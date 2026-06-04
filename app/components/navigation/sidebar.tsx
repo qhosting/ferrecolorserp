@@ -33,7 +33,9 @@ import {
   MessageSquare,
   Eye,
   ArrowDownRight,
-  ChevronDown
+  ChevronDown,
+  Briefcase,
+  Link2
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -70,6 +72,18 @@ const navigationItems: NavigationItem[] = [
     title: 'Productos',
     href: '/productos',
     icon: <Package className="h-4 w-4" />,
+    group: 'Catálogos'
+  },
+  {
+    title: 'Servicios',
+    href: '/servicios',
+    icon: <Briefcase className="h-4 w-4" />,
+    group: 'Catálogos'
+  },
+  {
+    title: 'CONTPAQi',
+    href: '/integraciones',
+    icon: <Link2 className="h-4 w-4" />,
     group: 'Catálogos'
   },
   // 4. Movimientos
