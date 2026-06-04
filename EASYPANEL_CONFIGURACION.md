@@ -133,10 +133,10 @@ OPENPAY_BASE_URL=https://api.openpay.mx/v1
 LABSMOBILE_USERNAME=tu-usuario
 LABSMOBILE_PASSWORD=tu-password
 
-# Evolution API (WhatsApp)
-EVOLUTION_API_URL=https://tu-servidor.com
-EVOLUTION_API_KEY=tu-api-key
-EVOLUTION_INSTANCE=tu-instancia
+# WAHA API (WhatsApp)
+WAHA_API_URL=https://tu-servidor.com
+WAHA_SESSION_NAME=default
+WAHA_API_KEY=tu-api-key
 
 # Correo (SMTP)
 SMTP_HOST=smtp.gmail.com

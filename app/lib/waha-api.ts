@@ -1,5 +1,5 @@
+// WAHA API Service (WhatsApp HTTP API - dev.waha.dev)
 
-// Evolution API Service
 export interface WhatsAppMessage {
   number: string;
   message: string;
@@ -16,34 +16,43 @@ export interface WhatsAppContact {
   lastSeen?: Date;
 }
 
-export interface EvolutionConfig {
+export interface WahaConfig {
   baseUrl: string;
-  instanceName: string;
-  token: string;
+  sessionName: string;
+  apiKey: string;
 }
 
-class EvolutionAPIService {
-  private config: EvolutionConfig;
+class WahaAPIService {
+  private config: WahaConfig;
 
-  constructor(config: EvolutionConfig) {
+  constructor(config: WahaConfig) {
     this.config = config;
   }
 
   private getHeaders() {
-    return {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'apikey': this.config.token,
+      'Accept': 'application/json',
     };
+    if (this.config.apiKey) {
+      headers['X-Api-Key'] = this.config.apiKey;
+    }
+    return headers;
   }
 
   async sendMessage(data: WhatsAppMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      // WAHA espera el número en formato internacional con @c.us
+      const cleanNumber = data.number.replace(/\D/g, '');
+      const chatId = cleanNumber.includes('@') ? cleanNumber : `${cleanNumber}@c.us`;
+
       const payload = {
-        number: data.number,
+        session: this.config.sessionName,
+        chatId: chatId,
         text: data.message,
       };
 
-      const response = await fetch(`${this.config.baseUrl}/message/sendText/${this.config.instanceName}`, {
+      const response = await fetch(`${this.config.baseUrl}/api/sendText`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(payload),
@@ -54,16 +63,16 @@ class EvolutionAPIService {
       if (response.ok) {
         return {
           success: true,
-          messageId: result.key?.id || 'unknown',
+          messageId: result.id || 'unknown',
         };
       } else {
         return {
           success: false,
-          error: result.message || 'Error al enviar mensaje',
+          error: result.message || 'Error al enviar mensaje con WAHA API',
         };
       }
     } catch (error) {
-      console.error('Evolution API Error:', error);
+      console.error('WAHA API Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido',
@@ -73,17 +82,27 @@ class EvolutionAPIService {
 
   async sendMedia(data: WhatsAppMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      const cleanNumber = data.number.replace(/\D/g, '');
+      const chatId = cleanNumber.includes('@') ? cleanNumber : `${cleanNumber}@c.us`;
+
+      let mimeType = 'application/octet-stream';
+      if (data.mediaType === 'image') mimeType = 'image/jpeg';
+      else if (data.mediaType === 'document') mimeType = 'application/pdf';
+      else if (data.mediaType === 'audio') mimeType = 'audio/mp3';
+      else if (data.mediaType === 'video') mimeType = 'video/mp4';
+
       const payload = {
-        number: data.number,
-        mediaMessage: {
-          media: data.mediaUrl,
-          mediaType: data.mediaType || 'image',
-          fileName: data.fileName || 'archivo',
-          caption: data.message,
+        session: this.config.sessionName,
+        chatId: chatId,
+        file: {
+          url: data.mediaUrl,
+          filename: data.fileName || 'archivo',
+          mimetype: mimeType
         },
+        caption: data.message
       };
 
-      const response = await fetch(`${this.config.baseUrl}/message/sendMedia/${this.config.instanceName}`, {
+      const response = await fetch(`${this.config.baseUrl}/api/sendFile`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(payload),
@@ -94,16 +113,16 @@ class EvolutionAPIService {
       if (response.ok) {
         return {
           success: true,
-          messageId: result.key?.id || 'unknown',
+          messageId: result.id || 'unknown',
         };
       } else {
         return {
           success: false,
-          error: result.message || 'Error al enviar media',
+          error: result.message || 'Error al enviar archivo con WAHA API',
         };
       }
     } catch (error) {
-      console.error('Evolution API Media Error:', error);
+      console.error('WAHA API Media Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido',
@@ -113,19 +132,19 @@ class EvolutionAPIService {
 
   async getContacts(): Promise<{ success: boolean; contacts?: WhatsAppContact[]; error?: string }> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/chat/fetchContacts/${this.config.instanceName}`, {
+      const response = await fetch(`${this.config.baseUrl}/api/contacts/all?session=${this.config.sessionName}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
 
       const result = await response.json();
 
-      if (response.ok) {
+      if (response.ok && Array.isArray(result)) {
         const contacts = result.map((contact: any) => ({
           id: contact.id,
-          name: contact.pushName || contact.verifiedName || contact.id,
-          number: contact.id.replace('@s.whatsapp.net', ''),
-          profilePic: contact.profilePicUrl,
+          name: contact.name || contact.pushname || contact.id,
+          number: contact.id.replace('@c.us', ''),
+          profilePic: contact.profilePic || contact.avatarUrl || '',
         }));
 
         return {
@@ -135,11 +154,11 @@ class EvolutionAPIService {
       } else {
         return {
           success: false,
-          error: result.message || 'Error al obtener contactos',
+          error: (result && result.message) || 'Error al obtener contactos de WAHA',
         };
       }
     } catch (error) {
-      console.error('Evolution API Contacts Error:', error);
+      console.error('WAHA API Contacts Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido',
@@ -149,7 +168,7 @@ class EvolutionAPIService {
 
   async getInstanceStatus(): Promise<{ success: boolean; status?: string; error?: string }> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/instance/fetchInstance/${this.config.instanceName}`, {
+      const response = await fetch(`${this.config.baseUrl}/api/sessions/${this.config.sessionName}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -159,16 +178,16 @@ class EvolutionAPIService {
       if (response.ok) {
         return {
           success: true,
-          status: result.instance?.state || 'unknown',
+          status: result.status || 'unknown',
         };
       } else {
         return {
           success: false,
-          error: result.message || 'Error al obtener estado',
+          error: result.message || 'Error al obtener estado de la sesión WAHA',
         };
       }
     } catch (error) {
-      console.error('Evolution API Status Error:', error);
+      console.error('WAHA API Status Error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido',
@@ -177,4 +196,4 @@ class EvolutionAPIService {
   }
 }
 
-export default EvolutionAPIService;
+export default WahaAPIService;

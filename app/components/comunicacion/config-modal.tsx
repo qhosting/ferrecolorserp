@@ -31,9 +31,9 @@ interface ConfigModalProps {
 }
 
 interface APIConfig {
-  evolutionApiUrl: string;
-  evolutionInstanceName: string;
-  evolutionApiToken: string;
+  wahaApiUrl: string;
+  wahaSessionName: string;
+  wahaApiKey: string;
   labsmobileUsername: string;
   labsmobileToken: string;
 }
@@ -46,9 +46,9 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
   }>({});
   
   const [config, setConfig] = useState<APIConfig>({
-    evolutionApiUrl: process.env.NEXT_PUBLIC_EVOLUTION_API_URL || 'http://localhost:8080',
-    evolutionInstanceName: process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE_NAME || 'default',
-    evolutionApiToken: '',
+    wahaApiUrl: process.env.NEXT_PUBLIC_WAHA_API_URL || 'http://localhost:3000',
+    wahaSessionName: process.env.NEXT_PUBLIC_WAHA_SESSION_NAME || 'default',
+    wahaApiKey: '',
     labsmobileUsername: '',
     labsmobileToken: ''
   });
@@ -61,20 +61,43 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
   };
 
   const testWhatsAppConnection = async () => {
-    if (!config.evolutionApiUrl || !config.evolutionApiToken) {
-      toast.error('Complete la configuración de WhatsApp');
+    if (!config.wahaApiUrl) {
+      toast.error('Complete la configuración de la URL de WhatsApp');
       return;
     }
 
     setLoading(true);
     try {
-      // Simular test de conexión (en producción harías una llamada real)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setTestResults(prev => ({ ...prev, whatsapp: true }));
-      toast.success('Conexión WhatsApp exitosa');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (config.wahaApiKey) {
+        headers['X-Api-Key'] = config.wahaApiKey;
+      }
+
+      // Consulta de estado de sesión real a WAHA API
+      const response = await fetch(`${config.wahaApiUrl}/api/sessions/${config.wahaSessionName}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'WORKING') {
+          setTestResults(prev => ({ ...prev, whatsapp: true }));
+          toast.success('Conexión WAHA exitosa. Sesión activa (WORKING).');
+        } else {
+          setTestResults(prev => ({ ...prev, whatsapp: false }));
+          toast.error(`Sesión de WAHA encontrada, pero no activa. Estado: ${result.status}`);
+        }
+      } else {
+        setTestResults(prev => ({ ...prev, whatsapp: false }));
+        toast.error('Error al conectar con WAHA API (Respuesta no exitosa)');
+      }
     } catch (error) {
+      console.error('WAHA Connection Test Error:', error);
       setTestResults(prev => ({ ...prev, whatsapp: false }));
-      toast.error('Error al conectar con WhatsApp API');
+      toast.error('Error al conectar con WAHA API. Verifique la URL.');
     } finally {
       setLoading(false);
     }
@@ -131,7 +154,7 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
             Configuración de APIs de Comunicación
           </DialogTitle>
           <DialogDescription>
-            Configure las credenciales para WhatsApp Business API y SMS LabsMobile
+            Configure las credenciales para WAHA API (WhatsApp) y SMS LabsMobile
           </DialogDescription>
         </DialogHeader>
 
@@ -153,49 +176,49 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MessageCircle className="h-5 w-5 text-green-600" />
-                    Evolution API (WhatsApp Business)
+                    WAHA API (WhatsApp HTTP API)
                   </div>
                   {getStatusBadge(testResults.whatsapp)}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="evolution-url">URL del Servidor Evolution API</Label>
+                  <Label htmlFor="waha-url">URL del Servidor WAHA API</Label>
                   <Input
-                    id="evolution-url"
-                    placeholder="http://localhost:8080"
-                    value={config.evolutionApiUrl}
-                    onChange={(e) => handleConfigChange('evolutionApiUrl', e.target.value)}
+                    id="waha-url"
+                    placeholder="http://localhost:3000"
+                    value={config.wahaApiUrl}
+                    onChange={(e) => handleConfigChange('wahaApiUrl', e.target.value)}
                   />
                   <p className="text-sm text-gray-500">
-                    URL donde está ejecutándose su instancia de Evolution API
+                    URL donde está ejecutándose su instancia de WAHA API (ej. http://localhost:3000)
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="evolution-instance">Nombre de la Instancia</Label>
+                  <Label htmlFor="waha-session">Nombre de la Sesión (Session)</Label>
                   <Input
-                    id="evolution-instance"
+                    id="waha-session"
                     placeholder="default"
-                    value={config.evolutionInstanceName}
-                    onChange={(e) => handleConfigChange('evolutionInstanceName', e.target.value)}
+                    value={config.wahaSessionName}
+                    onChange={(e) => handleConfigChange('wahaSessionName', e.target.value)}
                   />
                   <p className="text-sm text-gray-500">
-                    Nombre de la instancia de WhatsApp configurada en Evolution API
+                    Nombre de la sesión de WhatsApp configurada en WAHA API
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="evolution-token">Token de API</Label>
+                  <Label htmlFor="waha-apikey">Clave API (X-Api-Key)</Label>
                   <Input
-                    id="evolution-token"
+                    id="waha-apikey"
                     type="password"
                     placeholder="••••••••••••••••"
-                    value={config.evolutionApiToken}
-                    onChange={(e) => handleConfigChange('evolutionApiToken', e.target.value)}
+                    value={config.wahaApiKey}
+                    onChange={(e) => handleConfigChange('wahaApiKey', e.target.value)}
                   />
                   <p className="text-sm text-gray-500">
-                    Token de autenticación para Evolution API
+                    Clave API de seguridad configurada en su servidor WAHA (dejar vacío si no usa X-Api-Key)
                   </p>
                 </div>
 
@@ -205,7 +228,7 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
                   <div>
                     <h4 className="font-medium">Probar Conexión</h4>
                     <p className="text-sm text-gray-500">
-                      Verificar que la configuración sea correcta
+                      Verificar estado de la sesión activa en WAHA
                     </p>
                   </div>
                   <Button
@@ -221,9 +244,9 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-800 mb-2">Instrucciones de configuración:</h4>
                   <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                    <li>Instalar Evolution API usando Docker o desde el código fuente</li>
-                    <li>Crear una instancia de WhatsApp Business</li>
-                    <li>Obtener el token de API desde el panel de Evolution</li>
+                    <li>Instalar WAHA API usando Docker (dev.waha.dev)</li>
+                    <li>Iniciar una sesión de WhatsApp (Session)</li>
+                    <li>Autenticar mediante escaneo de código QR o Pairing Code</li>
                     <li>Configurar los datos arriba y probar la conexión</li>
                   </ol>
                 </div>

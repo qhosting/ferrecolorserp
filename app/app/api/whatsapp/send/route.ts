@@ -1,8 +1,7 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import EvolutionAPIService from '@/lib/evolution-api';
+import WahaAPIService from '@/lib/waha-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,25 +26,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Configuración de Evolution API (en producción usar variables de entorno)
-    const evolutionConfig = {
-      baseUrl: process.env.EVOLUTION_API_URL || 'http://localhost:8080',
-      instanceName: process.env.EVOLUTION_INSTANCE_NAME || 'default',
-      token: process.env.EVOLUTION_API_TOKEN || '',
+    // Configuración de WAHA API (WhatsApp HTTP API)
+    const wahaConfig = {
+      baseUrl: process.env.WAHA_API_URL || 'http://localhost:3000',
+      sessionName: process.env.WAHA_SESSION_NAME || 'default',
+      apiKey: process.env.WAHA_API_KEY || '',
     };
 
-    if (!evolutionConfig.token) {
+    if (!wahaConfig.baseUrl) {
       return NextResponse.json(
-        { error: 'Evolution API no configurada' },
+        { error: 'WAHA API no configurada' },
         { status: 500 }
       );
     }
 
-    const evolutionService = new EvolutionAPIService(evolutionConfig);
+    const wahaService = new WahaAPIService(wahaConfig);
 
     let result;
     if (mediaUrl) {
-      result = await evolutionService.sendMedia({
+      result = await wahaService.sendMedia({
         number,
         message,
         mediaUrl,
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
         fileName,
       });
     } else {
-      result = await evolutionService.sendMessage({
+      result = await wahaService.sendMessage({
         number,
         message,
       });
@@ -63,18 +62,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         messageId: result.messageId,
-        message: 'WhatsApp enviado exitosamente',
+        message: 'WhatsApp enviado exitosamente vía WAHA',
       });
     } else {
       return NextResponse.json(
         { 
-          error: result.error || 'Error al enviar WhatsApp',
+          error: result.error || 'Error al enviar WhatsApp con WAHA',
         },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('WhatsApp API Error:', error);
+    console.error('WhatsApp WAHA API Error:', error);
     return NextResponse.json(
       { 
         error: 'Error interno del servidor',

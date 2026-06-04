@@ -164,4 +164,4 @@ Vendedor:  vendedor1@sistema.com / password123
 *   **Frontend:** Next.js 14, Tailwind CSS, Radix UI, Framer Motion, Recharts.
 *   **Backend & DB:** Next.js Route Handlers, Prisma ORM, PostgreSQL (ferrecolorsdb).
 *   **Servicio API CONTPAQi:** .NET 8 (win-x86 self-contained), Scheduled Task, Kestrel (HTTPS port 5000).
-*   **Mensajería:** Evolution API (WhatsApp) + LabsMobile (SMS).
+*   **Mensajería:** WAHA API (WhatsApp) + LabsMobile (SMS).
