@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Calcular el saldoActual en memoria a partir de las relaciones precargadas
-    const proveedoresConSaldo = proveedores.map((p) => {
-      const saldoActual = p.cuentasPorPagar.reduce((sum, c) => sum + c.montoRestante, 0);
+    const proveedoresConSaldo = proveedores.map((p: any) => {
+      const saldoActual = p.cuentasPorPagar.reduce((sum: number, c: any) => sum + c.montoRestante, 0);
       
       // Limpiar cuentasPorPagar del retorno final para no sobrecargar el payload
       const { cuentasPorPagar, ...proveedorRestante } = p;

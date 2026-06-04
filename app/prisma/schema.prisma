@@ -430,6 +430,7 @@ model Venta {
   reestructuras     ReestructuraCredito[]
   garantias         Garantia[]
   
+  @@index([clienteId])
   @@map("ventas")
 }
 
@@ -482,6 +483,7 @@ model Pagare {
   venta             Venta        @relation(fields: [ventaId], references: [id])
   detallesPago      DetallePagoPagare[]
   
+  @@index([ventaId])
   @@map("pagares")
 }
 
@@ -722,6 +724,7 @@ model Pago {
   gestor            User?        @relation("PagoGestor", fields: [gestorId], references: [id])
   detallesPagares   DetallePagoPagare[]
   
+  @@index([clienteId])
   @@map("pagos")
 }
 
@@ -783,6 +786,7 @@ model MovimientoInventario {
   
   producto    Producto         @relation(fields: [productoId], references: [id])
   
+  @@index([productoId])
   @@map("movimientos_inventario")
 }
 
@@ -804,6 +808,7 @@ model CuentaPorPagar {
   proveedor     Proveedor @relation(fields: [proveedorId], references: [id])
   compra        Compra?   @relation(fields: [compraId], references: [id])
   
+  @@index([proveedorId])
   @@map("cuentas_por_pagar")
 }
 

@@ -97,55 +97,53 @@ Componentes UI:           53 + 12 directorios de negocio
 - Gráficos interactivos de ingresos, inventarios y cartera morosa. Modelos de análisis predictivo.
 - **APIs:** `/api/dashboard/*`, `/api/reportes/*`
 
+### 11. 💾 Sistema y Backups (Respaldos Reales)
+- **Estado:** ✅ COMPLETO
+- Historial de respaldos en disco (`/backups/`), generación asíncrona segura mediante `pg_dump`, descarga e interactividad (creación/eliminación para SUPERADMIN) a través de `BackupPanel.tsx`.
+- **APIs:** `/api/sistema/backup`
+
+### 12. 🏬 Store / Almacén Físico
+- **Estado:** ✅ COMPLETO
+- Kardex de movimientos de inventario paginado, alertas de stock mínimo, existencias e inventario físico con ubicaciones (pasillo/estante/nivel). Ajustes de stock atómicos con bloqueo exclusivo (`FOR UPDATE`).
+- **APIs:** `/api/sistema/inventario`
+
+### 13. 💳 Scoring de Crédito
+- **Estado:** ✅ COMPLETO
+- Dashboard de scoring crediticio automático (0-100) basado en deuda actual, pagarés vencidos, comportamiento y antigüedad.
+- **APIs:** `/api/clientes/scoring`
+
+### 14. 📄 Cuentas por Pagar (Proveedores)
+- **Estado:** ✅ COMPLETO
+- Dashboard de compromisos financieros con proveedores con registro de abonos reales, saldos y vencimientos. Optimización de query N+1 en listados.
+- **APIs:** `/api/compras/cuentas-pagar`, `/api/compras/proveedores`
+
 ---
 
 ## 🟡 MÓDULOS PARCIALMENTE IMPLEMENTADOS
 
-### 11. 💵 Pagos y Cobranza Móvil
+### 15. 💵 Pagos y Cobranza Móvil
 - **Página `/cobranza`:** UI funcional para abonos.
-- **Página `/cobranza-movil`:** UI de vendedor móvil.
+- **Página `/cobranza-movil`:** UI de vendedor móvil y sincronización de gestores conectada.
 - **Pendiente:** Integrar geolocalización de rutas y soporte offline persistente con IndexedDB.
-
-### 12. 💾 Sistema y Backups
-- **APIs:** Generación de copias de seguridad de la base de datos PostgreSQL.
-- **Pendiente:** Agregar UI para programar backups.
 
 ---
 
 ## ❌ MÓDULOS EN DESARROLLO (Placeholders en UI)
-
-### 13. Store / Almacén Físico
-- **Pendiente:** Kardex visual de productos, alertas de stock mínimo, gestión de traspasos entre sucursales.
-
-### 14. 💳 Scoring de Crédito
-- **Pendiente:** Sistema de scoring automático de clientes antes de autorizar ventas a crédito.
-
-### 15. 📄 Cuentas por Pagar (Proveedores)
-- **Pendiente:** Dashboard de compromisos financieros con proveedores y programación de pagos.
+*(Ninguno. Se han eliminado todos los placeholders y pantallas en desarrollo)*
 
 ---
 
 ## 🚦 ROADMAP ACTUALIZADO — Siguientes Fases
 
-### FASE 5: Operaciones CRUD Básicas
+### FASE 14: Optimización de Rendimiento
 - **Estado:** ✅ **COMPLETADA**
-- Se implementaron los 11 endpoints individuales que bloqueaban la edición/eliminación de todas las entidades de negocio.
+- Optimización N+1 en la API de Proveedores mediante carga relacional eager (`include`) en Prisma.
+- Adición de índices (`@@index`) en PostgreSQL para llaves foráneas críticas (`Venta.clienteId`, `Pagare.ventaId`, `Pago.clienteId`, `CuentaPorPagar.proveedorId`, `MovimientoInventario.productoId`).
 
-### FASE 5.5: Integración CONTPAQi y Red
-- **Estado:** ✅ **COMPLETADA**
-- API wrappers y SDK en .NET operando con empresa `adFERRE_COLORS`.
-- Se resolvió el error del SDK en timbrado digital e inicio COM.
-- CORS habilitado en el servidor para el nuevo dominio de producción.
-
-### FASE 5.6: Despliegue en Easypanel
-- **Estado:** ✅ **COMPLETADA**
-- Configuración de variables de entorno de producción.
-- Migración de Dockerfile para usar `npm` (`package-lock.json`) en lugar de `yarn` para evitar fallos de build en producción.
-- Creación de script de inicio `start.sh` robusto.
-
-### FASE 6: Completar Módulos Físicos e IndexedDB (Siguiente Prioridad)
-1. **Módulo de Almacén:** Implementar las pantallas de control de stock y auditoría de inventario físico.
-2. **Cobranza Móvil Offline:** Integrar el service worker para cobros sin red en zonas rurales con IndexedDB y sincronización diferida.
+### FASE 15: Estandarización de APIs y Validaciones (Siguiente Prioridad)
+1. **Validación de Entradas:** Implementar esquemas de validación de datos (Zod) en los endpoints para prevenir payloads corruptos.
+2. **Manejador de Errores Común:** Centralizar y estandarizar el formato de error JSON retornado por las APIs.
+3. **Cobranza Móvil Offline:** Integrar IndexedDB en el cliente de cobranza para soporte offline completo en zonas rurales.
 
 ---
 
