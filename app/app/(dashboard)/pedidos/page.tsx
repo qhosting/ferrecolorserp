@@ -20,6 +20,7 @@ import {
   CheckCircleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from "sonner"
 import { useRouter } from 'next/navigation'
 
@@ -68,6 +69,12 @@ export default function PedidosPage() {
   // Estado para conversión a venta
   const [convertirDialogOpen, setConvertirDialogOpen] = useState(false)
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<Pedido | null>(null)
+
+  // Estado para diálogo de cancelación
+  const [cancelConfirm, setCancelConfirm] = useState<{ open: boolean; id: string | null; folio: string }>({
+    open: false, id: null, folio: ''
+  })
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   // Cargar pedidos
   const fetchPedidos = async (page = 1) => {
@@ -157,15 +164,18 @@ export default function PedidosPage() {
     router.push(`/pedidos/${id}/editar`)
   }
 
-  const handleCancelarPedido = async (id: string) => {
-    if (!confirm('¿Está seguro de cancelar este pedido?')) return
+  const handleCancelarPedido = (id: string) => {
+    const pedido = pedidos.find(p => p.id === id)
+    setCancelConfirm({ open: true, id, folio: pedido?.folio ?? id })
+  }
 
+  const confirmCancelarPedido = async () => {
+    if (!cancelConfirm.id) return
+    setCancelLoading(true)
     try {
-      const response = await fetch(`/api/pedidos/${id}`, {
+      const response = await fetch(`/api/pedidos/${cancelConfirm.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estatus: 'CANCELADO' }),
       })
 
@@ -179,6 +189,9 @@ export default function PedidosPage() {
       }
     } catch (error) {
       toast.error('Error al cancelar pedido')
+    } finally {
+      setCancelLoading(false)
+      setCancelConfirm({ open: false, id: null, folio: '' })
     }
   }
 
@@ -407,6 +420,18 @@ export default function PedidosPage() {
         }}
         pedido={pedidoSeleccionado}
         onConfirm={confirmarConversion}
+      />
+
+      <ConfirmDialog
+        open={cancelConfirm.open}
+        title="Cancelar pedido"
+        message={`¿Estás seguro de que deseas cancelar el pedido ${cancelConfirm.folio}? Esta acción no se puede deshacer.`}
+        confirmLabel="Sí, cancelar pedido"
+        cancelLabel="No, mantener"
+        variant="warning"
+        loading={cancelLoading}
+        onConfirm={confirmCancelarPedido}
+        onCancel={() => setCancelConfirm({ open: false, id: null, folio: '' })}
       />
     </div>
   )

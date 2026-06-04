@@ -15,6 +15,7 @@ import { ClienteImportModal } from '@/components/clientes/cliente-import-modal';
 import { WhatsAppModal } from '@/components/comunicacion/whatsapp-modal';
 import { SMSModal } from '@/components/comunicacion/sms-modal';
 import { BulkSMSModal } from '@/components/comunicacion/bulk-sms-modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'react-hot-toast';
 import { 
   Plus, 
@@ -67,6 +68,12 @@ export default function ClientesPage() {
   const [selectedClienteId, setSelectedClienteId] = useState<string | null>(null);
   const [editingClienteId, setEditingClienteId] = useState<string | null>(null);
   const [comunicacionCliente, setComunicacionCliente] = useState<Cliente | null>(null);
+
+  // Estado para diálogo de confirmación de eliminación
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; clienteId: string | null; nombre: string }>({
+    open: false, clienteId: null, nombre: ''
+  });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const userRole = session?.user?.role;
   const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : null;
@@ -167,26 +174,31 @@ export default function ClientesPage() {
     setShowFormModal(true);
   };
 
-  const handleDeleteCliente = async (clienteId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
-      return;
-    }
+  const handleDeleteCliente = (clienteId: string) => {
+    const cliente = clientes.find(c => c.id === clienteId);
+    setDeleteConfirm({ open: true, clienteId, nombre: cliente?.nombre ?? 'este cliente' });
+  };
 
+  const confirmDeleteCliente = async () => {
+    if (!deleteConfirm.clienteId) return;
+    setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/clientes/${clienteId}`, {
+      const response = await fetch(`/api/clientes/${deleteConfirm.clienteId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         toast.success('Cliente eliminado exitosamente');
-        // Remover el cliente de la lista local
-        setClientes(prev => prev.filter(c => c.id !== clienteId));
+        setClientes(prev => prev.filter(c => c.id !== deleteConfirm.clienteId));
       } else {
         toast.error('Error al eliminar el cliente');
       }
     } catch (error) {
       console.error('Error deleting cliente:', error);
       toast.error('Error al eliminar el cliente');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteConfirm({ open: false, clienteId: null, nombre: '' });
     }
   };
 
@@ -500,6 +512,17 @@ export default function ClientesPage() {
       <BulkSMSModal
         isOpen={showBulkSMSModal}
         onClose={() => setShowBulkSMSModal(false)}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        title="Eliminar cliente"
+        message={`¿Estás seguro de que deseas eliminar a "${deleteConfirm.nombre}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Sí, eliminar"
+        variant="danger"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteCliente}
+        onCancel={() => setDeleteConfirm({ open: false, clienteId: null, nombre: '' })}
       />
       </div>
     </div>

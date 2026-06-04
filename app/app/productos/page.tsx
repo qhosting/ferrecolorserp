@@ -34,6 +34,7 @@ import { RolePermissions } from '@/lib/types';
 import { ProductForm } from '@/components/productos/product-form';
 import { ProductDetails } from '@/components/productos/product-details';
 import { ProductFilters } from '@/components/productos/product-filters';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface Producto {
   id: string;
@@ -84,6 +85,12 @@ export default function ProductosPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [marcas, setMarcas] = useState<string[]>([]);
+
+  // Estado para diálogo de confirmación
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null; nombre: string }>({
+    open: false, id: null, nombre: ''
+  });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const userRole = session?.user?.role;
   const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : {};
@@ -151,13 +158,16 @@ export default function ProductosPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este producto?')) {
-      return;
-    }
+  const handleDelete = (id: string) => {
+    const producto = productos.find(p => p.id === id);
+    setDeleteConfirm({ open: true, id, nombre: producto?.nombre ?? 'este producto' });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirm.id) return;
+    setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/productos/${id}`, {
+      const response = await fetch(`/api/productos/${deleteConfirm.id}`, {
         method: 'DELETE',
       });
 
@@ -171,6 +181,9 @@ export default function ProductosPage() {
     } catch (error) {
       console.error('Error deleting producto:', error);
       toast.error('Error al eliminar producto');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteConfirm({ open: false, id: null, nombre: '' });
     }
   };
 
@@ -505,6 +518,17 @@ export default function ProductosPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        title="Eliminar producto"
+        message={`¿Estás seguro de que deseas eliminar "${deleteConfirm.nombre}"? Esta acción eliminará el producto del catálogo y no se puede deshacer.`}
+        confirmLabel="Sí, eliminar"
+        variant="danger"
+        loading={deleteLoading}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({ open: false, id: null, nombre: '' })}
+      />
     </div>
   );
 }
