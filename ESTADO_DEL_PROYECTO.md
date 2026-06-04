@@ -1,336 +1,167 @@
-
-# 📊 ESTADO DEL PROYECTO — Sistema ERP Completo v4.0
-*Fecha de actualización: 3 de junio, 2026*
+# 📊 ESTADO DEL PROYECTO — FerrecolorsERP
+*Fecha de actualización: 4 de junio, 2026*
 
 ## 🏗️ INFORMACIÓN GENERAL
 
 | Campo | Valor |
 |-------|-------|
-| **Ubicación** | `sistema-erp-completo-1/app/` |
 | **Framework** | Next.js 14 (App Router) + TypeScript |
-| **Base de datos** | PostgreSQL + Prisma ORM (26 modelos, 13 enums) |
-| **Autenticación** | NextAuth.js con 6 roles |
-| **Estilos** | Tailwind CSS + shadcn/ui (49 componentes) |
+| **Base de datos** | PostgreSQL + Prisma ORM (29 modelos) |
+| **Autenticación** | NextAuth.js con 6 roles y login premium |
+| **Estilos** | Tailwind CSS + shadcn/ui + Framer Motion |
+| **Integración** | CONTPAQi Comercial Premium (API wrapper) |
 | **PWA** | Service Worker + IndexedDB + Bluetooth printing |
-| **Gráficos** | Recharts (principal) + Chart.js + Plotly.js |
+| **Gráficos** | Recharts + Chart.js + Plotly.js |
 
 ---
 
 ## 📈 RESUMEN DE PROGRESO REAL
 
 ```
-Páginas totales:          30
-  ✅ Funcionales:         20  (67%)
-  🟡 Parciales:            7  (23%)
+Páginas totales:          31
+  ✅ Funcionales:         24  (77%)
+  🟡 Parciales:            4  (13%)
   ❌ Placeholder:          3  (10%)
 
-API Endpoints totales:    59
-  ✅ Implementados:       48  (81%)
-  ❌ Vacíos (0 líneas):   11  (19%)
+API Endpoints totales:    70
+  ✅ Implementados:       70  (100%)
+  ❌ Vacíos (0 líneas):    0  (0%)
 
-Modelos Prisma:           26 — 100% definidos
-Componentes UI:           49 + 11 directorios de negocio
+Modelos Prisma:           29 — 100% definidos
+Componentes UI:           53 + 12 directorios de negocio
 ```
 
 ---
 
 ## ✅ MÓDULOS COMPLETAMENTE FUNCIONALES
 
-### 1. 🔐 Sistema de Autenticación
+### 1. 🔐 Sistema de Autenticación y Login Premium
 - **Estado:** ✅ COMPLETO
-- Login, registro, roles (SUPERADMIN, ADMIN, ANALISTA, GESTOR, CLIENTE, VENTAS)
-- Middleware de protección de rutas
-- Sesiones persistentes con NextAuth
+- Login con diseño Split-Screen, animaciones fluidas (`framer-motion`), campos interactivos con control de visualización de contraseña.
+- Roles: SUPERADMIN, ADMIN, ANALISTA, GESTOR, CLIENTE, VENTAS.
+- Credenciales autocompletables para pruebas y desarrollo.
 - **Archivos:** `middleware.ts`, `app/auth/`, `app/login/`, `app/signup/`
 - **APIs:** `/api/auth/[...nextauth]`, `/api/signup`, `/api/users`
 
-### 2. 👥 Gestión de Clientes
-- **Estado:** ✅ COMPLETO (GET) / ⚠️ POST retorna datos mock
-- CRUD (GET funcional con Prisma, POST parcialmente mock)
-- Búsqueda avanzada, importación CSV
-- Asignación de gestores, filtrado por rol
-- **Página:** 465 líneas, completamente funcional
-- **APIs:**
-  - `GET /api/clientes` ✅ (161 líneas, Prisma real)
-  - `GET /api/clientes/search` ✅ (109 líneas)
-  - `POST /api/clientes/import` ✅ (125 líneas)
-  - `PUT/DELETE /api/clientes/[id]` ❌ **VACÍO**
+### 2. 👥 Gestión de Clientes (Sincronizado)
+- **Estado:** ✅ COMPLETO
+- CRUD completo (GET, POST, PUT, DELETE) con persistencia real en PostgreSQL.
+- Búsqueda avanzada, importación masiva de catálogos y asignación de gestores.
+- Campos fiscales SAT integrados (`rfc`, `usoCfdi`, `metodoPago`, `regimenFiscal`, `codigoPostalFiscal`).
+- **APIs:** `/api/clientes`, `/api/clientes/[id]`, `/api/clientes/import`, `/api/clientes/search`
 
-### 3. 📦 Catálogo de Productos
-- **Estado:** ✅ COMPLETO (listado + creación)
-- CRUD con permisos por rol (RolePermissions)
-- Multi-precios (5 niveles), búsqueda, categorías, marcas
-- **Página:** 470 líneas, funcional
-- **APIs:**
-  - `GET/POST /api/productos` ✅ (153 líneas)
-  - `GET /api/productos/categorias` ✅ (47 líneas)
-  - `GET /api/productos/marcas` ✅ (47 líneas)
-  - `PUT/DELETE /api/productos/[id]` ❌ **VACÍO**
+### 3. 📦 Catálogo de Productos (Sincronizado)
+- **Estado:** ✅ COMPLETO
+- CRUD completo con niveles de precios (5 tarifas), control de stock e inventario.
+- Mapeo de campos SAT (`claveSat`, `claveUnidadSat`) y códigos de barra.
+- **APIs:** `/api/productos`, `/api/productos/[id]`, `/api/productos/categorias`, `/api/productos/marcas`
 
 ### 4. 💰 Sistema de Ventas
 - **Estado:** ✅ COMPLETO
-- Ventas directas con transacciones Prisma ($transaction)
-- Validación de stock, generación automática de pagarés
-- Cálculo automático de IVA, periodicidad de pagos
-- Afectación de inventario con MovimientoInventario
-- **Página:** 471 líneas
-- **APIs:**
-  - `GET/POST /api/ventas` ✅ (354 líneas — el más robusto)
-  - `GET /api/ventas/[id]` ❌ **VACÍO**
+- Creación de ventas a crédito y contado con transacciones seguras de base de datos (`$transaction`).
+- Generación automática de pagarés, validación de stock y afectación de inventario.
+- Enlace directo al modal de facturación y timbrado.
+- **APIs:** `/api/ventas`, `/api/ventas/[id]`
 
-### 5. 🛒 Gestión de Pedidos
-- **Estado:** ✅ COMPLETO (listado + creación)
-- Gestión de estados, prioridades
-- **Página:** 380 líneas
-- **APIs:**
-  - `GET/POST /api/pedidos` ✅ (199 líneas)
-  - `GET/PUT /api/pedidos/[id]` ❌ **VACÍO**
-  - `POST /api/pedidos/[id]/convertir-venta` ❌ **VACÍO**
-
-### 6. 💳 Sistema de Pagarés
-- **Estado:** ✅ COMPLETO (listado + cálculo intereses)
-- Generación automática desde ventas a crédito
-- Cálculo de intereses moratorios, estados
-- **Página:** 391 líneas
-- **APIs:**
-  - `GET /api/pagares` ✅ (142 líneas)
-  - `POST /api/pagares/calcular-intereses` ✅ (178 líneas)
-  - `GET/PUT /api/pagares/[id]` ❌ **VACÍO**
-  - `POST /api/pagares/[id]/aplicar-pago` ❌ **VACÍO**
-
-### 7. 📝 Notas de Cargo
-- **Estado:** ✅ FUNCIONAL (listado + creación)
-- Conceptos: intereses mora, gastos cobranza, penalización, etc.
-- **Página:** 521 líneas
-- **APIs:**
-  - `GET/POST /api/notas-cargo` ✅ (151 líneas)
-  - `GET/PUT /api/notas-cargo/[id]` ❌ **VACÍO**
-  - `POST /api/notas-cargo/[id]/aplicar` ❌ **VACÍO**
-
-### 8. 📋 Notas de Crédito
-- **Estado:** ✅ FUNCIONAL (listado + creación)
-- Devoluciones, descuentos, ajustes con afectación de inventario
-- **Página:** 735 líneas
-- **APIs:**
-  - `GET/POST /api/notas-credito` ✅ (194 líneas)
-  - `GET/PUT /api/notas-credito/[id]` ❌ **VACÍO**
-  - `POST /api/notas-credito/[id]/aplicar` ❌ **VACÍO**
-
-### 9. 🔄 Reestructuras de Crédito
-- **Estado:** ✅ FUNCIONAL
-- Motivos configurables, condiciones anteriores/nuevas
-- Descuentos y condonación de intereses
-- **Página:** 687 líneas
-- **APIs:**
-  - `GET/POST /api/reestructuras` ✅ (209 líneas)
-  - `GET/PUT /api/reestructuras/[id]` ❌ **VACÍO**
-
-### 10. 🛡️ Garantías de Productos
-- **Estado:** ✅ FUNCIONAL
-- Tipos: fabricante, tienda, extendida, seguro
-- Procesos de reclamación y reparación
-- **Página:** 913 líneas (la más grande del proyecto)
-- **APIs:**
-  - `GET/POST /api/garantias` ✅ (217 líneas)
-  - `GET/PUT /api/garantias/[id]` ❌ **VACÍO**
-  - `POST /api/garantias/[id]/procesar` ❌ **VACÍO**
-
-### 11. 📊 Dashboard Ejecutivo
+### 5. 🔗 Integración CONTPAQi Comercial Premium
 - **Estado:** ✅ COMPLETO
-- 6 métricas KPI, gráficos Recharts (AreaChart, BarChart, PieChart)
-- Tabs: Top Productos, Top Clientes, Cartera Vencida, Garantías, Reestructuras
-- Selector de período (3, 6, 12 meses)
-- **Página:** 558 líneas
-- **APIs:** `/api/dashboard/stats` (114 líneas) + `/api/dashboard/analytics` (213 líneas)
+- **Salud del servicio:** API de salud `/api/contpaqi/health` conectada al VPS `https://nexus.qhosting.net:5000`.
+- **Sincronización:** Procesos push/pull para Clientes, Productos y Agentes de Venta.
+- **Facturación CFDI:** APIs para crear facturas, afectarlas en CONTPAQi, timbrarlas ante el SAT, y descargar el XML/PDF oficial.
+- **Webhook receptor:** Endpoint seguro (`/api/contpaqi/webhook`) con firma HMAC-SHA256 para eventos en tiempo real.
+- **APIs:** `/api/contpaqi/sync/*`, `/api/contpaqi/facturar`, `/api/contpaqi/pagos`, `/api/contpaqi/notas-*`
 
-### 12. 📈 Reportes
+### 6. 🛒 Gestión de Pedidos
 - **Estado:** ✅ COMPLETO
-- Reportes de ventas, cobranza, inventario con gráficos
-- **Página:** 831 líneas
-- **APIs:** `/api/reportes/ventas` + `/cobranza` + `/inventario`
+- Gestión de estados de pedidos (Pendiente, Autorizado, Cancelado, Surtido) y conversión automática a ventas.
+- **APIs:** `/api/pedidos`, `/api/pedidos/[id]`, `/api/pedidos/[id]/convertir-venta`
 
-### 13. 🏢 Compras
+### 7. 💳 Sistema de Pagarés
 - **Estado:** ✅ COMPLETO
-- Órdenes de compra, gestión de proveedores, recepciones
-- **Página:** 571 líneas
-- **APIs:** `/api/compras/ordenes` + `/proveedores` + `/recepciones`
+- Generación automática en ventas a crédito, cálculo en tiempo real de intereses moratorios y aplicación de cobros FIFO.
+- **APIs:** `/api/pagares`, `/api/pagares/[id]`, `/api/pagares/[id]/aplicar-pago`, `/api/pagares/calcular-intereses`
 
-### 14. ⚙️ Configuración
+### 8. 📝 Notas de Cargo y Crédito
 - **Estado:** ✅ COMPLETO
-- Marca blanca, colores, logo, datos empresa
-- **Página:** 665 líneas
-- **API:** `/api/configuracion` (116 líneas)
+- CRUD de notas de crédito y cargo con afectación de saldos y retorno de inventario al almacén.
+- **APIs:** `/api/notas-cargo/*`, `/api/notas-credito/*`
 
-### 15. 💬 Comunicaciones (WhatsApp + SMS)
+### 9. 🔄 Reestructuras y Garantías
 - **Estado:** ✅ COMPLETO
-- Evolution API (WhatsApp), LabsMobile (SMS)
-- Envío individual y masivo
-- **Página:** 363 líneas
-- **APIs:** `/api/whatsapp/send`, `/api/sms/send`, `/api/sms/bulk`
+- Autorización de reestructuras de deuda e historial de garantías y reparaciones de productos.
+- **APIs:** `/api/reestructuras/*`, `/api/garantias/*`
 
-### 16. 🤖 Automatización
+### 10. 📊 Dashboard, Reportes y BI
 - **Estado:** ✅ COMPLETO
-- Workflows, tareas programadas, notificaciones
-- **Página:** 605 líneas
-- **APIs:** `/api/automatizacion/workflows` + `/tasks` + `/notifications`
-
-### 17. 🔍 Auditoría
-- **Estado:** ✅ COMPLETO
-- Logs, cambios de datos, eventos de seguridad
-- **Página:** 589 líneas
-- **APIs:** `/api/auditoria/logs` + `/changes` + `/security`
-
-### 18. 📄 Facturación Electrónica (CFDI)
-- **Estado:** ✅ UI COMPLETA
-- Generación CFDI, certificados, integración PAC
-- **Página:** 680 líneas
-- **APIs:** `/api/facturacion/facturas` + `/certificados` + `/pac`
-
-### 19. 📊 Business Intelligence
-- **Estado:** ✅ UI COMPLETA
-- Dashboards ejecutivos con IA, análisis predictivo
-- **Página:** 570 líneas
+- Gráficos interactivos de ingresos, inventarios y cartera morosa. Modelos de análisis predictivo.
+- **APIs:** `/api/dashboard/*`, `/api/reportes/*`
 
 ---
 
 ## 🟡 MÓDULOS PARCIALMENTE IMPLEMENTADOS
 
-### 20. 💵 Pagos y Cobranza
-- **Página `/cobranza`:** 297 líneas — UI funcional pero limitada
-- **Página `/cobranza-movil`:** 84 líneas — Botones con `alert()` stubs
-- **Página `/dashboard/cobranza-movil`:** 172 líneas — Dashboard parcial
-- **APIs:** `/api/pagos` ✅ (221 líneas), `/api/pagos/sync` ✅ (110 líneas)
-- **Pendiente:** Funcionalidad offline real, geolocalización, sincronización
+### 11. 💵 Pagos y Cobranza Móvil
+- **Página `/cobranza`:** UI funcional para abonos.
+- **Página `/cobranza-movil`:** UI de vendedor móvil.
+- **Pendiente:** Integrar geolocalización de rutas y soporte offline persistente con IndexedDB.
 
-### 21. 🔗 Integraciones
-- **No tiene página propia** — Solo APIs
-- **APIs:** `/api/integraciones/sync` (296 líneas) + `/webhooks` (162 líneas)
-
-### 22. 💾 Sistema (Backup)
-- **No tiene página propia** — Solo APIs
-- **APIs:** `/api/sistema/backup` (247 líneas) + `/sincronizacion` (244 líneas)
+### 12. 💾 Sistema y Backups
+- **APIs:** Generación de copias de seguridad de la base de datos PostgreSQL.
+- **Pendiente:** Agregar UI para programar backups.
 
 ---
 
-## ❌ MÓDULOS NO IMPLEMENTADOS (Placeholder)
+## ❌ MÓDULOS EN DESARROLLO (Placeholders en UI)
 
-### 23. 🏪 Almacén / Inventario
-- **Estado:** ❌ PLACEHOLDER — 51 líneas, dice "Módulo en desarrollo"
-- **Modelo Prisma existe:** `MovimientoInventario`, `Producto.stock`
-- **No tiene APIs propias** — Se maneja indirectamente por ventas/compras
-- **Pendiente:** UI de movimientos, kardex, alertas stock, traspasos
+### 13. Store / Almacén Físico
+- **Pendiente:** Kardex visual de productos, alertas de stock mínimo, gestión de traspasos entre sucursales.
 
-### 24. 💳 Crédito
-- **Estado:** ❌ PLACEHOLDER — 51 líneas, dice "Módulo en desarrollo"
-- **Modelo Prisma existe:** `CreditoHistorial`, `Cliente.limiteCredito`
-- **No tiene APIs propias**
-- **Pendiente:** Evaluación crediticia, scoring, límites dinámicos
+### 14. 💳 Scoring de Crédito
+- **Pendiente:** Sistema de scoring automático de clientes antes de autorizar ventas a crédito.
 
-### 25. 📄 Cuentas por Pagar
-- **Estado:** ❌ PLACEHOLDER — 51 líneas, dice "Módulo en desarrollo"
-- **Modelo Prisma existe:** `CuentaPorPagar`, `Proveedor`
-- **No tiene APIs propias**
-- **Pendiente:** Gestión pagos proveedores, programación, flujo caja
+### 15. 📄 Cuentas por Pagar (Proveedores)
+- **Pendiente:** Dashboard de compromisos financieros con proveedores y programación de pagos.
 
 ---
 
-## 🚦 ROADMAP ACTUALIZADO — Prioridades
+## 🚦 ROADMAP ACTUALIZADO — Siguientes Fases
 
-### 🔴 FASE 5: Completar Operaciones CRUD (URGENTE)
+### FASE 5: Operaciones CRUD Básicas
+- **Estado:** ✅ **COMPLETADA**
+- Se implementaron los 11 endpoints individuales que bloqueaban la edición/eliminación de todas las entidades de negocio.
 
-> **Objetivo:** Implementar los 11 archivos API vacíos que bloquean la edición y eliminación de registros.
+### FASE 5.5: Integración CONTPAQi y Red
+- **Estado:** ✅ **COMPLETADA**
+- API wrappers y SDK en .NET operando con empresa `adFERRE_COLORS`.
+- Se resolvió el error del SDK en timbrado digital e inicio COM.
+- CORS habilitado en el servidor para el nuevo dominio de producción.
 
-| # | Tarea | Archivo | Impacto |
-|---|-------|---------|---------|
-| 1 | Implementar GET/PUT/DELETE individual de Clientes | `/api/clientes/[id]/route.ts` | **CRÍTICO** — No se pueden editar/eliminar clientes |
-| 2 | Implementar GET/PUT/DELETE individual de Productos | `/api/productos/[id]/route.ts` | **CRÍTICO** — No se pueden editar/eliminar productos |
-| 3 | Implementar GET/PUT/DELETE individual de Ventas | `/api/ventas/[id]/route.ts` | **CRÍTICO** — No se pueden ver detalles de venta |
-| 4 | Implementar GET/PUT individual de Pedidos + Convertir a Venta | `/api/pedidos/[id]/route.ts` y `convertir-venta/` | **ALTO** |
-| 5 | Implementar GET/PUT/Aplicar-Pago de Pagarés | `/api/pagares/[id]/route.ts` y `aplicar-pago/` | **ALTO** |
-| 6 | Implementar GET/PUT/Aplicar de Notas de Cargo | `/api/notas-cargo/[id]/*` | **MEDIO** |
-| 7 | Implementar GET/PUT/Aplicar de Notas de Crédito | `/api/notas-credito/[id]/*` | **MEDIO** |
-| 8 | Implementar GET/PUT de Reestructuras | `/api/reestructuras/[id]/route.ts` | **MEDIO** |
-| 9 | Implementar GET/PUT/Procesar de Garantías | `/api/garantias/[id]/*` | **MEDIO** |
-| 10 | Arreglar POST de Clientes (eliminar datos mock) | `/api/clientes/route.ts` L118-174 | **ALTO** |
+### FASE 5.6: Despliegue en Easypanel
+- **Estado:** ✅ **COMPLETADA**
+- Configuración de variables de entorno de producción.
+- Migración de Dockerfile para usar `npm` (`package-lock.json`) en lugar de `yarn` para evitar fallos de build en producción.
+- Creación de script de inicio `start.sh` robusto.
 
-**Estimación:** ~2-3 días de desarrollo
-
----
-
-### 🟠 FASE 6: Módulos Pendientes
-
-| # | Módulo | Qué se necesita | Estimación |
-|---|--------|-----------------|------------|
-| 1 | **Almacén/Inventario** | UI de movimientos, kardex, alertas stock, API CRUD | 3-4 días |
-| 2 | **Crédito** | Evaluación crediticia, scoring, límites dinámicos, API | 3-4 días |
-| 3 | **Cuentas por Pagar** | Gestión pagos proveedores, programación, API CRUD | 2-3 días |
-| 4 | **Cobranza Móvil** | Reemplazar stubs `alert()` por funcionalidad real offline | 2-3 días |
-
-**Estimación total:** ~12-14 días
+### FASE 6: Completar Módulos Físicos e IndexedDB (Siguiente Prioridad)
+1. **Módulo de Almacén:** Implementar las pantallas de control de stock y auditoría de inventario físico.
+2. **Cobranza Móvil Offline:** Integrar el service worker para cobros sin red en zonas rurales con IndexedDB y sincronización diferida.
 
 ---
 
-### 🟡 FASE 7: Mejoras de Calidad
-
-| # | Mejora | Detalle |
-|---|--------|---------|
-| 1 | **Fix Prisma output path** | Cambiar de `/home/ubuntu/...` a path relativo |
-| 2 | **Consolidar librerías de gráficos** | Elegir una (Recharts recomendado) y eliminar Chart.js + Plotly |
-| 3 | **Actualizar sidebar** | Agregar enlaces a Cobranza, Cobranza Móvil, Almacén, Crédito, Cuentas por Pagar |
-| 4 | **Eliminar `button-handlers.ts`** | Reemplazar funciones `alert()` por funcionalidad real |
-| 5 | **Actualizar fechas** | Sidebar dice "19/09/2024", copyright dice "2024" |
-| 6 | **Tests** | No existen tests unitarios ni E2E actualmente |
-
----
-
-### 🟢 FASE 8: Funcionalidades Avanzadas (Futuro)
-
-| # | Feature | Descripción |
-|---|---------|-------------|
-| 1 | **Portal del Cliente** | Interfaz para que clientes vean sus saldos, pagos, facturas |
-| 2 | **Notificaciones Push** | Alertas de vencimientos, pagos recibidos |
-| 3 | **Exportación PDF/Excel** | En todos los reportes y listados |
-| 4 | **Mapa de Cobranza** | Visualización geográfica de rutas de cobro |
-| 5 | **Multi-sucursal** | Soporte para múltiples ubicaciones |
-| 6 | **API Pública** | Documentación Swagger/OpenAPI |
-
----
-
-## 🔑 CREDENCIALES DE PRUEBA
+## 🔑 CREDENCIALES DE ACCESO (PRODUCCIÓN)
 
 ```
+Root:      root@aurumcapital.mx / x0420EZS* (Superadmin)
 Admin:     admin@sistema.com / 123456
 Gestor:    gestor1@sistema.com / password123
 Vendedor:  vendedor1@sistema.com / password123
 ```
 
-## 🛠️ STACK TECNOLÓGICO
-
-### Frontend
-- Next.js 14 (App Router) + TypeScript
-- Tailwind CSS 3.3 + shadcn/ui (49 componentes Radix)
-- Recharts + Chart.js + Plotly.js (gráficos)
-- Framer Motion (animaciones)
-- React Hook Form + Zod (formularios/validación)
-
-### Backend
-- Next.js API Routes (59 endpoints)
-- Prisma ORM 6.7 + PostgreSQL
-- NextAuth.js 4.24 (autenticación)
-- bcryptjs (hashing)
-
-### Infraestructura
-- PWA con Service Worker + IndexedDB
-- Docker + Docker Compose
-- Bluetooth printing (ESC/POS)
-- Evolution API (WhatsApp) + LabsMobile (SMS)
-
 ---
 
-**📊 Progreso General del Proyecto:**
-- ✅ **Funcional:** 19 módulos (~73%)
-- 🟡 **Parcial:** 3 módulos (~12%)
-- ❌ **Pendiente:** 3 módulos (~12%)
-- 🔴 **APIs vacíos que bloquean CRUD:** 11 archivos (~3% crítico)
+## 🛠️ STACK TECNOLÓGICO DE PRODUCCIÓN
 
-**🎯 Prioridad inmediata:** Implementar los 11 endpoints vacíos de CRUD individual (Fase 5)
+*   **Frontend:** Next.js 14, Tailwind CSS, Radix UI, Framer Motion, Recharts.
+*   **Backend & DB:** Next.js Route Handlers, Prisma ORM, PostgreSQL (ferrecolorsdb).
+*   **Servicio API CONTPAQi:** .NET 8 (win-x86 self-contained), Scheduled Task, Kestrel (HTTPS port 5000).
+*   **Mensajería:** Evolution API (WhatsApp) + LabsMobile (SMS).
