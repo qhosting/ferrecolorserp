@@ -1,10 +1,9 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-// GET - Obtener cambios de datos
+// GET - Obtener cambios de datos reales
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -20,209 +19,70 @@ export async function GET(request: NextRequest) {
     const fechaFin = searchParams.get('fechaFin');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Datos simulados de cambios de datos
-    const changes = [
-      {
-        id: '1',
-        tabla: 'clientes',
-        registroId: 'CLI-001',
-        operacion: 'UPDATE',
-        camposAfectados: ['limiteCredito', 'telefono'],
-        valoresAnteriores: {
-          limiteCredito: 50000,
-          telefono: '555-1234'
-        },
-        valoresNuevos: {
-          limiteCredito: 75000,
-          telefono: '555-5678'
-        },
-        usuario: {
-          id: 'user1',
-          nombre: 'Juan Pérez'
-        },
-        timestamp: '2024-09-19T10:30:00Z'
-      },
-      {
-        id: '2',
-        tabla: 'productos',
-        registroId: 'PROD-123',
-        operacion: 'INSERT',
-        camposAfectados: ['codigo', 'nombre', 'precio1', 'stock'],
-        valoresAnteriores: null,
-        valoresNuevos: {
-          codigo: 'PROD-123',
-          nombre: 'Nuevo Producto',
-          precio1: 1500,
-          stock: 100
-        },
-        usuario: {
-          id: 'user2',
-          nombre: 'María González'
-        },
-        timestamp: '2024-09-19T11:15:00Z'
-      },
-      {
-        id: '3',
-        tabla: 'ventas',
-        registroId: 'VEN-2024-001',
-        operacion: 'UPDATE',
-        camposAfectados: ['estado', 'fechaEntrega'],
-        valoresAnteriores: {
-          estado: 'PENDIENTE',
-          fechaEntrega: null
-        },
-        valoresNuevos: {
-          estado: 'ENTREGADA',
-          fechaEntrega: '2024-09-19T15:00:00Z'
-        },
-        usuario: {
-          id: 'user3',
-          nombre: 'Carlos Ruiz'
-        },
-        timestamp: '2024-09-19T15:00:00Z'
-      },
-      {
-        id: '4',
-        tabla: 'usuarios',
-        registroId: 'user4',
-        operacion: 'UPDATE',
-        camposAfectados: ['password', 'ultimoCambioPassword'],
-        valoresAnteriores: {
-          password: '[HASH_ANTERIOR]',
-          ultimoCambioPassword: '2024-06-15T08:00:00Z'
-        },
-        valoresNuevos: {
-          password: '[HASH_NUEVO]',
-          ultimoCambioPassword: '2024-09-19T14:20:00Z'
-        },
-        usuario: {
-          id: 'user4',
-          nombre: 'Ana López'
-        },
-        timestamp: '2024-09-19T14:20:00Z'
-      },
-      {
-        id: '5',
-        tabla: 'pagares',
-        registroId: 'PAGARE-001',
-        operacion: 'DELETE',
-        camposAfectados: ['monto', 'fechaVencimiento', 'estado'],
-        valoresAnteriores: {
-          monto: 5000,
-          fechaVencimiento: '2024-09-30T00:00:00Z',
-          estado: 'PAGADO'
-        },
-        valoresNuevos: null,
-        usuario: {
-          id: 'user1',
-          nombre: 'Juan Pérez'
-        },
-        timestamp: '2024-09-19T16:45:00Z'
-      },
-      {
-        id: '6',
-        tabla: 'productos',
-        registroId: 'PROD-456',
-        operacion: 'UPDATE',
-        camposAfectados: ['stock', 'stockMinimo', 'ultimaActualizacion'],
-        valoresAnteriores: {
-          stock: 50,
-          stockMinimo: 10,
-          ultimaActualizacion: '2024-09-18T10:00:00Z'
-        },
-        valoresNuevos: {
-          stock: 25,
-          stockMinimo: 15,
-          ultimaActualizacion: '2024-09-19T12:30:00Z'
-        },
-        usuario: {
-          id: 'user2',
-          nombre: 'María González'
-        },
-        timestamp: '2024-09-19T12:30:00Z'
-      },
-      {
-        id: '7',
-        tabla: 'configuracion',
-        registroId: 'CONFIG-001',
-        operacion: 'UPDATE',
-        camposAfectados: ['tasaInteres', 'diasGracia'],
-        valoresAnteriores: {
-          tasaInteres: 2.5,
-          diasGracia: 3
-        },
-        valoresNuevos: {
-          tasaInteres: 2.8,
-          diasGracia: 5
-        },
-        usuario: {
-          id: 'admin1',
-          nombre: 'Administrador'
-        },
-        timestamp: '2024-09-19T09:00:00Z'
-      },
-      {
-        id: '8',
-        tabla: 'garantias',
-        registroId: 'GAR-001',
-        operacion: 'INSERT',
-        camposAfectados: ['producto', 'cliente', 'fechaCompra', 'tipoGarantia'],
-        valoresAnteriores: null,
-        valoresNuevos: {
-          producto: 'PROD-789',
-          cliente: 'CLI-002',
-          fechaCompra: '2024-09-19T00:00:00Z',
-          tipoGarantia: 'FABRICANTE'
-        },
-        usuario: {
-          id: 'user1',
-          nombre: 'Juan Pérez'
-        },
-        timestamp: '2024-09-19T13:15:00Z'
-      }
-    ];
-
-    // Aplicar filtros
-    let filteredChanges = changes;
-
+    const where: any = {};
     if (tabla) {
-      filteredChanges = filteredChanges.filter(change => change.tabla === tabla);
+      where.tabla = { equals: tabla, mode: 'insensitive' };
     }
-
     if (operacion) {
-      filteredChanges = filteredChanges.filter(change => change.operacion === operacion);
+      where.accion = operacion;
     }
-
     if (usuario) {
-      filteredChanges = filteredChanges.filter(change => change.usuario.id === usuario);
+      where.userId = usuario;
+    }
+    if (fechaInicio || fechaFin) {
+      where.createdAt = {};
+      if (fechaInicio) where.createdAt.gte = new Date(fechaInicio);
+      if (fechaFin) where.createdAt.lte = new Date(fechaFin);
     }
 
-    if (fechaInicio && fechaFin) {
-      filteredChanges = filteredChanges.filter(change => {
-        const fecha = new Date(change.timestamp);
-        return fecha >= new Date(fechaInicio) && fecha <= new Date(fechaFin);
-      });
-    }
+    const logs = await prisma.auditLog.findMany({
+      where,
+      take: limit,
+      include: {
+        user: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
-    // Limitar resultados
-    if (limit) {
-      filteredChanges = filteredChanges.slice(0, limit);
-    }
+    const changes = logs.map((log) => {
+      let camposAfectados: string[] = [];
+      if (log.datosAnteriores && log.datosNuevos) {
+        const prev = log.datosAnteriores as Record<string, any>;
+        const next = log.datosNuevos as Record<string, any>;
+        camposAfectados = Object.keys(next).filter((key) => prev[key] !== next[key]);
+      } else if (log.datosNuevos) {
+        camposAfectados = Object.keys(log.datosNuevos as Record<string, any>);
+      }
 
-    // Estadísticas de cambios
+      return {
+        id: log.id,
+        tabla: log.tabla,
+        registroId: log.registroId,
+        operacion: log.accion,
+        camposAfectados,
+        valoresAnteriores: log.datosAnteriores,
+        valoresNuevos: log.datosNuevos,
+        usuario: {
+          id: log.userId || 'sistema',
+          nombre: log.user?.name || 'Sistema',
+        },
+        timestamp: log.createdAt.toISOString(),
+      };
+    });
+
     const changeStats = {
-      total: filteredChanges.length,
-      inserciones: filteredChanges.filter(c => c.operacion === 'INSERT').length,
-      actualizaciones: filteredChanges.filter(c => c.operacion === 'UPDATE').length,
-      eliminaciones: filteredChanges.filter(c => c.operacion === 'DELETE').length,
+      total: changes.length,
+      inserciones: changes.filter(c => c.operacion === 'CREATE' || c.operacion === 'INSERT').length,
+      actualizaciones: changes.filter(c => c.operacion === 'UPDATE').length,
+      eliminaciones: changes.filter(c => c.operacion === 'DELETE').length,
       tablasMasModificadas: Object.entries(
-        filteredChanges.reduce((acc: Record<string, number>, change) => {
+        changes.reduce((acc: Record<string, number>, change) => {
           acc[change.tabla] = (acc[change.tabla] || 0) + 1;
           return acc;
         }, {})
       ).sort(([,a], [,b]) => b - a).slice(0, 5),
       usuariosMasActivos: Object.entries(
-        filteredChanges.reduce((acc: Record<string, number>, change) => {
+        changes.reduce((acc: Record<string, number>, change) => {
           acc[change.usuario.nombre] = (acc[change.usuario.nombre] || 0) + 1;
           return acc;
         }, {})
@@ -230,7 +90,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({
-      changes: filteredChanges,
+      changes,
       stats: changeStats,
       message: 'Cambios de datos obtenidos exitosamente'
     });
@@ -244,7 +104,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Registrar cambio de datos
+// POST - Registrar cambio de datos real
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -263,37 +123,49 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validaciones
-    if (!tabla || !registroId || !operacion || !camposAfectados) {
+    if (!tabla || !registroId || !operacion) {
       return NextResponse.json(
-        { error: 'Campos requeridos: tabla, registroId, operacion, camposAfectados' },
+        { error: 'Campos requeridos: tabla, registroId, operacion' },
         { status: 400 }
       );
     }
 
-    const nuevoCambio = {
-      id: Math.random().toString(36).substr(2, 9),
-      tabla,
-      registroId,
-      operacion,
-      camposAfectados: Array.isArray(camposAfectados) ? camposAfectados : [camposAfectados],
-      valoresAnteriores: valoresAnteriores || null,
-      valoresNuevos: valoresNuevos || null,
-      usuario: {
-        id: session.user.id,
-        nombre: session.user.name || 'Usuario'
+    const nuevoLog = await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        accion: operacion,
+        tabla,
+        registroId,
+        datosAnteriores: valoresAnteriores || undefined,
+        datosNuevos: valoresNuevos || undefined,
       },
-      timestamp: new Date().toISOString()
-    };
+      include: {
+        user: true,
+      },
+    });
 
     return NextResponse.json({
-      change: nuevoCambio,
+      change: {
+        id: nuevoLog.id,
+        tabla: nuevoLog.tabla,
+        registroId: nuevoLog.registroId,
+        operacion: nuevoLog.accion,
+        camposAfectados: camposAfectados || [],
+        valoresAnteriores: nuevoLog.datosAnteriores,
+        valoresNuevos: nuevoLog.datosNuevos,
+        usuario: {
+          id: nuevoLog.userId,
+          nombre: nuevoLog.user?.name || 'Usuario',
+        },
+        timestamp: nuevoLog.createdAt.toISOString(),
+      },
       message: 'Cambio de datos registrado exitosamente'
     }, { status: 201 });
 
   } catch (error) {
     console.error('Error registering data change:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: (error as Error).message },
       { status: 500 }
     );
   }

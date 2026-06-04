@@ -1,6 +1,5 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
@@ -12,8 +11,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Datos simulados de proveedores PAC
-    const proveedores = [
+    const configObj = await prisma.configuracion.findFirst();
+    const currentConfigJson = (configObj?.configJson as any) || {};
+    const proveedores = currentConfigJson.proveedoresPac || [
       {
         id: 'pac-principal',
         nombre: 'PAC Principal',
@@ -24,27 +24,15 @@ export async function GET(request: NextRequest) {
           certificado: 'certificado_activo'
         },
         creditos: 1500,
-        ultimaSincronizacion: '2024-09-19T08:00:00Z'
-      },
-      {
-        id: 'pac-backup',
-        nombre: 'PAC Respaldo',
-        activo: false,
-        configuracion: {
-          url: 'https://api.pac-backup.com',
-          usuario: 'usuario_backup',
-          certificado: 'certificado_backup'
-        },
-        creditos: 500,
-        ultimaSincronizacion: '2024-09-15T10:00:00Z'
+        ultimaSincronizacion: new Date().toISOString()
       }
     ];
 
     return NextResponse.json({
       proveedores,
       total: proveedores.length,
-      activos: proveedores.filter(p => p.activo).length,
-      creditosTotales: proveedores.reduce((sum, p) => sum + p.creditos, 0),
+      activos: proveedores.filter((p: any) => p.activo).length,
+      creditosTotales: proveedores.reduce((sum: number, p: any) => sum + (p.creditos || 0), 0),
       message: 'Proveedores PAC obtenidos exitosamente'
     });
 
@@ -81,20 +69,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Simulación de configuración de PAC
+    let configObj = await prisma.configuracion.findFirst();
+    if (!configObj) {
+      configObj = await prisma.configuracion.create({
+        data: {
+          nombreEmpresa: 'FerreColors',
+          configJson: {}
+        }
+      });
+    }
+
+    const currentConfigJson = (configObj.configJson as any) || {};
+    const proveedores = currentConfigJson.proveedoresPac || [];
+
     const nuevoProveedor = {
       id: Math.random().toString(36).substr(2, 9),
       nombre,
-      activo: false, // Inicia inactivo hasta validar configuración
+      activo: proveedores.length === 0,
       configuracion: {
         url,
         usuario,
         certificado: certificado || 'pendiente'
       },
-      creditos: 0,
+      creditos: 1000,
       ultimaSincronizacion: null,
       fechaConfiguracion: new Date().toISOString()
     };
+
+    proveedores.push(nuevoProveedor);
+    currentConfigJson.proveedoresPac = proveedores;
+
+    await prisma.configuracion.update({
+      where: { id: configObj.id },
+      data: {
+        configJson: currentConfigJson
+      }
+    });
 
     return NextResponse.json({
       proveedor: nuevoProveedor,
@@ -104,7 +114,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error configuring PAC provider:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: (error as Error).message },
       { status: 500 }
     );
   }

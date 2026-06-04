@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
@@ -17,137 +16,80 @@ export async function GET(request: NextRequest) {
     const proveedor = searchParams.get('proveedor');
     const limit = searchParams.get('limit');
 
-    // Datos simulados por ahora
-    const ordenes = [
-      {
-        id: '1',
-        folio: 'OC-2024-001',
-        proveedor: {
-          id: '1',
-          nombre: 'Distribuidora ABC S.A.',
-          codigo: 'PROV001'
-        },
-        fecha: '2024-09-15T10:00:00Z',
-        fechaEntrega: '2024-09-22T10:00:00Z',
-        subtotal: 50000,
-        iva: 8000,
-        total: 58000,
-        estado: 'CONFIRMADA',
-        detalles: [
-          {
-            id: '1',
-            producto: {
-              id: '1',
-              codigo: 'PROD001',
-              nombre: 'Monitor LED 24"'
-            },
-            cantidad: 10,
-            precio: 5000,
-            subtotal: 50000,
-            cantidadRecibida: 0
-          }
-        ],
-        observaciones: 'Entrega en horario de oficina',
-        createdAt: '2024-09-15T10:00:00Z',
-        updatedAt: '2024-09-15T10:00:00Z'
-      },
-      {
-        id: '2',
-        folio: 'OC-2024-002',
-        proveedor: {
-          id: '2',
-          nombre: 'Tecnología y Sistemas SA',
-          codigo: 'PROV002'
-        },
-        fecha: '2024-09-16T14:30:00Z',
-        fechaEntrega: '2024-09-25T14:30:00Z',
-        subtotal: 75000,
-        iva: 12000,
-        total: 87000,
-        estado: 'PENDIENTE',
-        detalles: [
-          {
-            id: '2',
-            producto: {
-              id: '2',
-              codigo: 'PROD002',
-              nombre: 'Laptop HP EliteBook'
-            },
-            cantidad: 5,
-            precio: 15000,
-            subtotal: 75000,
-            cantidadRecibida: 0
-          }
-        ],
-        observaciones: 'Verificar especificaciones técnicas',
-        createdAt: '2024-09-16T14:30:00Z',
-        updatedAt: '2024-09-16T14:30:00Z'
-      },
-      {
-        id: '3',
-        folio: 'OC-2024-003',
-        proveedor: {
-          id: '3',
-          nombre: 'Suministros Industriales XYZ',
-          codigo: 'PROV003'
-        },
-        fecha: '2024-09-18T09:15:00Z',
-        fechaEntrega: '2024-09-20T09:15:00Z',
-        subtotal: 25000,
-        iva: 4000,
-        total: 29000,
-        estado: 'RECIBIDA',
-        detalles: [
-          {
-            id: '3',
-            producto: {
-              id: '3',
-              codigo: 'PROD003',
-              nombre: 'Material de Oficina'
-            },
-            cantidad: 100,
-            precio: 250,
-            subtotal: 25000,
-            cantidadRecibida: 100
-          }
-        ],
-        observaciones: 'Entrega completada satisfactoriamente',
-        createdAt: '2024-09-18T09:15:00Z',
-        updatedAt: '2024-09-20T15:00:00Z'
-      }
-    ];
-
-    let filteredOrdenes = ordenes;
-
+    const where: any = {};
     if (estado) {
-      filteredOrdenes = filteredOrdenes.filter(o => o.estado === estado);
+      where.status = estado as any;
     }
-
     if (proveedor) {
-      filteredOrdenes = filteredOrdenes.filter(o => o.proveedor.id === proveedor);
+      where.proveedorId = proveedor;
     }
 
-    if (limit) {
-      filteredOrdenes = filteredOrdenes.slice(0, parseInt(limit));
-    }
+    const compras = await prisma.compra.findMany({
+      where,
+      take: limit ? parseInt(limit) : undefined,
+      include: {
+        proveedor: true,
+        items: {
+          include: {
+            producto: true,
+          },
+        },
+      },
+      orderBy: { fechaCompra: 'desc' },
+    });
 
-    // Calcular estadísticas
+    const ordenes = compras.map((compra) => ({
+      id: compra.id,
+      folio: compra.numeroCompra,
+      proveedor: {
+        id: compra.proveedor.id,
+        nombre: compra.proveedor.nombre,
+        codigo: compra.proveedor.codigo,
+      },
+      fecha: compra.fechaCompra.toISOString(),
+      fechaEntrega: compra.fechaRecepcion?.toISOString() || new Date(compra.fechaCompra.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      subtotal: compra.subtotal,
+      iva: compra.iva,
+      total: compra.total,
+      estado: compra.status,
+      detalles: compra.items.map((item) => ({
+        id: item.id,
+        producto: {
+          id: item.producto.id,
+          codigo: item.producto.codigo,
+          nombre: item.producto.nombre,
+        },
+        cantidad: item.cantidad,
+        precio: item.precioUnitario,
+        subtotal: item.subtotal,
+        cantidadRecibida: compra.status === 'RECIBIDA' ? item.cantidad : 0,
+      })),
+      observaciones: compra.observaciones,
+      createdAt: compra.createdAt.toISOString(),
+      updatedAt: compra.updatedAt.toISOString(),
+    }));
+
+    // Calcular estadísticas en base a las compras filtradas o todas
+    const allCompras = await prisma.compra.findMany({
+      where: proveedor ? { proveedorId: proveedor } : {},
+    });
+
     const estadisticas = {
-      total: filteredOrdenes.length,
-      pendientes: filteredOrdenes.filter(o => o.estado === 'PENDIENTE').length,
-      confirmadas: filteredOrdenes.filter(o => o.estado === 'CONFIRMADA').length,
-      recibidas: filteredOrdenes.filter(o => o.estado === 'RECIBIDA').length,
-      canceladas: filteredOrdenes.filter(o => o.estado === 'CANCELADA').length,
-      montoTotal: filteredOrdenes.reduce((sum, o) => sum + o.total, 0),
-      montoPendiente: filteredOrdenes
-        .filter(o => o.estado === 'PENDIENTE' || o.estado === 'CONFIRMADA')
-        .reduce((sum, o) => sum + o.total, 0)
+      total: allCompras.length,
+      pendientes: allCompras.filter((o) => o.status === 'PENDIENTE').length,
+      confirmadas: allCompras.filter((o) => o.status === 'CONFIRMADA').length,
+      recibidas: allCompras.filter((o) => o.status === 'RECIBIDA').length,
+      canceladas: allCompras.filter((o) => o.status === 'CANCELADA').length,
+      montoTotal: allCompras.reduce((sum, o) => sum + o.total, 0),
+      montoPendiente: allCompras
+        .filter((o) => o.status === 'PENDIENTE' || o.status === 'CONFIRMADA')
+        .reduce((sum, o) => sum + o.total, 0),
     };
 
     return NextResponse.json({
-      ordenes: filteredOrdenes,
+      ordenes,
       estadisticas,
-      message: 'Órdenes obtenidas exitosamente'
+      message: 'Órdenes obtenidas exitosamente',
     });
 
   } catch (error) {
@@ -191,30 +133,82 @@ export async function POST(request: NextRequest) {
     // Generar folio
     const folio = `OC-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`;
 
-    // Simulación de creación exitosa
-    const nuevaOrden = {
-      id: Math.random().toString(36).substr(2, 9),
-      folio,
-      proveedorId,
-      fecha: new Date().toISOString(),
-      fechaEntrega: fechaEntrega || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      subtotal,
-      iva,
-      total,
-      estado: 'PENDIENTE',
-      detalles: detalles.map((item: any) => ({
-        ...item,
-        id: Math.random().toString(36).substr(2, 9),
-        subtotal: item.cantidad * item.precio,
-        cantidadRecibida: 0
+    // Crear la compra y los compra items
+    const compra = await prisma.$transaction(async (tx) => {
+      const c = await tx.compra.create({
+        data: {
+          numeroCompra: folio,
+          proveedorId,
+          subtotal,
+          iva,
+          total,
+          status: 'PENDIENTE',
+          observaciones: observaciones || null,
+        },
+      });
+
+      // Crear los ítems de compra
+      await Promise.all(
+        detalles.map((item: any) =>
+          tx.compraItem.create({
+            data: {
+              compraId: c.id,
+              productoId: item.productoId,
+              cantidad: parseInt(item.cantidad.toString()),
+              precioUnitario: parseFloat(item.precio.toString()),
+              subtotal: item.cantidad * item.precio,
+            },
+          })
+        )
+      );
+
+      return tx.compra.findUnique({
+        where: { id: c.id },
+        include: {
+          proveedor: true,
+          items: {
+            include: {
+              producto: true,
+            },
+          },
+        },
+      });
+    });
+
+    if (!compra) {
+      throw new Error('Error al recuperar la compra creada');
+    }
+
+    const orden = {
+      id: compra.id,
+      folio: compra.numeroCompra,
+      proveedorId: compra.proveedorId,
+      fecha: compra.fechaCompra.toISOString(),
+      fechaEntrega: fechaEntrega || new Date(compra.fechaCompra.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      subtotal: compra.subtotal,
+      iva: compra.iva,
+      total: compra.total,
+      estado: compra.status,
+      detalles: compra.items.map((item) => ({
+        id: item.id,
+        productoId: item.productoId,
+        producto: {
+          id: item.producto.id,
+          codigo: item.producto.codigo,
+          nombre: item.producto.nombre,
+        },
+        cantidad: item.cantidad,
+        precio: item.precioUnitario,
+        subtotal: item.subtotal,
+        cantidadRecibida: 0,
       })),
-      observaciones: observaciones || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      observaciones: compra.observaciones,
+      createdAt: compra.createdAt.toISOString(),
+      updatedAt: compra.updatedAt.toISOString(),
     };
 
     return NextResponse.json({
-      orden: nuevaOrden,
+      orden,
       message: 'Orden de compra creada exitosamente'
     }, { status: 201 });
 

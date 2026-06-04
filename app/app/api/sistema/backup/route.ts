@@ -1,10 +1,20 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import fs from 'fs';
+import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
-// GET - Obtener historial de backups
+const execPromise = promisify(exec);
+const BACKUPS_DIR = path.join(process.cwd(), '..', 'backups');
+
+// Asegurar existencia de la carpeta de copias de seguridad
+if (!fs.existsSync(BACKUPS_DIR)) {
+  fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+}
+
+// GET - Obtener historial de backups o descargar archivo específico
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,131 +28,81 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const file = searchParams.get('file');
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    // Datos simulados de backups
-    const backups = [
-      {
-        id: '1',
-        nombre: 'backup_completo_2024-09-19_02-00',
-        tipo: 'COMPLETO',
-        fecha: '2024-09-19T02:00:00Z',
-        tamaño: '2.5 GB',
-        tamañoBytes: 2684354560,
-        duracion: 180, // segundos
-        estado: 'COMPLETADO',
-        archivoRuta: '/backups/backup_completo_2024-09-19_02-00.sql.gz',
-        incluye: {
-          baseDatos: true,
-          archivos: true,
-          configuracion: true
-        },
-        compresion: true,
-        hash: 'sha256:a1b2c3d4e5f6...',
-        usuario: 'Sistema Automático',
-        observaciones: 'Backup automático nocturno'
-      },
-      {
-        id: '2',
-        nombre: 'backup_incremental_2024-09-18_14-30',
-        tipo: 'INCREMENTAL',
-        fecha: '2024-09-18T14:30:00Z',
-        tamaño: '156 MB',
-        tamañoBytes: 163577856,
-        duracion: 45,
-        estado: 'COMPLETADO',
-        archivoRuta: '/backups/backup_incremental_2024-09-18_14-30.sql.gz',
-        incluye: {
-          baseDatos: true,
-          archivos: false,
-          configuracion: false
-        },
-        compresion: true,
-        hash: 'sha256:f6e5d4c3b2a1...',
-        usuario: 'admin@empresa.com',
-        observaciones: 'Backup manual antes de actualización'
-      },
-      {
-        id: '3',
-        nombre: 'backup_completo_2024-09-16_02-00',
-        tipo: 'COMPLETO',
-        fecha: '2024-09-16T02:00:00Z',
-        tamaño: '2.3 GB',
-        tamañoBytes: 2469606400,
-        duracion: 175,
-        estado: 'COMPLETADO',
-        archivoRuta: '/backups/backup_completo_2024-09-16_02-00.sql.gz',
-        incluye: {
-          baseDatos: true,
-          archivos: true,
-          configuracion: true
-        },
-        compresion: true,
-        hash: 'sha256:1a2b3c4d5e6f...',
-        usuario: 'Sistema Automático',
-        observaciones: 'Backup automático nocturno'
-      },
-      {
-        id: '4',
-        nombre: 'backup_emergencia_2024-09-15_16-45',
-        tipo: 'EMERGENCIA',
-        fecha: '2024-09-15T16:45:00Z',
-        tamaño: '2.1 GB',
-        tamañoBytes: 2255848960,
-        duracion: 95,
-        estado: 'COMPLETADO',
-        archivoRuta: '/backups/backup_emergencia_2024-09-15_16-45.sql.gz',
-        incluye: {
-          baseDatos: true,
-          archivos: true,
-          configuracion: true
-        },
-        compresion: true,
-        hash: 'sha256:6f5e4d3c2b1a...',
-        usuario: 'admin@empresa.com',
-        observaciones: 'Backup de emergencia antes de mantenimiento crítico'
-      },
-      {
-        id: '5',
-        nombre: 'backup_fallido_2024-09-14_02-00',
-        tipo: 'COMPLETO',
-        fecha: '2024-09-14T02:00:00Z',
-        tamaño: '0 B',
-        tamañoBytes: 0,
-        duracion: 0,
-        estado: 'FALLIDO',
-        archivoRuta: null,
-        incluye: {
-          baseDatos: true,
-          archivos: true,
-          configuracion: true
-        },
-        compresion: true,
-        hash: null,
-        usuario: 'Sistema Automático',
-        observaciones: 'Error: Espacio insuficiente en disco',
-        error: 'No space left on device'
+    // Descarga de archivo
+    if (file) {
+      // Evitar Path Traversal
+      const safeFile = path.basename(file);
+      const filePath = path.join(BACKUPS_DIR, safeFile);
+      
+      if (!fs.existsSync(filePath)) {
+        return NextResponse.json({ error: 'Archivo no encontrado' }, { status: 404 });
       }
-    ];
 
-    // Aplicar límite
+      const fileBuffer = await fs.promises.readFile(filePath);
+      return new NextResponse(fileBuffer, {
+        headers: {
+          'Content-Type': 'application/gzip',
+          'Content-Disposition': `attachment; filename="${safeFile}"`
+        }
+      });
+    }
+
+    // Listado de archivos
+    const files = await fs.promises.readdir(BACKUPS_DIR);
+    const backups = await Promise.all(
+      files
+        .filter((f) => f.endsWith('.sql.gz'))
+        .map(async (f) => {
+          const filePath = path.join(BACKUPS_DIR, f);
+          const stat = await fs.promises.stat(filePath);
+          
+          const metaPath = filePath.replace('.sql.gz', '.json');
+          let meta: any = {};
+          if (fs.existsSync(metaPath)) {
+            try {
+              meta = JSON.parse(await fs.promises.readFile(metaPath, 'utf-8'));
+            } catch (e) {
+              console.error('Error reading backup meta:', e);
+            }
+          }
+
+          const sizeInMB = (stat.size / (1024 * 1024)).toFixed(2);
+
+          return {
+            id: f,
+            nombre: f.replace('.sql.gz', ''),
+            tipo: meta.tipo || 'MANUAL',
+            fecha: stat.birthtime.toISOString(),
+            tamaño: `${sizeInMB} MB`,
+            tamañoBytes: stat.size,
+            duracion: meta.duracion || 0,
+            estado: meta.estado || 'COMPLETADO',
+            archivoRuta: `/api/sistema/backup?file=${encodeURIComponent(f)}`,
+            incluye: meta.incluye || { baseDatos: true, archivos: false, configuracion: false },
+            compresion: true,
+            hash: meta.hash || null,
+            usuario: meta.usuario || 'Sistema',
+            observaciones: meta.observaciones || 'Copia de seguridad real de la base de datos'
+          };
+        })
+    );
+
+    // Ordenar de más reciente a más antiguo
+    backups.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     const limitedBackups = backups.slice(0, limit);
 
-    // Calcular estadísticas
+    // Calcular estadísticas reales
     const stats = {
       total: backups.length,
       completados: backups.filter(b => b.estado === 'COMPLETADO').length,
       fallidos: backups.filter(b => b.estado === 'FALLIDO').length,
-      ultimoBackup: backups[0]?.fecha,
-      espacioUsado: backups
-        .filter(b => b.estado === 'COMPLETADO')
-        .reduce((sum, b) => sum + b.tamañoBytes, 0),
-      promedioTamaño: backups
-        .filter(b => b.estado === 'COMPLETADO')
-        .reduce((sum, b) => sum + b.tamañoBytes, 0) / backups.filter(b => b.estado === 'COMPLETADO').length,
-      promedioDuracion: backups
-        .filter(b => b.estado === 'COMPLETADO')
-        .reduce((sum, b) => sum + b.duracion, 0) / backups.filter(b => b.estado === 'COMPLETADO').length
+      ultimoBackup: backups[0]?.fecha || null,
+      espacioUsado: backups.reduce((sum, b) => sum + b.tamañoBytes, 0),
+      promedioTamaño: backups.length ? backups.reduce((sum, b) => sum + b.tamañoBytes, 0) / backups.length : 0,
+      promedioDuracion: backups.length ? backups.reduce((sum, b) => sum + b.duracion, 0) / backups.length : 0
     };
 
     return NextResponse.json({
@@ -176,57 +136,89 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       tipo = 'MANUAL',
-      incluirArchivos = true,
+      incluirArchivos = false,
       incluirConfiguracion = true,
       compresion = true,
       observaciones
     } = body;
 
-    // Generar nombre del backup
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      return NextResponse.json({ error: 'DATABASE_URL no está configurada' }, { status: 500 });
+    }
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const nombre = `backup_${tipo.toLowerCase()}_${timestamp}`;
+    const sqlFile = path.join(BACKUPS_DIR, `${nombre}.sql`);
+    const gzFile = `${sqlFile}.gz`;
 
-    // Simulación de proceso de backup
-    const nuevoBackup = {
-      id: Math.random().toString(36).substr(2, 9),
-      nombre,
+    const metaInfo = {
       tipo,
-      fecha: new Date().toISOString(),
-      tamaño: 'En proceso...',
-      tamañoBytes: 0,
-      duracion: 0,
-      estado: 'EN_PROCESO',
-      archivoRuta: `/backups/${nombre}.sql.gz`,
-      incluye: {
-        baseDatos: true,
-        archivos: incluirArchivos,
-        configuracion: incluirConfiguracion
-      },
-      compresion,
-      hash: null,
       usuario: session.user.email || 'Usuario',
-      observaciones: observaciones || `Backup ${tipo.toLowerCase()} iniciado manualmente`
+      observaciones: observaciones || `Backup ${tipo.toLowerCase()} de la base de datos`,
+      incluye: { baseDatos: true, archivos: incluirArchivos, configuracion: incluirConfiguracion },
+      duracion: 0,
+      hash: null
     };
 
-    // En un sistema real, aquí iniciarías el proceso de backup en background
-    // y retornarías el ID del proceso para monitoreo
+    const tempJsonFile = path.join(BACKUPS_DIR, `${nombre}.json`);
+    await fs.promises.writeFile(tempJsonFile, JSON.stringify({ ...metaInfo, estado: 'EN_PROCESO' }, null, 2));
 
-    // Simular completación después de unos segundos (en desarrollo)
-    setTimeout(async () => {
-      // Aquí actualizarías el estado del backup en la base de datos
-      console.log(`Backup ${nuevoBackup.id} completado exitosamente`);
-    }, 5000);
+    const startTime = Date.now();
+
+    // Ejecutar pg_dump asíncronamente en segundo plano
+    const runBackup = async () => {
+      try {
+        // Ejecución segura de pg_dump
+        const cmd = `pg_dump "${connectionString}" | gzip > "${gzFile}"`;
+        await execPromise(cmd);
+        
+        const duration = Math.ceil((Date.now() - startTime) / 1000);
+        
+        await fs.promises.writeFile(tempJsonFile, JSON.stringify({
+          ...metaInfo,
+          duracion: duration,
+          estado: 'COMPLETADO'
+        }, null, 2));
+
+        console.log(`[Backup] Completado con éxito: ${nombre}.sql.gz en ${duration}s`);
+      } catch (err) {
+        console.error('[Backup] Error al ejecutar pg_dump:', err);
+        await fs.promises.writeFile(tempJsonFile, JSON.stringify({
+          ...metaInfo,
+          estado: 'FALLIDO',
+          error: (err as Error).message
+        }, null, 2));
+      }
+    };
+
+    runBackup();
 
     return NextResponse.json({
-      backup: nuevoBackup,
+      backup: {
+        id: `${nombre}.sql.gz`,
+        nombre,
+        tipo,
+        fecha: new Date().toISOString(),
+        tamaño: 'En proceso...',
+        tamañoBytes: 0,
+        duracion: 0,
+        estado: 'EN_PROCESO',
+        archivoRuta: `/api/sistema/backup?file=${encodeURIComponent(nombre + '.sql.gz')}`,
+        incluye: metaInfo.incluye,
+        compresion,
+        hash: null,
+        usuario: metaInfo.usuario,
+        observaciones: metaInfo.observaciones
+      },
       message: 'Backup iniciado exitosamente',
-      procesoId: nuevoBackup.id
+      procesoId: nombre
     }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating backup:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: (error as Error).message },
       { status: 500 }
     );
   }
@@ -255,8 +247,16 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // En un sistema real, aquí eliminarías el archivo físico y el registro de la base de datos
-    // También verificarías que no sea un backup crítico o reciente
+    const safeFile = path.basename(backupId);
+    const gzFile = path.join(BACKUPS_DIR, safeFile);
+    const metaFile = path.join(BACKUPS_DIR, safeFile.replace('.sql.gz', '.json'));
+
+    if (fs.existsSync(gzFile)) {
+      await fs.promises.unlink(gzFile);
+    }
+    if (fs.existsSync(metaFile)) {
+      await fs.promises.unlink(metaFile);
+    }
 
     return NextResponse.json({
       message: 'Backup eliminado exitosamente'

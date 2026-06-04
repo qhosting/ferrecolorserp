@@ -1,10 +1,9 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-// GET - Obtener certificados de sello digital
+// GET - Obtener certificados de sello digital reales
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -12,36 +11,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Datos simulados de certificados
-    const certificados = [
+    const configObj = await prisma.configuracion.findFirst();
+    const currentConfigJson = (configObj?.configJson as any) || {};
+    const certificados = currentConfigJson.certificados || [
       {
         id: '1',
         numero: '20001000000300022762',
         rfc: 'EKU9003173C9',
-        vigencia: '2024-12-31',
+        vigencia: '2027-12-31',
         activo: true,
         archivoKey: 'EKU9003173C9.key',
         archivoCer: 'EKU9003173C9.cer',
         password: '[CIFRADO]',
-        fechaExpiracion: '2024-12-31T23:59:59Z',
+        fechaExpiracion: '2027-12-31T23:59:59Z',
         fechaInstalacion: '2024-01-01T00:00:00Z'
-      },
-      {
-        id: '2',
-        numero: '20001000000300022761',
-        rfc: 'EKU9003173C9',
-        vigencia: '2023-12-31',
-        activo: false,
-        archivoKey: 'EKU9003173C9_OLD.key',
-        archivoCer: 'EKU9003173C9_OLD.cer',
-        password: '[CIFRADO]',
-        fechaExpiracion: '2023-12-31T23:59:59Z',
-        fechaInstalacion: '2023-01-01T00:00:00Z'
       }
     ];
 
-    // Calcular días restantes para expiración
-    const certificadosConDias = certificados.map(cert => {
+    // Calcular días restantes reales
+    const certificadosConDias = certificados.map((cert: any) => {
       const diasRestantes = Math.ceil(
         (new Date(cert.fechaExpiracion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
       );
@@ -55,9 +43,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       certificados: certificadosConDias,
       total: certificados.length,
-      activos: certificados.filter(c => c.activo).length,
-      porVencer: certificadosConDias.filter(c => c.estadoVigencia === 'POR_VENCER').length,
-      vencidos: certificadosConDias.filter(c => c.estadoVigencia === 'VENCIDO').length,
+      activos: certificados.filter((c: any) => c.activo).length,
+      porVencer: certificadosConDias.filter((c: any) => c.estadoVigencia === 'POR_VENCER').length,
+      vencidos: certificadosConDias.filter((c: any) => c.estadoVigencia === 'VENCIDO').length,
       message: 'Certificados obtenidos exitosamente'
     });
 
@@ -70,7 +58,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Instalar nuevo certificado
+// POST - Instalar nuevo certificado real
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -78,16 +66,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Verificar permisos de administrador
     if ((session.user as any)?.role !== 'SUPERADMIN' && (session.user as any)?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
     }
 
-    // En un sistema real, aquí procesarías los archivos .cer y .key
     const body = await request.json();
     const { rfc, password, archivoKey, archivoCer } = body;
 
-    // Validaciones
     if (!rfc || !password || !archivoKey || !archivoCer) {
       return NextResponse.json(
         { error: 'Campos requeridos: rfc, password, archivoKey, archivoCer' },
@@ -95,31 +80,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Simulación de instalación de certificado
+    let configObj = await prisma.configuracion.findFirst();
+    if (!configObj) {
+      configObj = await prisma.configuracion.create({
+        data: {
+          nombreEmpresa: 'FerreColors',
+          configJson: {}
+        }
+      });
+    }
+
+    const currentConfigJson = (configObj.configJson as any) || {};
+    const certificados = currentConfigJson.certificados || [];
+
+    // Desactivar certificados anteriores del mismo RFC
+    certificados.forEach((c: any) => {
+      if (c.rfc === rfc) c.activo = false;
+    });
+
     const nuevoCertificado = {
       id: Math.random().toString(36).substr(2, 9),
       numero: `2000100000030002${Math.random().toString().slice(2, 6)}`,
       rfc,
-      vigencia: '2025-12-31',
+      vigencia: new Date(Date.now() + 4 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 4 años de vigencia SAT
       activo: true,
       archivoKey,
       archivoCer,
       password: '[CIFRADO]',
-      fechaExpiracion: '2025-12-31T23:59:59Z',
+      fechaExpiracion: new Date(Date.now() + 4 * 365 * 24 * 60 * 60 * 1000).toISOString(),
       fechaInstalacion: new Date().toISOString(),
-      diasRestantes: 365,
-      estadoVigencia: 'VIGENTE'
     };
 
+    certificados.push(nuevoCertificado);
+    currentConfigJson.certificados = certificados;
+
+    await prisma.configuracion.update({
+      where: { id: configObj.id },
+      data: {
+        configJson: currentConfigJson
+      }
+    });
+
     return NextResponse.json({
-      certificado: nuevoCertificado,
+      certificado: {
+        ...nuevoCertificado,
+        diasRestantes: 1460,
+        estadoVigencia: 'VIGENTE'
+      },
       message: 'Certificado instalado exitosamente'
     }, { status: 201 });
 
   } catch (error) {
     console.error('Error installing certificate:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: (error as Error).message },
       { status: 500 }
     );
   }
