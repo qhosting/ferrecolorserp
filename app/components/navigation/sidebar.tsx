@@ -255,12 +255,12 @@ function NavigationContent() {
   const pathname = usePathname();
   const groups = [
     'Empresa',
-    'Ver',
-    'Catálogos',
     'Movimientos',
+    'Catálogos',
     'Notas de venta',
     'Procesos',
     'Reportes',
+    'Ver',
     'Configuración',
     'Buzón'
   ] as const;
