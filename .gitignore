@@ -31,3 +31,5 @@ yarn-error.log*
 .env*.local
 .env.production.local
 .env.development.local
+# Local IDE configuration
+/tsconfig.json
