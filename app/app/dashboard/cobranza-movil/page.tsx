@@ -91,101 +91,102 @@ export default function CobranzaMovilPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="flex flex-col min-h-screen">
       <Header 
         title="Cobranza Móvil"
         description="Registro de pagos con funcionalidad offline"
       />
+      <div className="p-4 md:p-6 space-y-6">
+        {/* Status Bar */}
+        <div className="flex flex-wrap items-center gap-4">
+          <OfflineIndicator isOnline={isOnline} />
+          
+          <Badge variant={location ? "default" : "secondary"} className="flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            {location ? 'GPS Activo' : 'Sin GPS'}
+          </Badge>
 
-      {/* Status Bar */}
-      <div className="flex flex-wrap items-center gap-4">
-        <OfflineIndicator isOnline={isOnline} />
-        
-        <Badge variant={location ? "default" : "secondary"} className="flex items-center gap-1">
-          <MapPin className="h-3 w-3" />
-          {location ? 'GPS Activo' : 'Sin GPS'}
-        </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Smartphone className="h-3 w-3" />
+            {session?.user?.role}
+          </Badge>
 
-        <Badge variant="outline" className="flex items-center gap-1">
-          <Smartphone className="h-3 w-3" />
-          {session?.user?.role}
-        </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {new Date().toLocaleDateString('es-MX')}
+          </Badge>
 
-        <Badge variant="outline" className="flex items-center gap-1">
-          <Calendar className="h-3 w-3" />
-          {new Date().toLocaleDateString('es-MX')}
-        </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+          </Badge>
+        </div>
 
-        <Badge variant="outline" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-        </Badge>
-      </div>
+        <Tabs defaultValue="cobranza" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="cobranza" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Cobranza
+            </TabsTrigger>
+            <TabsTrigger value="resumen" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Resumen
+            </TabsTrigger>
+            <TabsTrigger value="historial" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Historial
+            </TabsTrigger>
+            <TabsTrigger value="sync" className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Sincronizar
+            </TabsTrigger>
+          </TabsList>
 
-      <Tabs defaultValue="cobranza" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="cobranza" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            Cobranza
-          </TabsTrigger>
-          <TabsTrigger value="resumen" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Resumen
-          </TabsTrigger>
-          <TabsTrigger value="historial" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Historial
-          </TabsTrigger>
-          <TabsTrigger value="sync" className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Sincronizar
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="cobranza" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Búsqueda de Clientes */}
-            <ClientSearchCard 
-              selectedClient={selectedClient}
-              onClientSelect={setSelectedClient}
-              isOnline={isOnline}
-            />
-
-            {/* Formulario de Pago */}
-            {selectedClient && (
-              <PaymentFormCard
-                client={selectedClient}
-                location={location}
-                onPaymentSuccess={handlePaymentSuccess}
-                onCancel={() => setSelectedClient(null)}
+          <TabsContent value="cobranza" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Búsqueda de Clientes */}
+              <ClientSearchCard 
+                selectedClient={selectedClient}
+                onClientSelect={setSelectedClient}
                 isOnline={isOnline}
               />
-            )}
-          </div>
-        </TabsContent>
 
-        <TabsContent value="resumen" className="space-y-6">
-          <DailySummary 
-            gestorId={session?.user?.id} 
-            isOnline={isOnline}
-          />
-        </TabsContent>
+              {/* Formulario de Pago */}
+              {selectedClient && (
+                <PaymentFormCard
+                  client={selectedClient}
+                  location={location}
+                  onPaymentSuccess={handlePaymentSuccess}
+                  onCancel={() => setSelectedClient(null)}
+                  isOnline={isOnline}
+                />
+              )}
+            </div>
+          </TabsContent>
 
-        <TabsContent value="historial" className="space-y-6">
-          <RecentPayments 
-            gestorId={session?.user?.id}
-            isOnline={isOnline}
-          />
-        </TabsContent>
+          <TabsContent value="resumen" className="space-y-6">
+            <DailySummary 
+              gestorId={session?.user?.id} 
+              isOnline={isOnline}
+            />
+          </TabsContent>
 
-        <TabsContent value="sync" className="space-y-6">
-          <SyncStatusCard 
-            syncStatus={syncStatus}
-            onSync={loadSyncStatus}
-            isOnline={isOnline}
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="historial" className="space-y-6">
+            <RecentPayments 
+              gestorId={session?.user?.id}
+              isOnline={isOnline}
+            />
+          </TabsContent>
+
+          <TabsContent value="sync" className="space-y-6">
+            <SyncStatusCard 
+              syncStatus={syncStatus}
+              onSync={loadSyncStatus}
+              isOnline={isOnline}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

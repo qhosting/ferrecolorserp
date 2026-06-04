@@ -122,11 +122,12 @@ export default function CreditoPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-col min-h-screen">
       <Header 
         title="Scoring de Crédito"
         description="Evaluación de riesgo crediticio en tiempo real basada en saldos, límites autorizados y comportamiento de pagarés."
       />
+      <div className="p-6 space-y-6">
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -416,6 +417,7 @@ export default function CreditoPage() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

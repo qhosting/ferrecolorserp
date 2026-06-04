@@ -130,11 +130,12 @@ export default function ComunicacionPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-col min-h-screen">
       <Header 
         title="Centro de Comunicaciones"
         description="Gestiona las comunicaciones por WhatsApp y SMS"
       />
+      <div className="p-6 space-y-6">
 
       {/* Status Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -391,6 +392,7 @@ export default function ComunicacionPage() {
         isOpen={showConfigModal}
         onClose={() => setShowConfigModal(false)}
       />
+      </div>
     </div>
   );
 }

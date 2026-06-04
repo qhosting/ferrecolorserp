@@ -236,11 +236,12 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-col min-h-screen">
       <Header 
         title="Gestión de Clientes"
         description="Administra la información de tus clientes y su cartera"
       />
+      <div className="p-6 space-y-6">
 
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -500,6 +501,7 @@ export default function ClientesPage() {
         isOpen={showBulkSMSModal}
         onClose={() => setShowBulkSMSModal(false)}
       />
+      </div>
     </div>
   );
 }

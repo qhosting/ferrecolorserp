@@ -5,13 +5,14 @@ import SyncPanel from '@/components/contpaqi/SyncPanel';
 
 export default function IntegracionesPage() {
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-col min-h-screen">
       <Header
         title="Integración CONTPAQi Comercial Premium"
         description="Gestión de sincronización de catálogos, agentes de venta, almacenes y bitácora de eventos"
       />
-      
-      <SyncPanel />
+      <div className="p-6">
+        <SyncPanel />
+      </div>
     </div>
   );
 }

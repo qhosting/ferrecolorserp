@@ -27,6 +27,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { useSession } from 'next-auth/react';
 import { BackupPanel } from '@/components/sistema/BackupPanel';
+import { Header } from '@/components/navigation/header';
 
 interface Configuracion {
   id: string;
@@ -145,18 +146,18 @@ export default function ConfiguracionPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Configuración del Sistema</h1>
-          <p className="text-gray-500 mt-2">Ajustes generales y configuraciones avanzadas</p>
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Configuración del Sistema"
+        description="Ajustes generales y configuraciones avanzadas"
+      />
+      <div className="container mx-auto px-6 py-8">
+        <div className="flex justify-end mb-8">
+          <Button onClick={guardarConfiguracion} disabled={guardando}>
+            <Save className="w-4 h-4 mr-2" />
+            {guardando ? 'Guardando...' : 'Guardar Cambios'}
+          </Button>
         </div>
-
-        <Button onClick={guardarConfiguracion} disabled={guardando}>
-          <Save className="w-4 h-4 mr-2" />
-          {guardando ? 'Guardando...' : 'Guardar Cambios'}
-        </Button>
-      </div>
 
       <Tabs defaultValue="empresa" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
@@ -709,6 +710,7 @@ export default function ConfiguracionPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

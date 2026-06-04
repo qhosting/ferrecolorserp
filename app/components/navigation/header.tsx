@@ -68,12 +68,12 @@ export function Header({ title, description }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-gray-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-40">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">{title}</h1>
           {description && (
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{description}</p>
           )}
         </div>
 
@@ -82,7 +82,7 @@ export function Header({ title, description }: HeaderProps) {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="relative" 
+            className="relative text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800" 
             onClick={() => toast('Panel de notificaciones en desarrollo', { icon: '🔔' })}
           >
             <Bell className="h-5 w-5" />
@@ -96,22 +96,22 @@ export function Header({ title, description }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
-                className="flex items-center space-x-2 px-3" 
+                className="flex items-center space-x-2 px-3 hover:bg-gray-100 dark:hover:bg-slate-800" 
                 onClick={(e) => e.preventDefault()}
                 role="button"
                 aria-expanded="false"
                 aria-haspopup="true"
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-blue-500 text-white text-sm">
+                  <AvatarFallback className="bg-blue-600 dark:bg-blue-500 text-white text-sm">
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200">
                     {getDisplayName()}
                   </p>
-                  <p className="text-xs text-gray-500">{session?.user?.role}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{session?.user?.role}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>

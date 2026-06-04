@@ -315,11 +315,12 @@ export default function AlmacenPage() {
       ).slice(0, 5);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-col min-h-screen">
       <Header 
         title="Gestión de Almacén"
         description="Monitoreo de stock en tiempo real, ubicaciones físicas y auditorías de inventario."
       />
+      <div className="p-6 space-y-6">
 
       {/* Overview Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -841,6 +842,7 @@ export default function AlmacenPage() {
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

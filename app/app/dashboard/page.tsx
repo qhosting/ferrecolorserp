@@ -42,6 +42,7 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/components/ui/use-toast';
+import { Header } from '@/components/navigation/header';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
 
@@ -157,16 +158,13 @@ export default function DashboardPage() {
     ((cobranzaActual - cobranzaAnterior) / cobranzaAnterior) * 100 : 0;
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-gray-900 via-indigo-950 to-gray-900 dark:from-white dark:via-indigo-200 dark:to-white bg-clip-text text-transparent">
-            Dashboard Ejecutivo
-          </h1>
-          <p className="text-muted-foreground mt-2">Panel de control y métricas de negocio</p>
-        </div>
-        
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Dashboard Ejecutivo"
+        description="Panel de control y métricas de negocio"
+      />
+      <div className="container mx-auto px-6 py-8">
+        <div className="flex justify-end gap-4 mb-8">
           <Select value={periodo} onValueChange={setPeriodo}>
             <SelectTrigger className="w-48">
               <SelectValue />
@@ -183,7 +181,6 @@ export default function DashboardPage() {
             Actualizar
           </Button>
         </div>
-      </div>
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
@@ -605,6 +602,7 @@ export default function DashboardPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

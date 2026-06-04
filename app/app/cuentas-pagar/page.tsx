@@ -209,11 +209,12 @@ export default function CuentasPagarPage() {
     : 'N/A';
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-col min-h-screen">
       <Header 
         title="Cuentas por Pagar"
         description="Monitorea las deudas vigentes con proveedores, folios de facturas de compra y administra abonos."
       />
+      <div className="p-6 space-y-6">
 
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -439,6 +440,7 @@ export default function CuentasPagarPage() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
