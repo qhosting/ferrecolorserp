@@ -28,13 +28,14 @@ import {
   MapPin,
   CreditCard,
   Filter,
-  MoreHorizontal,
   Eye,
   Edit,
   Trash2,
   Upload,
   MessageCircle,
-  MessageSquare
+  MessageSquare,
+  RefreshCw,
+  Link2
 } from 'lucide-react';
 
 interface Cliente {
@@ -82,6 +83,7 @@ export default function ClientesPage() {
     open: false, clienteId: null, nombre: ''
   });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   const userRole = session?.user?.role;
   const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : null;
@@ -248,6 +250,26 @@ export default function ClientesPage() {
     setShowBulkSMSModal(true);
   };
 
+  const handleSyncContpaqi = async () => {
+    setSyncLoading(true);
+    try {
+      const res = await fetch('/api/contpaqi/sync/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'pull' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Error al sincronizar');
+      const { importados = 0, fallidos = 0 } = data.data ?? {};
+      toast.success(`Sincronización completada: ${importados} importados, ${fallidos} fallidos`);
+      fetchClientes();
+    } catch (err: any) {
+      toast.error(`Error al sincronizar: ${err.message}`);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   const closeModals = () => {
     setShowDetailModal(false);
     setShowFormModal(false);
@@ -308,6 +330,17 @@ export default function ClientesPage() {
           <Button variant="outline" onClick={handleImportClientes}>
             <Upload className="mr-2 h-4 w-4" />
             Importar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleSyncContpaqi}
+            disabled={syncLoading}
+            title="Importar clientes desde CONTPAQi Comercial Premium"
+          >
+            {syncLoading
+              ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              : <Link2 className="mr-2 h-4 w-4 text-blue-600" />}
+            {syncLoading ? 'Sincronizando...' : 'Sync CONTPAQi'}
           </Button>
           <Button variant="outline" onClick={handleBulkSMS}>
             <MessageSquare className="mr-2 h-4 w-4" />
@@ -607,9 +640,9 @@ export default function ClientesPage() {
 
       <ConfirmDialog
         open={deleteConfirm.open}
-        title="Eliminar cliente"
-        message={`¿Estás seguro de que deseas eliminar a "${deleteConfirm.nombre}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Sí, eliminar"
+        title="Desactivar cliente"
+        message={`¿Desactivar a "${deleteConfirm.nombre}"? El registro se marcará como Inactivo para preservar el historial de ventas y pagos. Puedes reactivarlo desde el detalle del cliente.`}
+        confirmLabel="Sí, desactivar"
         variant="danger"
         loading={deleteLoading}
         onConfirm={confirmDeleteCliente}

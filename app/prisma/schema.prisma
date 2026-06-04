@@ -306,6 +306,37 @@ model Proveedor {
   @@map("proveedores")
 }
 
+// ============= MÓDULO DE SERVICIOS =============
+
+model Servicio {
+  id              String           @id @default(cuid())
+  codigo          String           @unique
+  nombre          String
+  descripcion     String?
+  categoria       CategoriaServicio @default(OTRO)
+  precio          Float            @default(0)
+  unidad          String           @default("Servicio")
+  isActive        Boolean          @default(true)
+
+  // Campos SAT / CFDI 4.0
+  claveSat        String?          // Clave de servicio SAT (81111500, etc.)
+  claveUnidadSat  String?          // Clave de unidad SAT (E48, HUR, etc.)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("servicios")
+}
+
+enum CategoriaServicio {
+  INSTALACION
+  APLICACION
+  ASESORIA
+  MANTENIMIENTO
+  TRANSPORTE
+  OTRO
+}
+
 // ============= MÓDULO DE PEDIDOS =============
 
 model Pedido {
