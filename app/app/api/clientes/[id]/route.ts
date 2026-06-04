@@ -120,6 +120,11 @@ export async function PUT(
       diaCobro,
       gestorId,
       vendedorId,
+      rfc,
+      usoCfdi,
+      metodoPago,
+      regimenFiscal,
+      codigoPostalFiscal,
     } = validation.data;
 
     // Verificar que el cliente existe
@@ -184,6 +189,11 @@ export async function PUT(
         diaCobro: diaCobro || null,
         gestorId: gestorId || null,
         vendedorId: vendedorId || null,
+        rfc: rfc?.trim() || null,
+        usoCfdi: usoCfdi || 'G03',
+        metodoPago: metodoPago || 'PUE',
+        regimenFiscal: regimenFiscal || null,
+        codigoPostalFiscal: codigoPostalFiscal?.trim() || null,
         ultimaActualizacion: new Date()
       },
       include: {

@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 import { 
   User, 
   Phone, 
@@ -16,7 +18,9 @@ import {
   DollarSign,
   Users,
   Edit,
-  X
+  X,
+  RefreshCw,
+  Database
 } from 'lucide-react';
 
 interface ClienteDetailModalProps {
@@ -30,6 +34,11 @@ interface ClienteDetalle {
   id: string;
   codigoCliente: string;
   nombre: string;
+  rfc?: string | null;
+  usoCfdi?: string | null;
+  metodoPago?: string | null;
+  regimenFiscal?: string | null;
+  codigoPostalFiscal?: string | null;
   telefono1?: string;
   telefono2?: string;
   email?: string;
@@ -45,6 +54,8 @@ interface ClienteDetalle {
   status: string;
   diaCobro?: string;
   fechaAlta?: string;
+  contpaqiCodigo?: string | null;
+  contpaqiSyncAt?: string | null;
   gestor?: { firstName?: string; lastName?: string; };
   vendedor?: { firstName?: string; lastName?: string; };
   // Historial de pagos reciente
@@ -58,6 +69,7 @@ interface ClienteDetalle {
 export function ClienteDetailModal({ isOpen, onClose, clienteId, onEdit }: ClienteDetailModalProps) {
   const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (isOpen && clienteId) {
@@ -80,13 +92,47 @@ export function ClienteDetailModal({ isOpen, onClose, clienteId, onEdit }: Clien
     }
   };
 
+  const handleSyncContpaqi = async () => {
+    if (!cliente) return;
+    setSyncing(true);
+    const toastId = toast.loading('Sincronizando datos con CONTPAQi...');
+    
+    try {
+      const response = await fetch('/api/contpaqi/sync/clientes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accion: 'push',
+          id: clienteId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || 'Cliente sincronizado exitosamente con CONTPAQi', { id: toastId });
+        // Recargar para ver los datos actualizados
+        fetchClienteDetail();
+      } else {
+        toast.error(data.error || 'Error al sincronizar el cliente', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Error syncing client:', error);
+      toast.error('Error de red al sincronizar con CONTPAQi', { id: toastId });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'ACTIVO': { color: 'bg-green-100 text-green-800', text: 'Activo' },
-      'INACTIVO': { color: 'bg-gray-100 text-gray-800', text: 'Inactivo' },
-      'MOROSO': { color: 'bg-red-100 text-red-800', text: 'Moroso' },
-      'BLOQUEADO': { color: 'bg-orange-100 text-orange-800', text: 'Bloqueado' },
-      'PROSPECTO': { color: 'bg-blue-100 text-blue-800', text: 'Prospecto' },
+      'ACTIVO': { color: 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400', text: 'Activo' },
+      'INACTIVO': { color: 'bg-gray-100 text-gray-800 dark:bg-gray-950/30 dark:text-gray-400', text: 'Inactivo' },
+      'MOROSO': { color: 'bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400', text: 'Moroso' },
+      'BLOQUEADO': { color: 'bg-orange-100 text-orange-800 dark:bg-orange-950/30 dark:text-orange-400', text: 'Bloqueado' },
+      'PROSPECTO': { color: 'bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-400', text: 'Prospecto' },
     };
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['ACTIVO'];
     return <Badge className={config.color}>{config.text}</Badge>;
@@ -115,6 +161,16 @@ export function ClienteDetailModal({ isOpen, onClose, clienteId, onEdit }: Clien
             Detalles del Cliente
           </DialogTitle>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncContpaqi}
+              disabled={syncing || !cliente}
+              className="border-blue-500/20 hover:border-blue-500 hover:bg-blue-500/5 text-blue-600 dark:text-blue-400"
+            >
+              <RefreshCw className={cn("h-4 w-4 mr-1", syncing && "animate-spin")} />
+              {syncing ? 'Sincronizando...' : 'Sincronizar CONTPAQi'}
+            </Button>
             {onEdit && (
               <Button 
                 variant="outline" 
@@ -141,20 +197,28 @@ export function ClienteDetailModal({ isOpen, onClose, clienteId, onEdit }: Clien
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">{cliente.nombre}</h2>
-                <p className="text-gray-600">Código: {cliente.codigoCliente}</p>
+                <p className="text-gray-600 dark:text-gray-400">Código: {cliente.codigoCliente}</p>
+                {cliente.rfc && (
+                  <p className="text-sm font-mono mt-1 text-slate-500 dark:text-slate-400">RFC: {cliente.rfc}</p>
+                )}
               </div>
               <div className="text-right">
                 {getStatusBadge(cliente.status)}
                 <p className="text-sm text-gray-500 mt-1">
                   Cliente desde: {formatDate(cliente.fechaAlta)}
                 </p>
+                {cliente.contpaqiSyncAt && (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">
+                    Sincronizado: {new Date(cliente.contpaqiSyncAt).toLocaleString('es-MX')}
+                  </p>
+                )}
               </div>
             </div>
 
             <Separator />
 
             {/* Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Información de Contacto */}
               <Card>
                 <CardHeader className="pb-3">
@@ -177,7 +241,7 @@ export function ClienteDetailModal({ isOpen, onClose, clienteId, onEdit }: Clien
                   {cliente.email && (
                     <div>
                       <span className="font-medium">Email:</span>
-                      <p>{cliente.email}</p>
+                      <p className="break-all">{cliente.email}</p>
                     </div>
                   )}
                 </CardContent>
@@ -198,9 +262,39 @@ export function ClienteDetailModal({ isOpen, onClose, clienteId, onEdit }: Clien
                   {cliente.colonia && (
                     <p>Col. {cliente.colonia}</p>
                   )}
-                  <p>{cliente.municipio}, {cliente.estado}</p>
+                  <p>{cliente.municipio || 'N/A'}, {cliente.estado || 'N/A'}</p>
                   {cliente.codigoPostal && (
                     <p>CP: {cliente.codigoPostal}</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Datos Fiscales */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Database className="h-4 w-4" />
+                    Datos Fiscales (CFDI 4.0)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Uso de CFDI:</span>
+                    <p className="font-mono text-xs">{cliente.usoCfdi || 'No asignado'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Método de Pago:</span>
+                    <p className="font-mono text-xs">{cliente.metodoPago || 'No asignado'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Régimen Fiscal:</span>
+                    <p className="text-xs">{cliente.regimenFiscal || 'No asignado'}</p>
+                  </div>
+                  {cliente.codigoPostalFiscal && (
+                    <div>
+                      <span className="font-medium">CP Fiscal:</span>
+                      <p className="font-mono">{cliente.codigoPostalFiscal}</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>

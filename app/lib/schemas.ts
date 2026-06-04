@@ -32,6 +32,11 @@ export const clienteUpdateSchema = z.object({
   diaCobro: z.string().nullable().optional(),
   gestorId: z.string().nullable().optional(),
   vendedorId: z.string().nullable().optional(),
+  rfc: z.string().nullable().optional(),
+  usoCfdi: z.string().nullable().optional(),
+  metodoPago: z.string().nullable().optional(),
+  regimenFiscal: z.string().nullable().optional(),
+  codigoPostalFiscal: z.string().nullable().optional(),
 });
 
 // Producto Schemas

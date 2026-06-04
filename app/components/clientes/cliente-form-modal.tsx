@@ -46,6 +46,11 @@ interface ClienteForm {
   observaciones: string;
   gestorId: string;
   vendedorId: string;
+  rfc: string;
+  usoCfdi: string;
+  metodoPago: string;
+  regimenFiscal: string;
+  codigoPostalFiscal: string;
 }
 
 interface UserOption {
@@ -74,7 +79,12 @@ const initialForm: ClienteForm = {
   diaCobro: 'LUNES',
   observaciones: '',
   gestorId: 'sin-gestor',
-  vendedorId: 'sin-vendedor'
+  vendedorId: 'sin-vendedor',
+  rfc: '',
+  usoCfdi: 'G03',
+  metodoPago: 'PUE',
+  regimenFiscal: '',
+  codigoPostalFiscal: ''
 };
 
 export function ClienteFormModal({ isOpen, onClose, clienteId, onSuccess }: ClienteFormModalProps) {
@@ -148,7 +158,12 @@ export function ClienteFormModal({ isOpen, onClose, clienteId, onSuccess }: Clie
           diaCobro: cliente.diaCobro || 'LUNES',
           observaciones: cliente.observaciones || '',
           gestorId: cliente.gestorId || 'sin-gestor',
-          vendedorId: cliente.vendedorId || 'sin-vendedor'
+          vendedorId: cliente.vendedorId || 'sin-vendedor',
+          rfc: cliente.rfc || '',
+          usoCfdi: cliente.usoCfdi || 'G03',
+          metodoPago: cliente.metodoPago || 'PUE',
+          regimenFiscal: cliente.regimenFiscal || '',
+          codigoPostalFiscal: cliente.codigoPostalFiscal || ''
         });
       }
     } catch (error) {
@@ -177,6 +192,11 @@ export function ClienteFormModal({ isOpen, onClose, clienteId, onSuccess }: Clie
           pagosPeriodicos: parseFloat(form.pagosPeriodicos) || 0,
           gestorId: (form.gestorId && form.gestorId !== 'sin-gestor') ? form.gestorId : null,
           vendedorId: (form.vendedorId && form.vendedorId !== 'sin-vendedor') ? form.vendedorId : null,
+          rfc: form.rfc?.trim() || null,
+          usoCfdi: form.usoCfdi || 'G03',
+          metodoPago: form.metodoPago || 'PUE',
+          regimenFiscal: form.regimenFiscal || null,
+          codigoPostalFiscal: form.codigoPostalFiscal?.trim() || null,
         }),
       });
 
@@ -222,9 +242,10 @@ export function ClienteFormModal({ isOpen, onClose, clienteId, onSuccess }: Clie
         ) : (
           <form onSubmit={handleSubmit}>
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="general">General</TabsTrigger>
                 <TabsTrigger value="direccion">Dirección</TabsTrigger>
+                <TabsTrigger value="fiscal">Datos Fiscales</TabsTrigger>
                 <TabsTrigger value="financiero">Financiero</TabsTrigger>
               </TabsList>
 
@@ -406,6 +427,85 @@ export function ClienteFormModal({ isOpen, onClose, clienteId, onSuccess }: Clie
                       onChange={(e) => handleChange('codigoPostal', e.target.value)}
                       placeholder="12345"
                     />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="fiscal" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="rfc">RFC *</Label>
+                    <Input
+                      id="rfc"
+                      value={form.rfc}
+                      onChange={(e) => handleChange('rfc', e.target.value.toUpperCase())}
+                      placeholder="XAXX010101000"
+                      maxLength={13}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="codigoPostalFiscal">Código Postal Fiscal</Label>
+                    <Input
+                      id="codigoPostalFiscal"
+                      value={form.codigoPostalFiscal}
+                      onChange={(e) => handleChange('codigoPostalFiscal', e.target.value)}
+                      placeholder="12345"
+                      maxLength={5}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="usoCfdi">Uso de CFDI (CFDI 4.0)</Label>
+                    <Select value={form.usoCfdi} onValueChange={(value) => handleChange('usoCfdi', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="G01">G01 - Adquisición de mercancías</SelectItem>
+                        <SelectItem value="G03">G03 - Gastos en general</SelectItem>
+                        <SelectItem value="I01">I01 - Construcciones</SelectItem>
+                        <SelectItem value="I03">I03 - Equipo de transporte</SelectItem>
+                        <SelectItem value="I04">I04 - Equipo de cómputo y accesorios</SelectItem>
+                        <SelectItem value="D01">D01 - Honorarios médicos, dentales y gastos hospitalarios</SelectItem>
+                        <SelectItem value="S01">S01 - Sin efectos fiscales</SelectItem>
+                        <SelectItem value="CP01">CP01 - Pagos</SelectItem>
+                        <SelectItem value="CN01">CN01 - Nómina</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="metodoPago">Método de Pago</Label>
+                    <Select value={form.metodoPago} onValueChange={(value) => handleChange('metodoPago', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PUE">PUE - Pago en una sola exhibición</SelectItem>
+                        <SelectItem value="PPD">PPD - Pago en parcialidades o diferido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="regimenFiscal">Régimen Fiscal (CFDI 4.0)</Label>
+                    <Select value={form.regimenFiscal} onValueChange={(value) => handleChange('regimenFiscal', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el régimen fiscal..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="601">601 - General de Ley Personas Morales</SelectItem>
+                        <SelectItem value="603">603 - Personas Morales con Fines no Lucrativos</SelectItem>
+                        <SelectItem value="605">605 - Sueldos y Salarios e Ingresos Asimilados a Salarios</SelectItem>
+                        <SelectItem value="606">606 - Arrendamiento</SelectItem>
+                        <SelectItem value="612">612 - Personas Físicas con Actividades Empresariales y Profesionales</SelectItem>
+                        <SelectItem value="616">616 - Sin obligaciones fiscales</SelectItem>
+                        <SelectItem value="621">621 - Incorporación Fiscal</SelectItem>
+                        <SelectItem value="625">625 - Régimen de las Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras</SelectItem>
+                        <SelectItem value="626">626 - Régimen Simplificado de Confianza (RESICO)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </TabsContent>
