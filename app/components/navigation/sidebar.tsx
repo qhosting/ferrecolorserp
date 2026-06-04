@@ -35,7 +35,9 @@ import {
   ArrowDownRight,
   ChevronDown,
   Briefcase,
-  Link2
+  Link2,
+  Building2,
+  UserCheck
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -78,6 +80,18 @@ const navigationItems: NavigationItem[] = [
     title: 'Servicios',
     href: '/servicios',
     icon: <Briefcase className="h-4 w-4" />,
+    group: 'Catálogos'
+  },
+  {
+    title: 'Proveedores',
+    href: '/proveedores',
+    icon: <Building2 className="h-4 w-4" />,
+    group: 'Catálogos'
+  },
+  {
+    title: 'Agentes',
+    href: '/agentes',
+    icon: <UserCheck className="h-4 w-4" />,
     group: 'Catálogos'
   },
   {
