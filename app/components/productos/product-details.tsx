@@ -191,6 +191,20 @@ export function ProductDetails({ product, onClose, onEdit }: ProductDetailsProps
                         <p className="font-medium">{product.presentacion}</p>
                       </div>
                     )}
+
+                    {product.claveSat && (
+                      <div>
+                        <span className="text-gray-600">Clave SAT (CFDI 4.0):</span>
+                        <p className="font-medium font-mono text-purple-600">{product.claveSat}</p>
+                      </div>
+                    )}
+
+                    {product.claveUnidadSat && (
+                      <div>
+                        <span className="text-gray-600">Unidad SAT:</span>
+                        <p className="font-medium font-mono text-blue-600">{product.claveUnidadSat}</p>
+                      </div>
+                    )}
                   </div>
 
                   {product.descripcion && (

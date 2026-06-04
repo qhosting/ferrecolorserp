@@ -124,6 +124,8 @@ export const productoCreateSchema = z.object({
   destacado: z.boolean().optional(),
   oferta: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  claveSat: z.string().nullable().optional(),
+  claveUnidadSat: z.string().nullable().optional(),
 });
 
 export const productoUpdateSchema = productoCreateSchema.partial();

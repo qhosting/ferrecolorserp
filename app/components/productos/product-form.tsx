@@ -71,6 +71,8 @@ const productSchema = z.object({
   destacado: z.boolean().optional(),
   oferta: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  claveSat: z.string().optional(),
+  claveUnidadSat: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -139,6 +141,8 @@ export function ProductForm({ product, onClose }: ProductFormProps) {
       destacado: false,
       oferta: false,
       isActive: true,
+      claveSat: '',
+      claveUnidadSat: '',
     },
   });
 
@@ -190,6 +194,8 @@ export function ProductForm({ product, onClose }: ProductFormProps) {
         destacado: product.destacado || false,
         oferta: product.oferta || false,
         isActive: product.isActive !== false,
+        claveSat: product.claveSat || '',
+        claveUnidadSat: product.claveUnidadSat || '',
       });
     }
     fetchCategorias();
@@ -680,6 +686,25 @@ export function ProductForm({ product, onClose }: ProductFormProps) {
                       {...register('imagen')}
                       placeholder="https://upload.wikimedia.org/wikipedia/commons/6/63/Generic_placeholder_page.jpg"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="claveSat">Clave SAT (CFDI 4.0)</Label>
+                      <Input
+                        id="claveSat"
+                        {...register('claveSat')}
+                        placeholder="ej. 31211507"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="claveUnidadSat">Clave Unidad SAT (CFDI 4.0)</Label>
+                      <Input
+                        id="claveUnidadSat"
+                        {...register('claveUnidadSat')}
+                        placeholder="ej. E48"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-3">

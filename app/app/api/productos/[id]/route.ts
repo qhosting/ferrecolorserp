@@ -148,6 +148,8 @@ export async function PUT(
         destacado: data.destacado !== undefined ? Boolean(data.destacado) : existingProduct.destacado,
         oferta: data.oferta !== undefined ? Boolean(data.oferta) : existingProduct.oferta,
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : existingProduct.isActive,
+        claveSat: data.claveSat !== undefined ? data.claveSat : existingProduct.claveSat,
+        claveUnidadSat: data.claveUnidadSat !== undefined ? data.claveUnidadSat : existingProduct.claveUnidadSat,
       },
     });
 

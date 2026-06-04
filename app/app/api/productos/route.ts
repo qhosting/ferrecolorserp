@@ -162,6 +162,8 @@ export async function POST(request: NextRequest) {
         destacado: Boolean(data.destacado),
         oferta: Boolean(data.oferta),
         isActive: data.isActive !== false,
+        claveSat: data.claveSat || null,
+        claveUnidadSat: data.claveUnidadSat || null,
       },
     });
 

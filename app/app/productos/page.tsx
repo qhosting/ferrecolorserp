@@ -27,7 +27,9 @@ import {
   Star,
   ShoppingCart,
   Download,
-  Upload
+  Upload,
+  RefreshCw,
+  Link2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { RolePermissions } from '@/lib/types';
@@ -91,6 +93,7 @@ export default function ProductosPage() {
     open: false, id: null, nombre: ''
   });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   const userRole = session?.user?.role;
   const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : {};
@@ -155,6 +158,31 @@ export default function ProductosPage() {
       }
     } catch (error) {
       console.error('Error fetching marcas:', error);
+    }
+  };
+
+  const handleSyncContpaqi = async () => {
+    setSyncLoading(true);
+    try {
+      const res = await fetch('/api/contpaqi/sync/productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'pull' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Error al sincronizar');
+      
+      const { importados = 0, fallidos = 0 } = data.data ?? {};
+      toast.success(`Sincronización completada: ${importados} importados, ${fallidos} fallidos`);
+      
+      // Recargar listado y filtros
+      fetchProductos();
+      fetchCategorias();
+      fetchMarcas();
+    } catch (err: any) {
+      toast.error(`Error al sincronizar: ${err.message}`);
+    } finally {
+      setSyncLoading(false);
     }
   };
 
@@ -301,6 +329,18 @@ export default function ProductosPage() {
                   Nuevo Producto
                 </Button>
               )}
+
+              <Button
+                variant="outline"
+                onClick={handleSyncContpaqi}
+                disabled={syncLoading}
+                title="Sincronizar catálogo completo desde CONTPAQi"
+              >
+                {syncLoading
+                  ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  : <Link2 className="w-4 h-4 mr-2 text-blue-600" />}
+                {syncLoading ? 'Sincronizando...' : 'Sync CONTPAQi'}
+              </Button>
             </div>
           </div>
         </CardContent>
