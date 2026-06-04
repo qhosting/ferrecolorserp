@@ -16,6 +16,9 @@ import { WhatsAppModal } from '@/components/comunicacion/whatsapp-modal';
 import { SMSModal } from '@/components/comunicacion/sms-modal';
 import { BulkSMSModal } from '@/components/comunicacion/bulk-sms-modal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { toast } from 'react-hot-toast';
 import { 
   Plus, 
@@ -58,6 +61,11 @@ export default function ClientesPage() {
   const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   
+  // Estados para filtros
+  const [filterStatus, setFilterStatus] = useState<string>('TODOS');
+  const [filterPeriodicidad, setFilterPeriodicidad] = useState<string>('TODOS');
+  const [filterConSaldo, setFilterConSaldo] = useState<boolean>(false);
+  
   // Estados para modales
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
@@ -88,18 +96,31 @@ export default function ClientesPage() {
   }, [session]);
 
   useEffect(() => {
+    let filtered = clientes || [];
+
     if (searchTerm) {
-      const filtered = clientes?.filter?.(cliente =>
-        cliente?.nombre?.toLowerCase()?.includes?.(searchTerm?.toLowerCase()) ||
-        cliente?.codigoCliente?.toLowerCase()?.includes?.(searchTerm?.toLowerCase()) ||
-        cliente?.telefono1?.includes?.(searchTerm) ||
-        cliente?.municipio?.toLowerCase()?.includes?.(searchTerm?.toLowerCase())
-      ) || [];
-      setFilteredClientes(filtered);
-    } else {
-      setFilteredClientes(clientes);
+      filtered = filtered.filter(cliente =>
+        cliente?.nombre?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        cliente?.codigoCliente?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        cliente?.telefono1?.includes(searchTerm) ||
+        cliente?.municipio?.toLowerCase()?.includes(searchTerm.toLowerCase())
+      );
     }
-  }, [searchTerm, clientes]);
+
+    if (filterStatus !== 'TODOS') {
+      filtered = filtered.filter(cliente => cliente.status === filterStatus);
+    }
+
+    if (filterPeriodicidad !== 'TODOS') {
+      filtered = filtered.filter(cliente => cliente.periodicidad === filterPeriodicidad);
+    }
+
+    if (filterConSaldo) {
+      filtered = filtered.filter(cliente => (cliente.saldoActual || 0) > 0);
+    }
+
+    setFilteredClientes(filtered);
+  }, [searchTerm, clientes, filterStatus, filterPeriodicidad, filterConSaldo]);
 
   const fetchClientes = async () => {
     try {
@@ -267,7 +288,11 @@ export default function ClientesPage() {
               className="pl-8 w-64"
             />
           </div>
-          <Button variant="outline" onClick={handleShowFilters}>
+          <Button 
+            variant={showFilters ? "secondary" : "outline"} 
+            onClick={handleShowFilters}
+            className={showFilters ? "border-purple-500 text-purple-600 bg-purple-50" : ""}
+          >
             <Filter className="mr-2 h-4 w-4" />
             Filtros
           </Button>
@@ -290,6 +315,72 @@ export default function ClientesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <Card className="border border-purple-500/20 bg-card/60 backdrop-blur-md transition-all duration-300">
+          <CardContent className="p-4 grid gap-4 grid-cols-1 md:grid-cols-4 items-end">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground">Estado</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos</SelectItem>
+                  <SelectItem value="ACTIVO">Activo</SelectItem>
+                  <SelectItem value="INACTIVO">Inactivo</SelectItem>
+                  <SelectItem value="MOROSO">Moroso</SelectItem>
+                  <SelectItem value="BLOQUEADO">Bloqueado</SelectItem>
+                  <SelectItem value="PROSPECTO">Prospecto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground">Periodicidad</Label>
+              <Select value={filterPeriodicidad} onValueChange={setFilterPeriodicidad}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos</SelectItem>
+                  <SelectItem value="DIARIO">Diario</SelectItem>
+                  <SelectItem value="SEMANAL">Semanal</SelectItem>
+                  <SelectItem value="QUINCENAL">Quincenal</SelectItem>
+                  <SelectItem value="MENSUAL">Mensual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2 h-10 border rounded-md px-3 bg-background">
+              <Checkbox
+                id="onlyDebt"
+                checked={filterConSaldo}
+                onCheckedChange={(checked) => setFilterConSaldo(checked as boolean)}
+              />
+              <Label htmlFor="onlyDebt" className="text-sm font-medium cursor-pointer select-none">
+                Solo con saldo pendiente
+              </Label>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setFilterStatus('TODOS');
+                  setFilterPeriodicidad('TODOS');
+                  setFilterConSaldo(false);
+                }}
+                className="w-full"
+                disabled={filterStatus === 'TODOS' && filterPeriodicidad === 'TODOS' && !filterConSaldo}
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
