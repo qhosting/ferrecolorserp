@@ -19,9 +19,9 @@
 
 ```
 Páginas totales:          31
-  ✅ Funcionales:         24  (77%)
-  🟡 Parciales:            4  (13%)
-  ❌ Placeholder:          3  (10%)
+  ✅ Funcionales:         29  (94%)
+  🟡 Parciales:            2  (6%)
+  ❌ Placeholder:          0  (0%)
 
 API Endpoints totales:    70
   ✅ Implementados:       70  (100%)
@@ -138,14 +138,26 @@ Componentes UI:           53 + 12 directorios de negocio
 ### FASE 14: Optimización de Rendimiento
 - **Estado:** ✅ **COMPLETADA**
 - Optimización N+1 en la API de Proveedores mediante carga relacional eager (`include`) en Prisma.
-- Adición de índices (`@@index`) en PostgreSQL para llaves foráneas críticas (`Venta.clienteId`, `Pagare.ventaId`, `Pago.clienteId`, `CuentaPorPagar.proveedorId`, `MovimientoInventario.productoId`).
+- Adición de índices (`@@index`) en PostgreSQL para llaves foráneas críticas.
 
-### FASE 15: Estandarización de APIs y Validaciones (Siguiente Prioridad)
-1. **Validación de Entradas:** Implementar esquemas de validación de datos (Zod) en los endpoints para prevenir payloads corruptos.
-2. **Manejador de Errores Común:** Centralizar y estandarizar el formato de error JSON retornado por las APIs.
-3. **Cobranza Móvil Offline:** Integrar IndexedDB en el cliente de cobranza para soporte offline completo en zonas rurales.
+### FASE 15: Estandarización de APIs y Validaciones (Zod)
+- **Estado:** ✅ **COMPLETADA**
+- Creación de esquemas de validación centralizados en `schemas.ts` para Clientes, Productos, Inventario y CxP.
+- Bloqueos de transacciones `FOR UPDATE` en inventario y cobros para mitigar concurrencia.
 
----
+### FASE 16: Rediseño Visual y UI/UX (FerreColors Theme)
+- **Estado:** ✅ **COMPLETADA**
+- Paleta HSL temática con efectos Glassmorphic y glows interactivos en `globals.css`.
+- Reorganización de Sidebar a `w-64` y copiado de layout wrappers en todos los módulos principales del ERP.
+
+### FASE 17: Cobranza Móvil Offline (IndexedDB / GPS)
+- **Estado:** ⏸️ **POSPUESTA** (Postergado por decisión de negocio para fases futuras).
+
+### FASE 18: Entrada a Producción SAT 4.0 y Sincronización CONTPAQi
+- **Estado:** ✅ **COMPLETADA** (Conexión 100% Real, sin Mocks)
+- Tarea programada interactiva `ContpaqiApi` configurada y activa en puerto 5000.
+- Sincronización y consulta real verificadas sobre la base de datos de producción `adFERRE_COLORS`.
+- Punto de Venta conectado a la emisión y encolado de timbrado real a través de Kestrel.
 
 ## 🔑 CREDENCIALES DE ACCESO (PRODUCCIÓN)
 
