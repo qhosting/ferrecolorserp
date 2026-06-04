@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { cuentasPagarAbonoSchema, formatZodError } from '@/lib/schemas';
 
 // GET - Obtener todas las cuentas por pagar (CxP)
 export async function GET(request: NextRequest) {
@@ -38,14 +39,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, montoAbono } = body;
 
-    if (!id || !montoAbono) {
+    // Validar con Zod
+    const validation = cuentasPagarAbonoSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Campos requeridos: id, montoAbono' },
+        { error: 'Error de validación', details: formatZodError(validation.error) },
         { status: 400 }
       );
     }
+
+    const { id, montoAbono } = validation.data;
 
     const cxp = await prisma.cuentaPorPagar.findUnique({
       where: { id }

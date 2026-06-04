@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { RolePermissions } from '@/lib/types';
+import { productoCreateSchema, formatZodError } from '@/lib/schemas';
 
 export async function GET(request: NextRequest) {
   try {
@@ -91,15 +92,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sin permisos para crear productos' }, { status: 403 });
     }
 
-    const data = await request.json();
+    const body = await request.json();
 
-    // Validar campos requeridos
-    if (!data.codigo || !data.nombre) {
+    // Validar con Zod
+    const validation = productoCreateSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Código y nombre son campos requeridos' },
+        { error: 'Error de validación', details: formatZodError(validation.error) },
         { status: 400 }
       );
     }
+
+    const data = validation.data;
 
     // Verificar si el código ya existe
     const existingProduct = await prisma.producto.findUnique({
@@ -124,32 +128,32 @@ export async function POST(request: NextRequest) {
         codigoBarras: data.codigoBarras || null,
         presentacion: data.presentacion || null,
         contenido: data.contenido || null,
-        peso: data.peso ? parseFloat(data.peso) : null,
+        peso: data.peso !== undefined ? data.peso : null,
         dimensiones: data.dimensiones || null,
         color: data.color || null,
         talla: data.talla || null,
-        precio1: parseFloat(data.precio1) || 0,
-        precio2: parseFloat(data.precio2) || 0,
-        precio3: parseFloat(data.precio3) || 0,
-        precio4: parseFloat(data.precio4) || 0,
-        precio5: parseFloat(data.precio5) || 0,
+        precio1: data.precio1 || 0,
+        precio2: data.precio2 || 0,
+        precio3: data.precio3 || 0,
+        precio4: data.precio4 || 0,
+        precio5: data.precio5 || 0,
         etiquetaPrecio1: data.etiquetaPrecio1 || 'Público',
         etiquetaPrecio2: data.etiquetaPrecio2 || 'Mayorista',
         etiquetaPrecio3: data.etiquetaPrecio3 || 'Distribuidor',
         etiquetaPrecio4: data.etiquetaPrecio4 || 'Especial',
         etiquetaPrecio5: data.etiquetaPrecio5 || 'Promocional',
-        precioCompra: parseFloat(data.precioCompra) || 0,
-        porcentajeGanancia: parseFloat(data.porcentajeGanancia) || 0,
-        stock: parseInt(data.stock) || 0,
-        stockMinimo: parseInt(data.stockMinimo) || 0,
-        stockMaximo: parseInt(data.stockMaximo) || 1000,
+        precioCompra: data.precioCompra || 0,
+        porcentajeGanancia: data.porcentajeGanancia || 0,
+        stock: data.stock || 0,
+        stockMinimo: data.stockMinimo || 0,
+        stockMaximo: data.stockMaximo !== undefined ? data.stockMaximo : 1000,
         unidadMedida: data.unidadMedida || 'PZA',
         pasillo: data.pasillo || null,
         estante: data.estante || null,
         nivel: data.nivel || null,
         proveedorPrincipal: data.proveedorPrincipal || null,
-        tiempoEntrega: parseInt(data.tiempoEntrega) || 0,
-        fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
+        tiempoEntrega: data.tiempoEntrega || 0,
+        fechaVencimiento: data.fechaVencimiento || null,
         lote: data.lote || null,
         requiereReceta: Boolean(data.requiereReceta),
         controlado: Boolean(data.controlado),

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { RolePermissions } from '@/lib/types';
+import { productoUpdateSchema, formatZodError } from '@/lib/schemas';
 
 export async function GET(
   request: NextRequest,
@@ -65,7 +66,18 @@ export async function PUT(
       return NextResponse.json({ error: 'Sin permisos para actualizar productos' }, { status: 403 });
     }
 
-    const data = await request.json();
+    const body = await request.json();
+
+    // Validar con Zod
+    const validation = productoUpdateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Error de validación', details: formatZodError(validation.error) },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
 
     // Verificar si el producto existe
     const existingProduct = await prisma.producto.findUnique({
@@ -93,8 +105,8 @@ export async function PUT(
     const producto = await prisma.producto.update({
       where: { id: params.id },
       data: {
-        codigo: data.codigo || existingProduct.codigo,
-        nombre: data.nombre || existingProduct.nombre,
+        codigo: data.codigo !== undefined ? data.codigo : existingProduct.codigo,
+        nombre: data.nombre !== undefined ? data.nombre : existingProduct.nombre,
         descripcion: data.descripcion !== undefined ? data.descripcion : existingProduct.descripcion,
         categoria: data.categoria !== undefined ? data.categoria : existingProduct.categoria,
         marca: data.marca !== undefined ? data.marca : existingProduct.marca,
@@ -102,32 +114,32 @@ export async function PUT(
         codigoBarras: data.codigoBarras !== undefined ? data.codigoBarras : existingProduct.codigoBarras,
         presentacion: data.presentacion !== undefined ? data.presentacion : existingProduct.presentacion,
         contenido: data.contenido !== undefined ? data.contenido : existingProduct.contenido,
-        peso: data.peso !== undefined ? (data.peso ? parseFloat(data.peso) : null) : existingProduct.peso,
+        peso: data.peso !== undefined ? data.peso : existingProduct.peso,
         dimensiones: data.dimensiones !== undefined ? data.dimensiones : existingProduct.dimensiones,
         color: data.color !== undefined ? data.color : existingProduct.color,
         talla: data.talla !== undefined ? data.talla : existingProduct.talla,
-        precio1: data.precio1 !== undefined ? parseFloat(data.precio1) || 0 : existingProduct.precio1,
-        precio2: data.precio2 !== undefined ? parseFloat(data.precio2) || 0 : existingProduct.precio2,
-        precio3: data.precio3 !== undefined ? parseFloat(data.precio3) || 0 : existingProduct.precio3,
-        precio4: data.precio4 !== undefined ? parseFloat(data.precio4) || 0 : existingProduct.precio4,
-        precio5: data.precio5 !== undefined ? parseFloat(data.precio5) || 0 : existingProduct.precio5,
-        etiquetaPrecio1: data.etiquetaPrecio1 || existingProduct.etiquetaPrecio1,
-        etiquetaPrecio2: data.etiquetaPrecio2 || existingProduct.etiquetaPrecio2,
-        etiquetaPrecio3: data.etiquetaPrecio3 || existingProduct.etiquetaPrecio3,
-        etiquetaPrecio4: data.etiquetaPrecio4 || existingProduct.etiquetaPrecio4,
-        etiquetaPrecio5: data.etiquetaPrecio5 || existingProduct.etiquetaPrecio5,
-        precioCompra: data.precioCompra !== undefined ? parseFloat(data.precioCompra) || 0 : existingProduct.precioCompra,
-        porcentajeGanancia: data.porcentajeGanancia !== undefined ? parseFloat(data.porcentajeGanancia) || 0 : existingProduct.porcentajeGanancia,
-        stock: data.stock !== undefined ? parseInt(data.stock) || 0 : existingProduct.stock,
-        stockMinimo: data.stockMinimo !== undefined ? parseInt(data.stockMinimo) || 0 : existingProduct.stockMinimo,
-        stockMaximo: data.stockMaximo !== undefined ? parseInt(data.stockMaximo) || 1000 : existingProduct.stockMaximo,
-        unidadMedida: data.unidadMedida || existingProduct.unidadMedida,
+        precio1: data.precio1 !== undefined ? data.precio1 : existingProduct.precio1,
+        precio2: data.precio2 !== undefined ? data.precio2 : existingProduct.precio2,
+        precio3: data.precio3 !== undefined ? data.precio3 : existingProduct.precio3,
+        precio4: data.precio4 !== undefined ? data.precio4 : existingProduct.precio4,
+        precio5: data.precio5 !== undefined ? data.precio5 : existingProduct.precio5,
+        etiquetaPrecio1: data.etiquetaPrecio1 !== undefined ? data.etiquetaPrecio1 : existingProduct.etiquetaPrecio1,
+        etiquetaPrecio2: data.etiquetaPrecio2 !== undefined ? data.etiquetaPrecio2 : existingProduct.etiquetaPrecio2,
+        etiquetaPrecio3: data.etiquetaPrecio3 !== undefined ? data.etiquetaPrecio3 : existingProduct.etiquetaPrecio3,
+        etiquetaPrecio4: data.etiquetaPrecio4 !== undefined ? data.etiquetaPrecio4 : existingProduct.etiquetaPrecio4,
+        etiquetaPrecio5: data.etiquetaPrecio5 !== undefined ? data.etiquetaPrecio5 : existingProduct.etiquetaPrecio5,
+        precioCompra: data.precioCompra !== undefined ? data.precioCompra : existingProduct.precioCompra,
+        porcentajeGanancia: data.porcentajeGanancia !== undefined ? data.porcentajeGanancia : existingProduct.porcentajeGanancia,
+        stock: data.stock !== undefined ? data.stock : existingProduct.stock,
+        stockMinimo: data.stockMinimo !== undefined ? data.stockMinimo : existingProduct.stockMinimo,
+        stockMaximo: data.stockMaximo !== undefined ? data.stockMaximo : existingProduct.stockMaximo,
+        unidadMedida: data.unidadMedida !== undefined ? data.unidadMedida : existingProduct.unidadMedida,
         pasillo: data.pasillo !== undefined ? data.pasillo : existingProduct.pasillo,
         estante: data.estante !== undefined ? data.estante : existingProduct.estante,
         nivel: data.nivel !== undefined ? data.nivel : existingProduct.nivel,
         proveedorPrincipal: data.proveedorPrincipal !== undefined ? data.proveedorPrincipal : existingProduct.proveedorPrincipal,
-        tiempoEntrega: data.tiempoEntrega !== undefined ? parseInt(data.tiempoEntrega) || 0 : existingProduct.tiempoEntrega,
-        fechaVencimiento: data.fechaVencimiento !== undefined ? (data.fechaVencimiento ? new Date(data.fechaVencimiento) : null) : existingProduct.fechaVencimiento,
+        tiempoEntrega: data.tiempoEntrega !== undefined ? data.tiempoEntrega : existingProduct.tiempoEntrega,
+        fechaVencimiento: data.fechaVencimiento !== undefined ? data.fechaVencimiento : existingProduct.fechaVencimiento,
         lote: data.lote !== undefined ? data.lote : existingProduct.lote,
         requiereReceta: data.requiereReceta !== undefined ? Boolean(data.requiereReceta) : existingProduct.requiereReceta,
         controlado: data.controlado !== undefined ? Boolean(data.controlado) : existingProduct.controlado,

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { clienteUpdateSchema, formatZodError } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,8 +92,17 @@ export async function PUT(
     }
 
     const body = await request.json();
+
+    // Validar con Zod
+    const validation = clienteUpdateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Error de validación', details: formatZodError(validation.error) },
+        { status: 400 }
+      );
+    }
+
     const {
-      codigoCliente,
       nombre,
       telefono1,
       telefono2,
@@ -110,8 +120,7 @@ export async function PUT(
       diaCobro,
       gestorId,
       vendedorId,
-      ...rest
-    } = body;
+    } = validation.data;
 
     // Verificar que el cliente existe
     const clienteExistente = await prisma.cliente.findUnique({
@@ -158,8 +167,8 @@ export async function PUT(
     const updatedCliente = await prisma.cliente.update({
       where: { id: params.id },
       data: {
-        nombre: nombre?.trim(),
-        telefono1: telefono1?.trim(),
+        nombre: nombre.trim(),
+        telefono1: telefono1.trim(),
         telefono2: telefono2?.trim() || null,
         email: email?.trim() || null,
         municipio: municipio?.trim() || null,
@@ -169,7 +178,7 @@ export async function PUT(
         numeroExterior: numeroExterior?.trim() || null,
         numeroInterior: numeroInterior?.trim() || null,
         codigoPostal: codigoPostal?.trim() || null,
-        pagosPeriodicos: typeof pagosPeriodicos === 'number' ? pagosPeriodicos : parseFloat(pagosPeriodicos) || 0,
+        pagosPeriodicos: pagosPeriodicos ?? 0,
         periodicidad: periodicidad || 'SEMANAL',
         status: status || 'ACTIVO',
         diaCobro: diaCobro || null,

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { RolePermissions } from '@/lib/types';
+import { inventarioAjusteSchema, formatZodError } from '@/lib/schemas';
 
 // GET - Obtener movimientos de inventario (Kardex)
 export async function GET(request: NextRequest) {
@@ -77,29 +78,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productoId, tipo, cantidad, motivo, referencia } = body;
 
-    if (!productoId || !tipo || !cantidad || !motivo) {
+    // Validar con Zod
+    const validation = inventarioAjusteSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Campos requeridos: productoId, tipo (ENTRADA/SALIDA/AJUSTE), cantidad, motivo' },
+        { error: 'Error de validación', details: formatZodError(validation.error) },
         { status: 400 }
       );
     }
 
-    const cantidadInt = parseInt(cantidad.toString());
-    if (isNaN(cantidadInt) || cantidadInt <= 0) {
-      return NextResponse.json(
-        { error: 'La cantidad debe ser un número entero mayor a cero' },
-        { status: 400 }
-      );
-    }
-
-    if (!['ENTRADA', 'SALIDA', 'AJUSTE'].includes(tipo)) {
-      return NextResponse.json(
-        { error: 'Tipo de movimiento inválido (ENTRADA, SALIDA o AJUSTE)' },
-        { status: 400 }
-      );
-    }
+    const { productoId, tipo, cantidad: cantidadInt, motivo, referencia } = validation.data;
 
     // Transacción para guardar el movimiento y actualizar el stock de forma atómica
     const result = await prisma.$transaction(async (tx) => {
