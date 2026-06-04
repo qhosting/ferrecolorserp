@@ -210,11 +210,19 @@ export default function ClientesPage() {
         method: 'DELETE',
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        toast.success('Cliente eliminado exitosamente');
+        if (data.modo === 'eliminado') {
+          toast.success(`Cliente eliminado permanentemente`);
+        } else {
+          // Soft-delete: tiene movimientos, se desactivó
+          toast.success(`Cliente desactivado: ${data.message}`, { duration: 5000 });
+        }
+        // En ambos casos lo quitamos de la vista (eliminado o ahora inactivo)
         setClientes(prev => prev.filter(c => c.id !== deleteConfirm.clienteId));
       } else {
-        toast.error('Error al eliminar el cliente');
+        toast.error(data.error ?? 'Error al procesar la solicitud');
       }
     } catch (error) {
       console.error('Error deleting cliente:', error);
@@ -224,6 +232,7 @@ export default function ClientesPage() {
       setDeleteConfirm({ open: false, clienteId: null, nombre: '' });
     }
   };
+
 
   const handleModalSuccess = () => {
     // Recargar la lista de clientes después de crear/editar
@@ -640,9 +649,9 @@ export default function ClientesPage() {
 
       <ConfirmDialog
         open={deleteConfirm.open}
-        title="Desactivar cliente"
-        message={`¿Desactivar a "${deleteConfirm.nombre}"? El registro se marcará como Inactivo para preservar el historial de ventas y pagos. Puedes reactivarlo desde el detalle del cliente.`}
-        confirmLabel="Sí, desactivar"
+        title="Eliminar cliente"
+        message={`¿Eliminar a "${deleteConfirm.nombre}"?\n\n• Si no tiene ventas, pagos ni pedidos → se eliminará permanentemente.\n• Si tiene movimientos registrados → se marcará como Inactivo para preservar el historial.`}
+        confirmLabel="Sí, eliminar"
         variant="danger"
         loading={deleteLoading}
         onConfirm={confirmDeleteCliente}

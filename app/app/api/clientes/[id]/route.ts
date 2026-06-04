@@ -219,25 +219,24 @@ export async function PUT(
   }
 }
 
-// DELETE /api/clientes/[id] - Eliminar cliente
+// DELETE /api/clientes/[id]
+// - Si no tiene movimientos → elimina físicamente (hard delete)
+// - Si tiene movimientos   → soft delete (status = INACTIVO) para preservar historial
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Verificar permisos - solo ADMIN y SUPERADMIN pueden eliminar
+    // Solo ADMIN y SUPERADMIN pueden eliminar
     const user = await prisma.user.findUnique({
       where: { email: session.user.email! },
-      select: { role: true }
+      select: { role: true },
     });
 
     if (!user || !['ADMIN', 'SUPERADMIN'].includes(user.role)) {
@@ -247,24 +246,72 @@ export async function DELETE(
       );
     }
 
-    // En lugar de eliminar, desactivamos el cliente
-    await prisma.cliente.update({
+    // Verificar que el cliente existe
+    const cliente = await prisma.cliente.findUnique({
       where: { id: params.id },
-      data: { 
-        status: 'INACTIVO',
-        ultimaActualizacion: new Date()
-      }
+      select: { id: true, nombre: true, contpaqiCodigo: true },
     });
-    
-    return NextResponse.json({ 
-      message: 'Cliente desactivado exitosamente',
-      id: params.id
-    });
+
+    if (!cliente) {
+      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+    }
+
+    // Contar registros relacionados en paralelo
+    const [ventas, pagos, pedidos, notasCargo, notasCredito, garantias, reestructuras] =
+      await Promise.all([
+        prisma.venta.count({ where: { clienteId: params.id } }),
+        prisma.pago.count({ where: { clienteId: params.id } }),
+        prisma.pedido.count({ where: { clienteId: params.id } }),
+        prisma.notaCargo.count({ where: { clienteId: params.id } }),
+        prisma.notaCredito.count({ where: { clienteId: params.id } }),
+        prisma.garantia.count({ where: { clienteId: params.id } }),
+        prisma.reestructuraCredito.count({ where: { clienteId: params.id } }),
+      ]);
+
+    const totalMovimientos = ventas + pagos + pedidos + notasCargo + notasCredito + garantias + reestructuras;
+
+    if (totalMovimientos === 0) {
+      // ✅ Sin movimientos → eliminar físicamente
+      await prisma.cliente.delete({ where: { id: params.id } });
+
+      return NextResponse.json({
+        success: true,
+        modo: 'eliminado',
+        message: `Cliente "${cliente.nombre}" eliminado permanentemente`,
+        id: params.id,
+      });
+    } else {
+      // ⚠️ Tiene movimientos → soft delete (preservar historial)
+      await prisma.cliente.update({
+        where: { id: params.id },
+        data: {
+          status: 'INACTIVO',
+          ultimaActualizacion: new Date(),
+        },
+      });
+
+      const detalle = [
+        ventas > 0 && `${ventas} venta(s)`,
+        pagos > 0 && `${pagos} pago(s)`,
+        pedidos > 0 && `${pedidos} pedido(s)`,
+        notasCargo > 0 && `${notasCargo} nota(s) de cargo`,
+        notasCredito > 0 && `${notasCredito} nota(s) de crédito`,
+        garantias > 0 && `${garantias} garantía(s)`,
+        reestructuras > 0 && `${reestructuras} reestructura(s)`,
+      ]
+        .filter(Boolean)
+        .join(', ');
+
+      return NextResponse.json({
+        success: true,
+        modo: 'desactivado',
+        message: `Cliente desactivado (tiene ${detalle} asociados)`,
+        id: params.id,
+        movimientos: totalMovimientos,
+      });
+    }
   } catch (error) {
     console.error('Error deleting cliente:', error);
-    return NextResponse.json(
-      { error: 'Error al eliminar el cliente' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error al procesar la solicitud' }, { status: 500 });
   }
 }
