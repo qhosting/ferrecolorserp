@@ -21,27 +21,36 @@ export async function GET(request: NextRequest) {
       where.isActive = activo === 'true';
     }
 
+    const startTime = Date.now();
+
     const proveedores = await prisma.proveedor.findMany({
       where,
       take: limit ? parseInt(limit) : undefined,
+      include: {
+        cuentasPorPagar: {
+          where: { status: { in: ['PENDIENTE', 'PARCIAL'] } },
+          select: { montoRestante: true }
+        }
+      },
       orderBy: { codigo: 'asc' },
     });
 
-    // Calcular el saldoActual sumando el montoRestante de sus cuentas por pagar
-    const proveedoresConSaldo = await Promise.all(
-      proveedores.map(async (p) => {
-        const cuentas = await prisma.cuentaPorPagar.findMany({
-          where: { proveedorId: p.id, status: { in: ['PENDIENTE', 'PARCIAL'] } },
-          select: { montoRestante: true },
-        });
-        const saldoActual = cuentas.reduce((sum, c) => sum + c.montoRestante, 0);
-        return {
-          ...p,
-          activo: p.isActive, // Para compatibilidad con frontend que espera campo 'activo'
-          saldoActual,
-        };
-      })
-    );
+    // Calcular el saldoActual en memoria a partir de las relaciones precargadas
+    const proveedoresConSaldo = proveedores.map((p) => {
+      const saldoActual = p.cuentasPorPagar.reduce((sum, c) => sum + c.montoRestante, 0);
+      
+      // Limpiar cuentasPorPagar del retorno final para no sobrecargar el payload
+      const { cuentasPorPagar, ...proveedorRestante } = p;
+
+      return {
+        ...proveedorRestante,
+        activo: p.isActive, // Para compatibilidad con frontend que espera campo 'activo'
+        saldoActual,
+      };
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`[Performance] Listado de proveedores completado en ${duration}ms (1 query relacional)`);
 
     return NextResponse.json({
       proveedores: proveedoresConSaldo,
