@@ -15,6 +15,30 @@ import {
   RegistrarPagoResponse,
 } from './contpaqi-types';
 
+/** Timeout en ms para cada petición al API de CONTPAQi */
+const REQUEST_TIMEOUT_MS = 15_000;
+
+/**
+ * Devuelve un RequestInit extra con un dispatcher de undici que omite la
+ * verificación TLS cuando NODE_TLS_REJECT_UNAUTHORIZED=0 (o cuando el host
+ * usa un certificado auto-firmado en desarrollo/VPN).
+ * Solo funciona en entornos Node.js (no Edge runtime).
+ */
+function buildFetchOptions(): Partial<RequestInit> {
+  try {
+    // undici está disponible internamente en Next.js sobre Node.js
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
+    const { Agent } = require('undici') as any;
+    return {
+      // @ts-expect-error undici dispatcher no está en los tipos de fetch estándar
+      dispatcher: new Agent({ connect: { rejectUnauthorized: false } }),
+    };
+  } catch {
+    // Si undici no está disponible (Edge runtime) no añadimos dispatcher
+    return {};
+  }
+}
+
 export class ContpaqiClient {
   private static instance: ContpaqiClient;
   private baseUrl: string;
@@ -25,6 +49,11 @@ export class ContpaqiClient {
     this.baseUrl = process.env.CONTPAQI_API_URL || 'http://localhost:5000/api';
     this.apiKey = process.env.CONTPAQI_API_KEY || '';
     this.companyId = process.env.CONTPAQI_COMPANY_ID || 'FERRE_COLORS';
+  }
+
+  /** Resetea el singleton para que recoja las env vars actualizadas. */
+  public static resetInstance(): void {
+    ContpaqiClient.instance = undefined as unknown as ContpaqiClient;
   }
 
   public static getInstance(): ContpaqiClient {
@@ -50,9 +79,17 @@ export class ContpaqiClient {
     isRaw = false
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+
+    // Timeout explícito: aborta si el servidor no responde en REQUEST_TIMEOUT_MS
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     const options: RequestInit = {
       method,
       headers: this.getHeaders(),
+      signal: controller.signal,
+      // Dispatcher para TLS auto-firmado (undici, Node.js runtime solamente)
+      ...buildFetchOptions(),
     };
 
     if (body) {
@@ -62,6 +99,7 @@ export class ContpaqiClient {
     try {
       console.log(`[CONTPAQi Client] ${method} ${url}`);
       const response = await fetch(url, options);
+      clearTimeout(timer);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -74,7 +112,13 @@ export class ContpaqiClient {
       }
 
       return (await response.json()) as T;
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timer);
+      // Mensaje legible según tipo de error
+      if (error?.name === 'AbortError') {
+        console.error(`[CONTPAQi Client Timeout] ${url} no respondió en ${REQUEST_TIMEOUT_MS / 1000}s`);
+        throw new Error(`Timeout: CONTPAQi no respondió en ${REQUEST_TIMEOUT_MS / 1000}s (${url})`);
+      }
       console.error(`[CONTPAQi Client Exception] Request failed to ${url}:`, error);
       throw error;
     }
