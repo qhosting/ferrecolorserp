@@ -7,7 +7,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execPromise = promisify(exec);
-const BACKUPS_DIR = path.join(process.cwd(), '..', 'backups');
+const BACKUPS_DIR = process.env.BACKUPS_PATH || path.join(process.cwd(), 'backups');
 
 // Asegurar existencia de la carpeta de copias de seguridad
 if (!fs.existsSync(BACKUPS_DIR)) {
