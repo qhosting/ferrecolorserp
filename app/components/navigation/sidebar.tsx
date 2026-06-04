@@ -28,7 +28,11 @@ import {
   Database,
   FileCheck,
   TrendingUp,
-  Truck
+  Truck,
+  Warehouse,
+  MessageSquare,
+  Eye,
+  ArrowDownRight
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -36,123 +40,182 @@ interface NavigationItem {
   href: string;
   icon: React.ReactNode;
   badge?: string | number;
-  group: 'Negocio' | 'Finanzas' | 'Sistema';
+  group: 'Empresa' | 'Ver' | 'Catálogos' | 'Movimientos' | 'Notas de venta' | 'Procesos' | 'Reportes' | 'Configuración' | 'Buzón';
 }
 
 const navigationItems: NavigationItem[] = [
+  // 1. Empresa
   {
     title: 'Dashboard',
     href: '/dashboard',
     icon: <Home className="h-4 w-4" />,
-    group: 'Negocio'
+    group: 'Empresa'
   },
+  // 2. Ver
+  {
+    title: 'Auditoría / Bitácoras',
+    href: '/auditoria',
+    icon: <Eye className="h-4 w-4" />,
+    group: 'Ver'
+  },
+  // 3. Catálogos
   {
     title: 'Clientes',
     href: '/clientes',
     icon: <Users className="h-4 w-4" />,
-    group: 'Negocio'
+    group: 'Catálogos'
   },
   {
     title: 'Productos',
     href: '/productos',
     icon: <Package className="h-4 w-4" />,
-    group: 'Negocio'
+    group: 'Catálogos'
   },
+  // 4. Movimientos
   {
     title: 'Pedidos',
     href: '/pedidos',
     icon: <ShoppingCart className="h-4 w-4" />,
-    group: 'Negocio'
-  },
-  {
-    title: 'Ventas',
-    href: '/ventas',
-    icon: <FileText className="h-4 w-4" />,
-    group: 'Negocio'
-  },
-  // Finanzas / Crédito
-  {
-    title: 'Pagarés',
-    href: '/pagares',
-    icon: <CreditCard className="h-4 w-4" />,
-    group: 'Finanzas'
-  },
-  {
-    title: 'Notas de Cargo',
-    href: '/notas-cargo',
-    icon: <PlusCircle className="h-4 w-4" />,
-    group: 'Finanzas'
-  },
-  {
-    title: 'Notas de Crédito',
-    href: '/notas-credito',
-    icon: <MinusCircle className="h-4 w-4" />,
-    group: 'Finanzas'
-  },
-  {
-    title: 'Reestructuras',
-    href: '/reestructuras',
-    icon: <RefreshCw className="h-4 w-4" />,
-    group: 'Finanzas'
-  },
-  {
-    title: 'Garantías',
-    href: '/garantias',
-    icon: <Shield className="h-4 w-4" />,
-    group: 'Finanzas'
+    group: 'Movimientos'
   },
   {
     title: 'Compras',
     href: '/compras',
     icon: <Truck className="h-4 w-4" />,
-    group: 'Finanzas',
+    group: 'Movimientos',
     badge: 'Nuevo'
   },
-  // Sistema / Admin
   {
-    title: 'Integración CONTPAQi',
-    href: '/integraciones',
-    icon: <Database className="h-4 w-4" />,
-    group: 'Sistema',
-    badge: 'Sync'
+    title: 'Almacén',
+    href: '/almacen',
+    icon: <Warehouse className="h-4 w-4" />,
+    group: 'Movimientos'
+  },
+  {
+    title: 'Cobranza',
+    href: '/cobranza',
+    icon: <ArrowDownRight className="h-4 w-4" />,
+    group: 'Movimientos'
+  },
+  {
+    title: 'Cobranza Móvil',
+    href: '/cobranza-movil',
+    icon: <Zap className="h-4 w-4" />,
+    group: 'Movimientos'
+  },
+  // 5. Notas de venta
+  {
+    title: 'Ventas',
+    href: '/ventas',
+    icon: <FileText className="h-4 w-4" />,
+    group: 'Notas de venta'
   },
   {
     title: 'Facturación Electrónica',
     href: '/facturacion-electronica',
     icon: <FileCheck className="h-4 w-4" />,
-    group: 'Sistema',
+    group: 'Notas de venta',
     badge: 'Nuevo'
+  },
+  // 6. Procesos
+  {
+    title: 'Pagarés',
+    href: '/pagares',
+    icon: <CreditCard className="h-4 w-4" />,
+    group: 'Procesos'
+  },
+  {
+    title: 'Scoring de Crédito',
+    href: '/credito',
+    icon: <TrendingUp className="h-4 w-4" />,
+    group: 'Procesos'
+  },
+  {
+    title: 'Cuentas por Pagar',
+    href: '/cuentas-pagar',
+    icon: <MinusCircle className="h-4 w-4" />,
+    group: 'Procesos'
+  },
+  {
+    title: 'Reestructuras',
+    href: '/reestructuras',
+    icon: <RefreshCw className="h-4 w-4" />,
+    group: 'Procesos'
+  },
+  {
+    title: 'Garantías',
+    href: '/garantias',
+    icon: <Shield className="h-4 w-4" />,
+    group: 'Procesos'
+  },
+  {
+    title: 'Notas de Cargo',
+    href: '/notas-cargo',
+    icon: <PlusCircle className="h-4 w-4" />,
+    group: 'Procesos'
+  },
+  {
+    title: 'Notas de Crédito',
+    href: '/notas-credito',
+    icon: <MinusCircle className="h-4 w-4" />,
+    group: 'Procesos'
+  },
+  // 7. Reportes
+  {
+    title: 'Reportes',
+    href: '/reportes',
+    icon: <BarChart3 className="h-4 w-4" />,
+    group: 'Reportes'
   },
   {
     title: 'Business Intelligence',
     href: '/business-intelligence',
     icon: <TrendingUp className="h-4 w-4" />,
-    group: 'Sistema',
+    group: 'Reportes',
     badge: 'Nuevo'
+  },
+  // 8. Configuración
+  {
+    title: 'Configuración General',
+    href: '/configuracion',
+    icon: <Settings className="h-4 w-4" />,
+    group: 'Configuración'
+  },
+  {
+    title: 'Integración CONTPAQi',
+    href: '/integraciones',
+    icon: <Database className="h-4 w-4" />,
+    group: 'Configuración',
+    badge: 'Sync'
   },
   {
     title: 'Automatización',
     href: '/automatizacion',
     icon: <Bot className="h-4 w-4" />,
-    group: 'Sistema'
+    group: 'Configuración'
   },
+  // 9. Buzón
   {
-    title: 'Auditoría',
-    href: '/auditoria',
-    icon: <Database className="h-4 w-4" />,
-    group: 'Sistema'
-  },
-  {
-    title: 'Configuración',
-    href: '/configuracion',
-    icon: <Settings className="h-4 w-4" />,
-    group: 'Sistema'
+    title: 'Comunicación / WhatsApp',
+    href: '/comunicacion',
+    icon: <MessageSquare className="h-4 w-4" />,
+    group: 'Buzón'
   }
 ];
 
 function NavigationContent() {
   const pathname = usePathname();
-  const groups = ['Negocio', 'Finanzas', 'Sistema'] as const;
+  const groups = [
+    'Empresa',
+    'Ver',
+    'Catálogos',
+    'Movimientos',
+    'Notas de venta',
+    'Procesos',
+    'Reportes',
+    'Configuración',
+    'Buzón'
+  ] as const;
 
   return (
     <div className="flex flex-col h-full bg-background border-r">
@@ -172,11 +235,12 @@ function NavigationContent() {
         <div className="space-y-6">
           {groups.map((groupName) => {
             const itemsInGroup = navigationItems.filter(item => item.group === groupName);
+            if (itemsInGroup.length === 0) return null;
             
             return (
               <div key={groupName} className="space-y-2">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3">
-                  {groupName === 'Negocio' ? 'Comercial' : groupName === 'Finanzas' ? 'Crédito y Cartera' : 'Sistema y Config'}
+                  {groupName}
                 </span>
                 <div className="space-y-1">
                   {itemsInGroup.map((item, index) => {

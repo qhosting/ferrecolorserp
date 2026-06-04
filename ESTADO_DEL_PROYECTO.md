@@ -149,6 +149,8 @@ Componentes UI:           53 + 12 directorios de negocio
 - **Estado:** ✅ **COMPLETADA**
 - Paleta HSL temática con efectos Glassmorphic y glows interactivos en `globals.css`.
 - Reorganización de Sidebar a `w-64` y copiado de layout wrappers en todos los módulos principales del ERP.
+- Reordenamiento del menú lateral para emular las 9 secciones estándar de **CONTPAQi Comercial Premium** (Empresa, Ver, Catálogos, Movimientos, Notas de venta, Procesos, Reportes, Configuración, Buzón) y habilitación de accesos directos previamente no mapeados en la navegación.
+
 
 ### FASE 17: Cobranza Móvil Offline (IndexedDB / GPS)
 - **Estado:** ⏸️ **POSPUESTA** (Postergado por decisión de negocio para fases futuras).
