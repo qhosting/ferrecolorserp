@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
       codigoClienteProveedor: venta.cliente.contpaqiCodigo || venta.cliente.codigoCliente,
       codigoAgente: codigoAgente || undefined,
       referencia: venta.folio,
-      observaciones: venta.observaciones || 'Facturación desde FerrecolorsERP',
+      observaciones: venta.observaciones || 'Facturación desde FerreColors',
       fecha: venta.fechaVenta.toISOString().split('T')[0],
-      movimientos: venta.detalles.map((detalle) => ({
+      movimientos: venta.detalles.map((detalle: any) => ({
         codigoProducto: detalle.producto.contpaqiCodigo || detalle.producto.codigo,
         codigoAlmacen,
         unidades: detalle.cantidad,

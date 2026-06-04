@@ -152,7 +152,7 @@ function NavigationContent() {
         <Link href="/" className="flex items-center gap-2">
           <Building className="h-8 w-8 text-primary" />
           <div className="flex flex-col">
-            <span className="text-lg font-bold">FerrecolorsERP</span>
+            <span className="text-lg font-bold">FerreColors</span>
             <span className="text-xs text-muted-foreground">v4.0.0</span>
           </div>
         </Link>
@@ -207,7 +207,7 @@ function NavigationContent() {
               <span>Sistema activo</span>
             </div>
             <div>Última actualización: 03/06/2026</div>
-            <div>© 2026 Ferrecolors. Todos los derechos reservados.</div>
+            <div>© 2026 FerreColors. Todos los derechos reservados.</div>
           </div>
         </div>
       </ScrollArea>

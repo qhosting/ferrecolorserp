@@ -73,7 +73,7 @@ export default function SignIn() {
             <Building2 className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            Ferrecolors<span className="text-indigo-400 font-medium">ERP</span>
+            FerreColors
           </span>
         </motion.div>
 
@@ -128,7 +128,7 @@ export default function SignIn() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="text-xs text-slate-500 z-10"
         >
-          © 2026 Ferrecolors. Todos los derechos reservados.
+          © 2026 FerreColors. Todos los derechos reservados.
         </motion.div>
       </div>
 
@@ -268,7 +268,7 @@ export default function SignIn() {
 
           <div className="text-center lg:hidden">
             <p className="text-xs text-slate-600">
-              © 2026 Ferrecolors. Todos los derechos reservados.
+              © 2026 FerreColors. Todos los derechos reservados.
             </p>
           </div>
         </motion.div>

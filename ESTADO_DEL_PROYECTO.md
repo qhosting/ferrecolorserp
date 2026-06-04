@@ -1,4 +1,4 @@
-# 📊 ESTADO DEL PROYECTO — FerrecolorsERP
+# 📊 ESTADO DEL PROYECTO — FerreColors
 *Fecha de actualización: 4 de junio, 2026*
 
 ## 🏗️ INFORMACIÓN GENERAL

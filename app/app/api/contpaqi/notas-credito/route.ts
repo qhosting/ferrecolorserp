@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       codigoConcepto: conceptoNotaCredito,
       codigoClienteProveedor: nota.cliente.contpaqiCodigo || nota.cliente.codigoCliente,
       referencia: nota.folio,
-      observaciones: nota.descripcion || 'Nota de crédito desde FerrecolorsERP',
+      observaciones: nota.descripcion || 'Nota de crédito desde FerreColors',
       fecha: nota.fecha.toISOString().split('T')[0],
       movimientos,
     };

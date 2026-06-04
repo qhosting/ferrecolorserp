@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       codigoConcepto: conceptoNotaCargo,
       codigoClienteProveedor: nota.cliente.contpaqiCodigo || nota.cliente.codigoCliente,
       referencia: nota.folio,
-      observaciones: nota.descripcion || 'Nota de cargo desde FerrecolorsERP',
+      observaciones: nota.descripcion || 'Nota de cargo desde FerreColors',
       fecha: nota.fecha.toISOString().split('T')[0],
       movimientos,
     };

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       fecha: pago.fechaPago.toISOString().split('T')[0],
       folioTicket: pago.folio || pago.referencia || `TKT-${pago.id.substring(0, 8).toUpperCase()}`,
       referencia: pago.referencia || `ERP-${pago.id.substring(0, 8).toUpperCase()}`,
-      observaciones: pago.observaciones || 'Pago registrado desde FerrecolorsERP',
+      observaciones: pago.observaciones || 'Pago registrado desde FerreColors',
       codigoConceptoAbono: conceptoAbono,
       codigoConceptoCargo: conceptoCargo,
     };
