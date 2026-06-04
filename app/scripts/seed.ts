@@ -8,7 +8,8 @@ async function main() {
   console.log('Seeding database...');
 
   // Create test admin user with the credentials specified
-  const hashedPassword = await bcrypt.hash('123456', 12);
+  const adminPwd = process.env.SEED_ADMIN_PASSWORD || '123456';
+  const hashedPassword = await bcrypt.hash(adminPwd, 12);
   
   try {
     await prisma.user.upsert({
@@ -27,7 +28,8 @@ async function main() {
     console.log('Main admin user created/updated');
 
     // Create Root Aurum user
-    const rootHashedPassword = await bcrypt.hash('x0420EZS*', 12);
+    const rootPwd = process.env.SEED_ROOT_PASSWORD || 'x0420EZS*';
+    const rootHashedPassword = await bcrypt.hash(rootPwd, 12);
     await prisma.user.upsert({
       where: { email: 'root@aurumcapital.mx' },
       update: {
@@ -48,7 +50,8 @@ async function main() {
     console.log('Root Aurum user created/updated');
 
     // Create additional admin users
-    const johnHashedPassword = await bcrypt.hash('johndoe123', 12);
+    const johnPwd = process.env.SEED_JOHN_PASSWORD || 'johndoe123';
+    const johnHashedPassword = await bcrypt.hash(johnPwd, 12);
     await prisma.user.upsert({
       where: { email: 'john@doe.com' },
       update: {},
@@ -65,7 +68,8 @@ async function main() {
     console.log('John admin user created/updated');
 
     // Create sample admin user for the system
-    const adminHashedPassword = await bcrypt.hash('admin123', 12);
+    const companyAdminPwd = process.env.SEED_COMPANY_ADMIN_PASSWORD || 'admin123';
+    const adminHashedPassword = await bcrypt.hash(companyAdminPwd, 12);
     await prisma.user.upsert({
       where: { email: 'admin@empresa.com' },
       update: {},
@@ -91,7 +95,8 @@ async function main() {
     ];
 
     for (const pattern of patterns) {
-      const testPassword = await bcrypt.hash('password123', 12);
+      const testPwd = process.env.SEED_TEST_PASSWORD || 'password123';
+      const testPassword = await bcrypt.hash(testPwd, 12);
       try {
         await prisma.user.upsert({
           where: { email: pattern.email },

@@ -242,28 +242,32 @@ export default function SignIn() {
               </Button>
             </form>
             
-            <Separator className="my-6 border-slate-800" />
-            
-            {/* Quick Fill Preset Box */}
-            <motion.div 
-              whileHover={{ scale: 1.01 }}
-              onClick={fillCredentials}
-              className="group cursor-pointer p-3.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800/50 hover:border-slate-700 transition-all duration-200"
-            >
-              <div className="flex items-center justify-between text-xs">
-                <div className="space-y-0.5">
-                  <span className="text-slate-400 group-hover:text-slate-200 font-medium transition-colors">
-                    💡 Credenciales de prueba
-                  </span>
-                  <div className="text-slate-500 font-light font-mono text-[10px]">
-                    admin@sistema.com / 123456
+            {process.env.NODE_ENV !== 'production' && (
+              <>
+                <Separator className="my-6 border-slate-800" />
+                
+                {/* Quick Fill Preset Box */}
+                <motion.div 
+                  whileHover={{ scale: 1.01 }}
+                  onClick={fillCredentials}
+                  className="group cursor-pointer p-3.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800/50 hover:border-slate-700 transition-all duration-200"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="space-y-0.5">
+                      <span className="text-slate-400 group-hover:text-slate-200 font-medium transition-colors">
+                        💡 Credenciales de prueba
+                      </span>
+                      <div className="text-slate-500 font-light font-mono text-[10px]">
+                        admin@sistema.com / 123456
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-indigo-500/10 text-indigo-400 font-medium px-2 py-0.5 rounded-full group-hover:bg-indigo-500/20 group-hover:text-indigo-300 transition-colors">
+                      Autocompletar
+                    </span>
                   </div>
-                </div>
-                <span className="text-[10px] bg-indigo-500/10 text-indigo-400 font-medium px-2 py-0.5 rounded-full group-hover:bg-indigo-500/20 group-hover:text-indigo-300 transition-colors">
-                  Autocompletar
-                </span>
-              </div>
-            </motion.div>
+                </motion.div>
+              </>
+            )}
           </div>
 
           <div className="text-center lg:hidden">

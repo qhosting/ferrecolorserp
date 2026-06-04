@@ -36,10 +36,11 @@ Componentes UI:           53 + 12 directorios de negocio
 ## ✅ MÓDULOS COMPLETAMENTE FUNCIONALES
 
 ### 1. 🔐 Sistema de Autenticación y Login Premium
-- **Estado:** ✅ COMPLETO
+- **Estado:** ✅ COMPLETO (Auditado y Asegurado)
 - Login con diseño Split-Screen, animaciones fluidas (`framer-motion`), campos interactivos con control de visualización de contraseña.
 - Roles: SUPERADMIN, ADMIN, ANALISTA, GESTOR, CLIENTE, VENTAS.
-- Credenciales autocompletables para pruebas y desarrollo.
+- Credenciales autocompletables para desarrollo, deshabilitadas automáticamente en producción (`process.env.NODE_ENV !== 'production'`).
+- Endpoint `/api/signup` protegido contra escalamiento de privilegios (degrada a `CLIENTE` si no es ejecutado por un administrador autenticado).
 - **Archivos:** `middleware.ts`, `app/auth/`, `app/login/`, `app/signup/`
 - **APIs:** `/api/auth/[...nextauth]`, `/api/signup`, `/api/users`
 
@@ -156,6 +157,15 @@ Admin:     admin@sistema.com / 123456
 Gestor:    gestor1@sistema.com / password123
 Vendedor:  vendedor1@sistema.com / password123
 ```
+
+---
+
+## 🔒 AUDITORÍA DE SEGURIDAD PRE-PUSH
+- **Fase 11:** ✅ COMPLETADA (4 de junio, 2026)
+- Se eliminaron las claves SAT y APIs hardcodeadas.
+- El endpoint de registro `/api/signup` ahora requiere autorización para asignar roles elevados (`SUPERADMIN`/`ADMIN`).
+- El botón de autocompletado de credenciales está restringido a entornos locales de desarrollo (`process.env.NODE_ENV !== 'production'`).
+- El script de bases de datos (`seed.ts`) ahora lee las contraseñas de las variables de entorno con fallbacks parametrizados.
 
 ---
 

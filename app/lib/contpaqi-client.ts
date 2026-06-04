@@ -23,7 +23,7 @@ export class ContpaqiClient {
 
   private constructor() {
     this.baseUrl = process.env.CONTPAQI_API_URL || 'http://localhost:5000/api';
-    this.apiKey = process.env.CONTPAQI_API_KEY || 'VortexContpaqiAPI2024';
+    this.apiKey = process.env.CONTPAQI_API_KEY || '';
     this.companyId = process.env.CONTPAQI_COMPANY_ID || 'FERRE_COLORS';
   }
 

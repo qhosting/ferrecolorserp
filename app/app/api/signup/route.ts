@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@/lib/types";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
@@ -33,9 +35,25 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Validate role
+    // Validate and restrict role assignment
     const validRoles = ['SUPERADMIN', 'ADMIN', 'ANALISTA', 'GESTOR', 'CLIENTE', 'VENTAS'];
-    const userRole = validRoles.includes(role) ? role : 'CLIENTE';
+    let userRole = 'CLIENTE';
+
+    // Count existing users to allow the first user to be ADMIN/SUPERADMIN
+    const totalUsers = await prisma.user.count();
+
+    if (totalUsers === 0) {
+      // First user in system can choose their role
+      userRole = validRoles.includes(role) ? role : 'SUPERADMIN';
+    } else {
+      // If there are users, require active admin/superadmin session to assign special roles
+      const session = await getServerSession(authOptions);
+      if (session && (session.user.role === 'SUPERADMIN' || session.user.role === 'ADMIN')) {
+        userRole = validRoles.includes(role) ? role : 'CLIENTE';
+      } else {
+        userRole = 'CLIENTE'; // Force default CLIENTE for self-registration/non-admins
+      }
+    }
 
     // Create user
     const user = await prisma.user.create({
