@@ -2,8 +2,8 @@
 # 🚀 Guía de Configuración para Easypanel
 
 **Fecha:** 25 de Octubre, 2025  
-**Proyecto:** VertexERP v4.0.0  
-**Problema:** "No such image: easypanel/cloudmx/vertexerp:latest"  
+**Proyecto:** FerreColors v4.0.0  
+**Problema:** "No such image: easypanel/cloudmx/FerreColors:latest"  
 **Solución:** Configurar correctamente el build desde Dockerfile
 
 ---
@@ -12,7 +12,7 @@
 
 ### Error Reportado
 ```
-No such image: easypanel/cloudmx/vertexerp:latest
+No such image: easypanel/cloudmx/FerreColors:latest
 ```
 
 ### Causa
@@ -20,7 +20,7 @@ Easypanel está configurado para usar una **imagen Docker pre-construida** en lu
 
 **Configuración incorrecta:**
 - Tipo: Docker Image (imagen pre-construida)
-- Imagen: easypanel/cloudmx/vertexerp:latest ❌
+- Imagen: easypanel/cloudmx/FerreColors:latest ❌
 
 **Configuración correcta:**
 - Tipo: **Build from Source** (construir desde Dockerfile)
@@ -33,14 +33,14 @@ Easypanel está configurado para usar una **imagen Docker pre-construida** en lu
 ### 1. Acceder al Proyecto en Easypanel
 
 1. Ve a tu panel de Easypanel
-2. Si ya existe el proyecto `vertexerp`, **elimínalo primero**
+2. Si ya existe el proyecto `FerreColors`, **elimínalo primero**
 3. Crea un **nuevo proyecto desde cero**
 
 ### 2. Configuración Inicial del Proyecto
 
 **Nombre del Proyecto:**
 ```
-VertexERP
+FerreColors
 ```
 
 **Tipo de Servicio:**
@@ -57,7 +57,7 @@ Esta es la parte **MÁS IMPORTANTE**:
 | Campo | Valor |
 |-------|-------|
 | **Source Type** | `GitHub` |
-| **Repository** | `qhosting/vertexerp` |
+| **Repository** | `qhosting/ferrecolorserp` |
 | **Branch** | `main` |
 | **Auto Deploy** | ✅ Enabled (para deploy automático con push) |
 
@@ -66,7 +66,7 @@ Esta es la parte **MÁS IMPORTANTE**:
 | Campo | Valor |
 |-------|-------|
 | **Source Type** | `Git` |
-| **Repository URL** | `https://github.com/qhosting/vertexerp.git` |
+| **Repository URL** | `https://github.com/qhosting/ferrecolorserp.git` |
 | **Branch** | `main` |
 | **Auto Deploy** | ✅ Enabled |
 
@@ -179,7 +179,7 @@ SMTP_PASSWORD=tu-app-password
 Easypanel buscará estos archivos en tu repositorio:
 
 ```
-vertexerp/
+ferrecolorserp/
 ├── Dockerfile              ← ⚠️ CRÍTICO: Debe estar en la raíz
 ├── docker-compose.yml      ← Opcional (no usado por Easypanel)
 ├── .dockerignore          ← Importante para optimizar build
@@ -223,8 +223,8 @@ CMD ["./start.sh"]
 ```
 
 **Easypanel ejecutará automáticamente:**
-1. `docker build -t vertexerp:latest .` ✅
-2. `docker run vertexerp:latest` ✅
+1. `docker build -t FerreColors:latest .` ✅
+2. `docker run FerreColors:latest` ✅
 
 ---
 
@@ -259,10 +259,10 @@ Antes de hacer deploy, verificar:
 
 1. **Crear Proyecto Nuevo en Easypanel**
    - Click en "New Project" o "Create App"
-   - Nombrar: `VertexERP`
+   - Nombrar: `FerreColors`
 
 2. **Configurar Source**
-   - Conectar GitHub: `qhosting/vertexerp`
+   - Conectar GitHub: `qhosting/ferrecolorserp`
    - Branch: `main`
    - Enable Auto Deploy
 
@@ -328,7 +328,7 @@ El proceso tomará aproximadamente **5-10 minutos**:
 
 **Síntoma:**
 ```
-No such image: easypanel/cloudmx/vertexerp:latest
+No such image: easypanel/cloudmx/FerreColors:latest
 ```
 
 **Causa:**
@@ -405,12 +405,12 @@ Recursos insuficientes o problema de red
 | Característica | Docker Image ❌ | Dockerfile ✅ |
 |---------------|----------------|---------------|
 | **Fuente** | Imagen pre-construida | Código fuente |
-| **Ejemplo** | `vertexerp:latest` | `./Dockerfile` |
+| **Ejemplo** | `FerreColors:latest` | `./Dockerfile` |
 | **Requiere** | Imagen en registry | Dockerfile en repo |
 | **Flexibilidad** | Baja (imagen fija) | Alta (build dinámico) |
 | **Actualizaciones** | Manual | Automático con push |
 | **Personalización** | No | Sí |
-| **Para VertexERP** | ❌ NO usar | ✅ SÍ usar |
+| **Para FerreColors** | ❌ NO usar | ✅ SÍ usar |
 
 ---
 
@@ -420,11 +420,11 @@ Recursos insuficientes o problema de red
 
 ```yaml
 Project:
-  Name: VertexERP
+  Name: FerreColors
   
 Source:
   Type: GitHub
-  Repository: qhosting/vertexerp
+  Repository: qhosting/ferrecolorserp
   Branch: main
   Auto Deploy: ✅ Enabled
 
@@ -547,12 +547,15 @@ Si después de seguir estos pasos todavía tienes problemas:
    - Comparar con esta guía
 
 3. **Verificar repositorio**
-   - https://github.com/qhosting/vertexerp
+   - https://github.com/qhosting/ferrecolorserp
    - Verificar que Dockerfile esté visible
    - Verificar que yarn.lock tenga 434 KB
 
 ---
 
-**VertexERP v4.0.0**  
+**FerreColors v4.0.0**  
 Configuración Verificada para Easypanel  
 © 2025 - Build desde Dockerfile funcionando correctamente
+
+
+

@@ -1,5 +1,5 @@
 
-# ⚡ Quick Start - VertexERP Completo v4.0
+# ⚡ Quick Start - FerreColors Completo v4.0
 
 ## 🚀 Instalación Ultra Rápida (5 minutos)
 
@@ -72,4 +72,5 @@ Contraseña: admin123
 
 ---
 
-**¡Tu VertexERP está listo en minutos!** 🎉
+**¡Tu FerreColors está listo en minutos!** 🎉
+

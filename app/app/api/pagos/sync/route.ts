@@ -7,9 +7,9 @@ import { authOptions } from '@/lib/auth';
 // En producción, aquí iría la conexión real a MySQL con las credenciales proporcionadas
 const dbConfig = {
   host: 'localhost',
-  user: 'mueblesdaso_cob',
+  user: 'ferrecolors_cob',
   password: 'B4Dl6VlHDo',
-  database: 'mueblesdaso_cob'
+  database: 'ferrecolors_cob'
 };
 
 export async function POST(request: NextRequest) {

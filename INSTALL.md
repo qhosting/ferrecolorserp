@@ -1,7 +1,7 @@
 
-# 🚀 Guía de Instalación - VertexERP Completo v4.0
+# 🚀 Guía de Instalación - FerreColors Completo v4.0
 
-Esta guía te ayudará a instalar y configurar el VertexERP Completo en tu entorno local o de producción.
+Esta guía te ayudará a instalar y configurar el FerreColors Completo en tu entorno local o de producción.
 
 ## 📋 Prerrequisitos
 
@@ -215,9 +215,9 @@ El sistema incluye funcionalidad PWA lista para usar:
 2. **Personalizar manifest.json**
 ```json
 {
-  "name": "Tu VertexERP",
+  "name": "Tu FerreColors",
   "short_name": "ERP",
-  "description": "VertexERP Completo para tu empresa",
+  "description": "FerreColors Completo para tu empresa",
   "start_url": "/",
   "display": "standalone"
 }
@@ -358,6 +358,7 @@ Después de una instalación exitosa:
 
 ---
 
-**¡Felicidades! Tu VertexERP está listo para usar** 🎉
+**¡Felicidades! Tu FerreColors está listo para usar** 🎉
 
 Desarrollado con ❤️ usando DeepAgent de Abacus.AI 🚀
+

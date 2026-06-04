@@ -2,7 +2,7 @@
 
 # ===========================================
 # Dockerfile Multi-Stage para Next.js
-# VertexERP v4.0
+# FerreColors v4.0
 # ===========================================
 
 # Stage 1: Dependencias
