@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { 
+import {
   Home,
   Users,
   Package,
@@ -82,8 +82,7 @@ const navigationItems: NavigationItem[] = [
     title: 'Compras',
     href: '/compras',
     icon: <Truck className="h-4 w-4" />,
-    group: 'Movimientos',
-    badge: 'Nuevo'
+    group: 'Movimientos'
   },
   {
     title: 'Almacén',
@@ -114,8 +113,7 @@ const navigationItems: NavigationItem[] = [
     title: 'Facturación Electrónica',
     href: '/facturacion-electronica',
     icon: <FileCheck className="h-4 w-4" />,
-    group: 'Notas de venta',
-    badge: 'Nuevo'
+    group: 'Notas de venta'
   },
   // 6. Procesos
   {
@@ -171,8 +169,7 @@ const navigationItems: NavigationItem[] = [
     title: 'Business Intelligence',
     href: '/business-intelligence',
     icon: <TrendingUp className="h-4 w-4" />,
-    group: 'Reportes',
-    badge: 'Nuevo'
+    group: 'Reportes'
   },
   // 8. Configuración
   {
@@ -185,8 +182,7 @@ const navigationItems: NavigationItem[] = [
     title: 'Integración CONTPAQi',
     href: '/integraciones',
     icon: <Database className="h-4 w-4" />,
-    group: 'Configuración',
-    badge: 'Sync'
+    group: 'Configuración'
   },
   {
     title: 'Automatización',
@@ -204,50 +200,50 @@ const navigationItems: NavigationItem[] = [
 ];
 
 const groupColors: Record<string, { activeBg: string; text: string; dot: string }> = {
-  'Empresa': { 
-    activeBg: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold border-l-2 border-blue-500 rounded-l-none rounded-r-md', 
-    text: 'text-blue-600 dark:text-blue-400', 
-    dot: 'bg-blue-500' 
+  'Empresa': {
+    activeBg: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold border-l-2 border-blue-500 rounded-l-none rounded-r-md',
+    text: 'text-blue-600 dark:text-blue-400',
+    dot: 'bg-blue-500'
   },
-  'Ver': { 
-    activeBg: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold border-l-2 border-amber-500 rounded-l-none rounded-r-md', 
-    text: 'text-amber-600 dark:text-amber-400', 
-    dot: 'bg-amber-500' 
+  'Ver': {
+    activeBg: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold border-l-2 border-amber-500 rounded-l-none rounded-r-md',
+    text: 'text-amber-600 dark:text-amber-400',
+    dot: 'bg-amber-500'
   },
-  'Catálogos': { 
-    activeBg: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-semibold border-l-2 border-purple-500 rounded-l-none rounded-r-md', 
-    text: 'text-purple-600 dark:text-purple-400', 
-    dot: 'bg-purple-500' 
+  'Catálogos': {
+    activeBg: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-semibold border-l-2 border-purple-500 rounded-l-none rounded-r-md',
+    text: 'text-purple-600 dark:text-purple-400',
+    dot: 'bg-purple-500'
   },
-  'Movimientos': { 
-    activeBg: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold border-l-2 border-emerald-500 rounded-l-none rounded-r-md', 
-    text: 'text-emerald-600 dark:text-emerald-400', 
-    dot: 'bg-emerald-500' 
+  'Movimientos': {
+    activeBg: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold border-l-2 border-emerald-500 rounded-l-none rounded-r-md',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    dot: 'bg-emerald-500'
   },
-  'Notas de venta': { 
-    activeBg: 'bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-semibold border-l-2 border-cyan-500 rounded-l-none rounded-r-md', 
-    text: 'text-cyan-600 dark:text-cyan-400', 
-    dot: 'bg-cyan-500' 
+  'Notas de venta': {
+    activeBg: 'bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-semibold border-l-2 border-cyan-500 rounded-l-none rounded-r-md',
+    text: 'text-cyan-600 dark:text-cyan-400',
+    dot: 'bg-cyan-500'
   },
-  'Procesos': { 
-    activeBg: 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold border-l-2 border-rose-500 rounded-l-none rounded-r-md', 
-    text: 'text-rose-600 dark:text-rose-400', 
-    dot: 'bg-rose-500' 
+  'Procesos': {
+    activeBg: 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold border-l-2 border-rose-500 rounded-l-none rounded-r-md',
+    text: 'text-rose-600 dark:text-rose-400',
+    dot: 'bg-rose-500'
   },
-  'Reportes': { 
-    activeBg: 'bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 font-semibold border-l-2 border-violet-500 rounded-l-none rounded-r-md', 
-    text: 'text-violet-600 dark:text-violet-400', 
-    dot: 'bg-violet-500' 
+  'Reportes': {
+    activeBg: 'bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 font-semibold border-l-2 border-violet-500 rounded-l-none rounded-r-md',
+    text: 'text-violet-600 dark:text-violet-400',
+    dot: 'bg-violet-500'
   },
-  'Configuración': { 
-    activeBg: 'bg-slate-500/10 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 font-semibold border-l-2 border-slate-500 rounded-l-none rounded-r-md', 
-    text: 'text-slate-700 dark:text-slate-300', 
-    dot: 'bg-slate-500 animate-pulse' 
+  'Configuración': {
+    activeBg: 'bg-slate-500/10 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 font-semibold border-l-2 border-slate-500 rounded-l-none rounded-r-md',
+    text: 'text-slate-700 dark:text-slate-300',
+    dot: 'bg-slate-500 animate-pulse'
   },
-  'Buzón': { 
-    activeBg: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 font-semibold border-l-2 border-green-500 rounded-l-none rounded-r-md', 
-    text: 'text-green-600 dark:text-green-400', 
-    dot: 'bg-green-500' 
+  'Buzón': {
+    activeBg: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 font-semibold border-l-2 border-green-500 rounded-l-none rounded-r-md',
+    text: 'text-green-600 dark:text-green-400',
+    dot: 'bg-green-500'
   }
 };
 
@@ -284,9 +280,9 @@ function NavigationContent() {
           {groups.map((groupName) => {
             const itemsInGroup = navigationItems.filter(item => item.group === groupName);
             if (itemsInGroup.length === 0) return null;
-            
+
             const groupConfig = groupColors[groupName];
-            
+
             return (
               <div key={groupName} className="space-y-2">
                 <div className="flex items-center gap-2 px-3">
@@ -298,7 +294,7 @@ function NavigationContent() {
                 <div className="space-y-1">
                   {itemsInGroup.map((item, index) => {
                     const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                    
+
                     return (
                       <div key={index}>
                         <Link href={item.href}>
@@ -306,13 +302,13 @@ function NavigationContent() {
                             variant={isActive ? 'secondary' : 'ghost'}
                             className={cn(
                               'w-full justify-start gap-3 h-9 px-3 text-sm transition-all duration-200',
-                              isActive 
+                              isActive
                                 ? groupConfig?.activeBg
                                 : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
                             )}
                           >
                             <span className={cn(
-                              'transition-transform duration-200', 
+                              'transition-transform duration-200',
                               isActive ? 'scale-110 ' + groupConfig?.text : 'text-muted-foreground'
                             )}>
                               {item.icon}
@@ -321,8 +317,8 @@ function NavigationContent() {
                             {item.badge && (
                               <span className={cn(
                                 'text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide',
-                                isActive 
-                                  ? 'bg-foreground text-background' 
+                                isActive
+                                  ? 'bg-foreground text-background'
                                   : 'bg-primary text-primary-foreground'
                               )}>
                                 {item.badge}
@@ -350,7 +346,7 @@ function NavigationContent() {
               <span className="font-medium text-foreground">ERP Sincronizado</span>
             </div>
             <div>Actualizado: 04/06/2026</div>
-            <div>© FerreColors. Todos los derechos reservados.</div>
+            <div>©AurumCapital</div>
           </div>
         </div>
       </ScrollArea>
