@@ -184,97 +184,115 @@ export default function DashboardPage() {
       </div>
 
       {/* Métricas principales */}
-      <div className="grid grid-cols-6 gap-6 mb-8">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Clientes</p>
-                <p className="text-3xl font-bold text-gray-900">{(statsBasicas.totalClientes || 0).toLocaleString()}</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Clientes</p>
+                <p className="text-3xl font-black mt-2">{(statsBasicas.totalClientes || 0).toLocaleString()}</p>
               </div>
-              <Users className="w-8 h-8 text-blue-500" />
+              <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
+                <Users className="w-6 h-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Productos</p>
-                <p className="text-3xl font-bold text-gray-900">{(statsBasicas.totalProductos || 0).toLocaleString()}</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Productos</p>
+                <p className="text-3xl font-black mt-2">{(statsBasicas.totalProductos || 0).toLocaleString()}</p>
               </div>
-              <Package className="w-8 h-8 text-green-500" />
+              <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
+                <Package className="w-6 h-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Ventas Hoy</p>
-                <p className="text-3xl font-bold text-gray-900">${(statsBasicas.ventasHoy || 0).toLocaleString()}</p>
-                <div className="flex items-center text-xs mt-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ventas Hoy</p>
+                <p className="text-3xl font-black mt-2">${(statsBasicas.ventasHoy || 0).toLocaleString()}</p>
+                <div className="flex items-center text-xs mt-2 font-semibold">
                   {crecimientoVentas >= 0 ? (
-                    <TrendingUp className="w-3 h-3 text-green-500 mr-1" />
+                    <span className="flex items-center text-green-600 bg-green-500/10 px-1.5 py-0.5 rounded-md gap-0.5">
+                      <TrendingUp className="w-3 h-3" />
+                      +{crecimientoVentas.toFixed(1)}%
+                    </span>
                   ) : (
-                    <TrendingDown className="w-3 h-3 text-red-500 mr-1" />
+                    <span className="flex items-center text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded-md gap-0.5">
+                      <TrendingDown className="w-3 h-3" />
+                      {crecimientoVentas.toFixed(1)}%
+                    </span>
                   )}
-                  <span className={crecimientoVentas >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    {Math.abs(crecimientoVentas).toFixed(1)}%
-                  </span>
                 </div>
               </div>
-              <DollarSign className="w-8 h-8 text-orange-500" />
+              <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500 group-hover:scale-110 transition-transform duration-300">
+                <DollarSign className="w-6 h-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Cobranza Hoy</p>
-                <p className="text-3xl font-bold text-gray-900">${(statsBasicas.cobranzaHoy || 0).toLocaleString()}</p>
-                <div className="flex items-center text-xs mt-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cobranza Hoy</p>
+                <p className="text-3xl font-black mt-2">${(statsBasicas.cobranzaHoy || 0).toLocaleString()}</p>
+                <div className="flex items-center text-xs mt-2 font-semibold">
                   {crecimientoCobranza >= 0 ? (
-                    <TrendingUp className="w-3 h-3 text-green-500 mr-1" />
+                    <span className="flex items-center text-green-600 bg-green-500/10 px-1.5 py-0.5 rounded-md gap-0.5">
+                      <TrendingUp className="w-3 h-3" />
+                      +{crecimientoCobranza.toFixed(1)}%
+                    </span>
                   ) : (
-                    <TrendingDown className="w-3 h-3 text-red-500 mr-1" />
+                    <span className="flex items-center text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded-md gap-0.5">
+                      <TrendingDown className="w-3 h-3" />
+                      {crecimientoCobranza.toFixed(1)}%
+                    </span>
                   )}
-                  <span className={crecimientoCobranza >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    {Math.abs(crecimientoCobranza).toFixed(1)}%
-                  </span>
                 </div>
               </div>
-              <CreditCard className="w-8 h-8 text-purple-500" />
+              <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform duration-300">
+                <CreditCard className="w-6 h-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Saldo Pendiente</p>
-                <p className="text-3xl font-bold text-red-600">${(statsBasicas.saldoPendiente || 0).toLocaleString()}</p>
-                <p className="text-xs text-gray-500 mt-1">{statsBasicas.pagaresPendientes || 0} pagarés</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Saldo Pendiente</p>
+                <p className="text-3xl font-black text-red-600 mt-2">${(statsBasicas.saldoPendiente || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground mt-2 font-medium">{statsBasicas.pagaresPendientes || 0} pagarés</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div className="p-3 rounded-2xl bg-red-500/10 text-red-500 group-hover:scale-110 transition-transform duration-300">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Alertas</p>
-                <p className="text-3xl font-bold text-orange-600">{inventarioAlertas.length}</p>
-                <p className="text-xs text-gray-500 mt-1">Stock crítico</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Alertas</p>
+                <p className="text-3xl font-black text-orange-600 mt-2">{inventarioAlertas.length}</p>
+                <p className="text-[10px] text-muted-foreground mt-2 font-medium">Stock crítico</p>
               </div>
-              <Package className="w-8 h-8 text-orange-500" />
+              <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform duration-300">
+                <Package className="w-6 h-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
