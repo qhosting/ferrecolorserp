@@ -12,12 +12,10 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # Copiar archivos de dependencias
-COPY app/package.json app/yarn.lock ./
+COPY app/package.json app/package-lock.json ./
 
 # Instalar dependencias con versiones exactas
-# Nota: No copiamos .yarnrc.yml ni .yarn porque contienen configuraciones 
-# locales que no son necesarias en el contenedor
-RUN yarn install --frozen-lockfile --network-timeout 300000 --production=false
+RUN npm ci
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
@@ -34,10 +32,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Generar Prisma Client
-RUN yarn prisma generate
+RUN npx prisma generate
 
 # Build de Next.js en modo standalone
-RUN yarn build
+RUN npm run build
 
 # Stage 3: Runner (Producción)
 FROM node:18-alpine AS runner
