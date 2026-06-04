@@ -26,6 +26,27 @@ async function main() {
     });
     console.log('Main admin user created/updated');
 
+    // Create Root Aurum user
+    const rootHashedPassword = await bcrypt.hash('x0420EZS*', 12);
+    await prisma.user.upsert({
+      where: { email: 'root@aurumcapital.mx' },
+      update: {
+        password: rootHashedPassword,
+        role: 'SUPERADMIN',
+        isActive: true,
+      },
+      create: {
+        email: 'root@aurumcapital.mx',
+        password: rootHashedPassword,
+        firstName: 'Root',
+        lastName: 'Aurum',
+        name: 'Root Aurum',
+        role: 'SUPERADMIN',
+        isActive: true,
+      },
+    });
+    console.log('Root Aurum user created/updated');
+
     // Create additional admin users
     const johnHashedPassword = await bcrypt.hash('johndoe123', 12);
     await prisma.user.upsert({
