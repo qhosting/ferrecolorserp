@@ -32,7 +32,8 @@ import {
   Warehouse,
   MessageSquare,
   Eye,
-  ArrowDownRight
+  ArrowDownRight,
+  ChevronDown
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -199,56 +200,76 @@ const navigationItems: NavigationItem[] = [
   }
 ];
 
-const groupColors: Record<string, { activeBg: string; text: string; dot: string }> = {
+const groupColors: Record<string, { activeBg: string; text: string; dot: string; groupBg: string; groupBorder: string }> = {
   'Empresa': {
     activeBg: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold border-l-2 border-blue-500 rounded-l-none rounded-r-md',
     text: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500'
+    dot: 'bg-blue-500',
+    groupBg: 'bg-blue-500/10 dark:bg-blue-500/20',
+    groupBorder: 'border-l-2 border-blue-500 rounded-l-none'
   },
   'Ver': {
     activeBg: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold border-l-2 border-amber-500 rounded-l-none rounded-r-md',
     text: 'text-amber-600 dark:text-amber-400',
-    dot: 'bg-amber-500'
+    dot: 'bg-amber-500',
+    groupBg: 'bg-amber-500/10 dark:bg-amber-500/20',
+    groupBorder: 'border-l-2 border-amber-500 rounded-l-none'
   },
   'Catálogos': {
     activeBg: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-semibold border-l-2 border-purple-500 rounded-l-none rounded-r-md',
     text: 'text-purple-600 dark:text-purple-400',
-    dot: 'bg-purple-500'
+    dot: 'bg-purple-500',
+    groupBg: 'bg-purple-500/10 dark:bg-purple-500/20',
+    groupBorder: 'border-l-2 border-purple-500 rounded-l-none'
   },
   'Movimientos': {
     activeBg: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold border-l-2 border-emerald-500 rounded-l-none rounded-r-md',
     text: 'text-emerald-600 dark:text-emerald-400',
-    dot: 'bg-emerald-500'
+    dot: 'bg-emerald-500',
+    groupBg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
+    groupBorder: 'border-l-2 border-emerald-500 rounded-l-none'
   },
   'Notas de venta': {
     activeBg: 'bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-semibold border-l-2 border-cyan-500 rounded-l-none rounded-r-md',
     text: 'text-cyan-600 dark:text-cyan-400',
-    dot: 'bg-cyan-500'
+    dot: 'bg-cyan-500',
+    groupBg: 'bg-cyan-500/10 dark:bg-cyan-500/20',
+    groupBorder: 'border-l-2 border-cyan-500 rounded-l-none'
   },
   'Procesos': {
     activeBg: 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold border-l-2 border-rose-500 rounded-l-none rounded-r-md',
     text: 'text-rose-600 dark:text-rose-400',
-    dot: 'bg-rose-500'
+    dot: 'bg-rose-500',
+    groupBg: 'bg-rose-500/10 dark:bg-rose-500/20',
+    groupBorder: 'border-l-2 border-rose-500 rounded-l-none'
   },
   'Reportes': {
     activeBg: 'bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 font-semibold border-l-2 border-violet-500 rounded-l-none rounded-r-md',
     text: 'text-violet-600 dark:text-violet-400',
-    dot: 'bg-violet-500'
+    dot: 'bg-violet-500',
+    groupBg: 'bg-violet-500/10 dark:bg-violet-500/20',
+    groupBorder: 'border-l-2 border-violet-500 rounded-l-none'
   },
   'Configuración': {
     activeBg: 'bg-slate-500/10 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 font-semibold border-l-2 border-slate-500 rounded-l-none rounded-r-md',
     text: 'text-slate-700 dark:text-slate-300',
-    dot: 'bg-slate-500 animate-pulse'
+    dot: 'bg-slate-500 animate-pulse',
+    groupBg: 'bg-slate-500/10 dark:bg-slate-500/20',
+    groupBorder: 'border-l-2 border-slate-500 rounded-l-none'
   },
   'Buzón': {
     activeBg: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 font-semibold border-l-2 border-green-500 rounded-l-none rounded-r-md',
     text: 'text-green-600 dark:text-green-400',
-    dot: 'bg-green-500'
+    dot: 'bg-green-500',
+    groupBg: 'bg-green-500/10 dark:bg-green-500/20',
+    groupBorder: 'border-l-2 border-green-500 rounded-l-none'
   }
 };
 
 function NavigationContent() {
   const pathname = usePathname();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  
   const groups = [
     'Empresa',
     'Movimientos',
@@ -260,6 +281,29 @@ function NavigationContent() {
     'Configuración',
     'Buzón'
   ] as const;
+
+  // Initialize and automatically expand only the active group on pathname changes (accordion style)
+  useEffect(() => {
+    const activeItem = navigationItems.find(item => 
+      pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+    );
+    if (activeItem) {
+      setExpandedGroups({
+        [activeItem.group]: true
+      });
+    }
+  }, [pathname]);
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups(prev => {
+      const wasExpanded = !!prev[groupName];
+      const newState: Record<string, boolean> = {};
+      if (!wasExpanded) {
+        newState[groupName] = true;
+      }
+      return newState;
+    });
+  };
 
   return (
     <div className="flex flex-col h-full bg-background border-r">
@@ -276,60 +320,82 @@ function NavigationContent() {
 
       {/* Navigation */}
       <ScrollArea className="flex-1 px-4 py-4">
-        <div className="space-y-6">
+        <div className="space-y-4">
           {groups.map((groupName) => {
             const itemsInGroup = navigationItems.filter(item => item.group === groupName);
             if (itemsInGroup.length === 0) return null;
 
             const groupConfig = groupColors[groupName];
+            const isExpanded = !!expandedGroups[groupName];
+            const isGroupActive = itemsInGroup.some(item => 
+              pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            );
 
             return (
-              <div key={groupName} className="space-y-2">
-                <div className="flex items-center gap-2 px-3">
-                  <span className={cn('h-1.5 w-1.5 rounded-full', groupConfig?.dot || 'bg-muted')} />
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    {groupName}
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  {itemsInGroup.map((item, index) => {
-                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+              <div key={groupName} className="space-y-1">
+                <button
+                  onClick={() => toggleGroup(groupName)}
+                  className={cn(
+                    "flex items-center justify-between w-full px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all duration-200 cursor-pointer border border-transparent",
+                    isGroupActive 
+                      ? cn("shadow-sm font-extrabold", groupConfig?.groupBg, groupConfig?.groupBorder, groupConfig?.text)
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    isExpanded && !isGroupActive && "bg-slate-50/60 dark:bg-slate-900/40 text-foreground border-l border-slate-200 dark:border-slate-800"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={cn('h-1.5 w-1.5 rounded-full transition-all', groupConfig?.dot || 'bg-muted', isGroupActive && 'scale-125')} />
+                    <span>{groupName}</span>
+                  </div>
+                  <ChevronDown 
+                    className={cn(
+                      "h-3.5 w-3.5 transition-transform duration-200 text-muted-foreground/75",
+                      isExpanded ? "transform rotate-0" : "transform -rotate-90"
+                    )} 
+                  />
+                </button>
+                
+                {isExpanded && (
+                  <div className="space-y-1 pl-2 border-l border-slate-200 dark:border-slate-800/60 ml-3.5 mt-1">
+                    {itemsInGroup.map((item, index) => {
+                      const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
-                    return (
-                      <div key={index}>
-                        <Link href={item.href}>
-                          <Button
-                            variant={isActive ? 'secondary' : 'ghost'}
-                            className={cn(
-                              'w-full justify-start gap-3 h-9 px-3 text-sm transition-all duration-200',
-                              isActive
-                                ? groupConfig?.activeBg
-                                : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
-                            )}
-                          >
-                            <span className={cn(
-                              'transition-transform duration-200',
-                              isActive ? 'scale-110 ' + groupConfig?.text : 'text-muted-foreground'
-                            )}>
-                              {item.icon}
-                            </span>
-                            <span className="flex-1 text-left">{item.title}</span>
-                            {item.badge && (
-                              <span className={cn(
-                                'text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide',
+                      return (
+                        <div key={index}>
+                          <Link href={item.href}>
+                            <Button
+                              variant={isActive ? 'secondary' : 'ghost'}
+                              className={cn(
+                                'w-full justify-start gap-3 h-8.5 px-3 text-xs transition-all duration-200 rounded-md',
                                 isActive
-                                  ? 'bg-foreground text-background'
-                                  : 'bg-primary text-primary-foreground'
+                                  ? groupConfig?.activeBg
+                                  : 'hover:bg-muted/30 text-muted-foreground hover:text-foreground'
+                              )}
+                            >
+                              <span className={cn(
+                                'transition-transform duration-200 h-3.5 w-3.5 flex items-center justify-center',
+                                isActive ? 'scale-110 ' + groupConfig?.text : 'text-muted-foreground'
                               )}>
-                                {item.badge}
+                                {item.icon}
                               </span>
-                            )}
-                          </Button>
-                        </Link>
-                      </div>
-                    );
-                  })}
-                </div>
+                              <span className="flex-1 text-left truncate">{item.title}</span>
+                              {item.badge && (
+                                <span className={cn(
+                                  'text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide',
+                                  isActive
+                                    ? 'bg-foreground text-background'
+                                    : 'bg-primary text-primary-foreground'
+                                )}>
+                                  {item.badge}
+                                </span>
+                              )}
+                            </Button>
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
