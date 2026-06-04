@@ -1,0 +1,81 @@
+
+version: '3.8'
+
+services:
+  # VertexERP - Aplicación Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vertexerp-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      # Agrega aquí otras variables de entorno necesarias
+    depends_on:
+      - db
+    networks:
+      - vertexerp-network
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: vertexerp-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-erp_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-erp_password}
+      - POSTGRES_DB=${POSTGRES_DB:-erp_database}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - vertexerp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-erp_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin (Opcional - solo para desarrollo)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sistema-erp-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@erp.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin123}
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - vertexerp-network
+    profiles:
+      - dev
+
+networks:
+  vertexerp-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  pgadmin-data:
+    driver: local
+  uploads:
+    driver: local

@@ -1,0 +1,57 @@
+
+{
+  "name": "VertexERP - Sistema de Gestión Empresarial",
+  "short_name": "VertexERP",
+  "description": "VertexERP: Sistema integral de gestión empresarial con funcionalidad offline",
+  "start_url": "/cobranza",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/PWA-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/PWA-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/PWA-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/PWA-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva Cobranza",
+      "short_name": "Cobrar",
+      "description": "Iniciar proceso de cobranza",
+      "url": "/cobranza",
+      "icons": [{ "src": "/icons/pay-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Sincronizar",
+      "short_name": "Sync",
+      "description": "Sincronizar datos offline",
+      "url": "/cobranza?sync=true",
+      "icons": [{ "src": "/icons/sync-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "categories": ["business", "finance", "productivity"],
+  "lang": "es",
+  "dir": "ltr"
+}

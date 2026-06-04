@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sin Conexión - ERP Cobranza</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .offline-container {
+            max-width: 400px;
+            background: white;
+            border-radius: 8px;
+            padding: 40px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .offline-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            background: #ff9500;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+        h1 {
+            margin: 0 0 10px;
+            color: #333;
+            font-size: 24px;
+        }
+        p {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        .retry-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .retry-button:hover {
+            background: #0056b3;
+        }
+        .features {
+            text-align: left;
+            margin-top: 30px;
+        }
+        .features h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .features ul {
+            padding-left: 20px;
+            color: #666;
+        }
+        .features li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📱</div>
+        <h1>Sin Conexión</h1>
+        <p>No hay conexión a internet, pero puedes continuar trabajando en modo offline.</p>
+        
+        <div class="features">
+            <h3>Funcionalidades disponibles offline:</h3>
+            <ul>
+                <li>Buscar clientes en el catálogo local</li>
+                <li>Registrar pagos (se sincronizarán automáticamente)</li>
+                <li>Imprimir tickets por Bluetooth</li>
+                <li>Ver historial de pagos offline</li>
+                <li>Configurar personalización de tickets</li>
+            </ul>
+        </div>
+
+        <button class="retry-button" onclick="window.location.reload()">
+            Reintentar Conexión
+        </button>
+
+        <p style="margin-top: 30px; font-size: 14px; color: #999;">
+            Los datos se sincronizarán automáticamente cuando se restaure la conexión a internet.
+        </p>
+    </div>
+
+    <script>
+        // Verificar estado de conexión periódicamente
+        function checkConnection() {
+            if (navigator.onLine) {
+                // Si hay conexión, redirigir a la aplicación
+                window.location.href = '/cobranza';
+            }
+        }
+
+        // Verificar cada 5 segundos
+        setInterval(checkConnection, 5000);
+
+        // Escuchar evento online
+        window.addEventListener('online', checkConnection);
+    </script>
+</body>
+</html>
