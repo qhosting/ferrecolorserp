@@ -231,4 +231,24 @@ export class ContpaqiClient {
   public async registrarPago(data: RegistrarPagoRequest): Promise<RegistrarPagoResponse> {
     return this.request<RegistrarPagoResponse>('/pagos', 'POST', data);
   }
+
+  // --- EMPRESA ---
+  public async getEmpresaInfo(): Promise<{
+    nombreEmpresa: string;
+    rfc: string;
+    regimenFiscal: string;
+    codigoPostal: string;
+    telefono: string;
+    email: string;
+    calle: string;
+    numeroExterior: string;
+    numeroInterior: string;
+    colonia: string;
+    pais: string;
+    estado: string;
+    ciudad: string;
+    direccionCompleta: string;
+  }> {
+    return this.request<any>('/contpaqi/empresa-info');
+  }
 }

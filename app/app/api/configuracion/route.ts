@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { ContpaqiClient } from '@/lib/contpaqi-client';
 
 const prisma = new PrismaClient();
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const configuracion = await prisma.configuracion.findFirst();
+    let configuracion = await prisma.configuracion.findFirst();
     
     if (!configuracion) {
       // Crear configuración por defecto
@@ -80,7 +81,45 @@ export async function GET(request: NextRequest) {
           },
         },
       });
-      return NextResponse.json(nuevaConfig);
+      configuracion = nuevaConfig;
+    }
+
+    // Fetch real company details from CONTPAQi API to keep it synchronized without mocks
+    try {
+      const contpaqi = ContpaqiClient.getInstance();
+      const contpaqiInfo = await contpaqi.getEmpresaInfo();
+      if (contpaqiInfo) {
+        configuracion.nombreEmpresa = contpaqiInfo.nombreEmpresa || configuracion.nombreEmpresa;
+        configuracion.rfc = contpaqiInfo.rfc || configuracion.rfc;
+        configuracion.direccion = contpaqiInfo.direccionCompleta || configuracion.direccion;
+        if (contpaqiInfo.telefono) {
+          configuracion.telefono = contpaqiInfo.telefono || configuracion.telefono;
+        }
+        if (contpaqiInfo.email) {
+          configuracion.email = contpaqiInfo.email || configuracion.email;
+        }
+
+        // Merge régimen fiscal and lugar de expedición (ZIP code)
+        let configJsonObj = configuracion.configJson as any;
+        if (!configJsonObj) {
+          configJsonObj = {};
+        } else if (typeof configJsonObj === 'string') {
+          configJsonObj = JSON.parse(configJsonObj);
+        }
+
+        if (!configJsonObj.configuracionFacturacion) {
+          configJsonObj.configuracionFacturacion = {};
+        }
+
+        configJsonObj.configuracionFacturacion.regimenFiscal = 
+          contpaqiInfo.regimenFiscal || configJsonObj.configuracionFacturacion.regimenFiscal;
+        configJsonObj.configuracionFacturacion.lugarExpedicion = 
+          contpaqiInfo.codigoPostal || configJsonObj.configuracionFacturacion.lugarExpedicion;
+
+        configuracion.configJson = configJsonObj;
+      }
+    } catch (error) {
+      console.warn('[Configuración] No se pudo obtener la información real de la empresa desde CONTPAQi API:', error);
     }
 
     return NextResponse.json(configuracion);
