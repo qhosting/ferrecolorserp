@@ -160,8 +160,10 @@ export default function DashboardPage() {
     <div className="container mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard Ejecutivo</h1>
-          <p className="text-gray-500 mt-2">Panel de control y métricas de negocio</p>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-gray-900 via-indigo-950 to-gray-900 dark:from-white dark:via-indigo-200 dark:to-white bg-clip-text text-transparent">
+            Dashboard Ejecutivo
+          </h1>
+          <p className="text-muted-foreground mt-2">Panel de control y métricas de negocio</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -185,12 +187,12 @@ export default function DashboardPage() {
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
-        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
+        <Card className="hover-glow glass-card border-t-2 border-blue-500 shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Clientes</p>
-                <p className="text-3xl font-black mt-2">{(statsBasicas.totalClientes || 0).toLocaleString()}</p>
+                <p className="text-3xl font-black mt-2 text-foreground">{(statsBasicas.totalClientes || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
                 <Users className="w-6 h-6" />
@@ -199,12 +201,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
+        <Card className="hover-glow glass-card border-t-2 border-emerald-500 shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Productos</p>
-                <p className="text-3xl font-black mt-2">{(statsBasicas.totalProductos || 0).toLocaleString()}</p>
+                <p className="text-3xl font-black mt-2 text-foreground">{(statsBasicas.totalProductos || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
                 <Package className="w-6 h-6" />
@@ -213,12 +215,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
+        <Card className="hover-glow glass-card border-t-2 border-indigo-500 shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ventas Hoy</p>
-                <p className="text-3xl font-black mt-2">${(statsBasicas.ventasHoy || 0).toLocaleString()}</p>
+                <p className="text-3xl font-black mt-2 text-foreground">${(statsBasicas.ventasHoy || 0).toLocaleString()}</p>
                 <div className="flex items-center text-xs mt-2 font-semibold">
                   {crecimientoVentas >= 0 ? (
                     <span className="flex items-center text-green-600 bg-green-500/10 px-1.5 py-0.5 rounded-md gap-0.5">
@@ -240,12 +242,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
+        <Card className="hover-glow glass-card border-t-2 border-purple-500 shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cobranza Hoy</p>
-                <p className="text-3xl font-black mt-2">${(statsBasicas.cobranzaHoy || 0).toLocaleString()}</p>
+                <p className="text-3xl font-black mt-2 text-foreground">${(statsBasicas.cobranzaHoy || 0).toLocaleString()}</p>
                 <div className="flex items-center text-xs mt-2 font-semibold">
                   {crecimientoCobranza >= 0 ? (
                     <span className="flex items-center text-green-600 bg-green-500/10 px-1.5 py-0.5 rounded-md gap-0.5">
@@ -267,7 +269,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
+        <Card className="hover-glow glass-card border-t-2 border-red-500 shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -282,7 +284,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-glow glass-card border-none shadow-sm rounded-2xl overflow-hidden relative group">
+        <Card className="hover-glow glass-card border-t-2 border-orange-500 shadow-sm rounded-2xl overflow-hidden relative group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
