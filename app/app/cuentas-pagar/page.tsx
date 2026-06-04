@@ -87,7 +87,7 @@ export default function CuentasPagarPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const userRole = session?.user?.role;
-  const permissions = userRole ? RolePermissions[userRole] : {};
+  const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : {};
   const canPay = permissions?.compras?.update; // Compra manager role can make payments
 
   useEffect(() => {

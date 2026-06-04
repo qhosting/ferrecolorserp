@@ -69,7 +69,7 @@ export default function ClientesPage() {
   const [comunicacionCliente, setComunicacionCliente] = useState<Cliente | null>(null);
 
   const userRole = session?.user?.role;
-  const permissions = userRole ? RolePermissions[userRole] : null;
+  const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : null;
   const canCreate = permissions?.clientes?.create === true;
   const canUpdate = permissions?.clientes?.update === true;
   const canDelete = permissions?.clientes?.delete === true;

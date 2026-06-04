@@ -126,7 +126,7 @@ export default function AlmacenPage() {
   const [locNivel, setLocNivel] = useState('');
 
   const userRole = session?.user?.role;
-  const permissions = userRole ? RolePermissions[userRole] : {};
+  const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : {};
   const canUpdate = permissions?.almacen?.update;
 
   useEffect(() => {

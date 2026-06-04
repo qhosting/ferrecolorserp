@@ -86,7 +86,7 @@ export default function ProductosPage() {
   const [marcas, setMarcas] = useState<string[]>([]);
 
   const userRole = session?.user?.role;
-  const permissions = userRole ? RolePermissions[userRole] : {};
+  const permissions = userRole ? RolePermissions[userRole as keyof typeof RolePermissions] : {};
 
   useEffect(() => {
     fetchProductos();
