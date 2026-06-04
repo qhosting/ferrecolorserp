@@ -25,6 +25,8 @@ import {
   EyeOff
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useSession } from 'next-auth/react';
+import { BackupPanel } from '@/components/sistema/BackupPanel';
 
 interface Configuracion {
   id: string;
@@ -44,7 +46,10 @@ export default function ConfiguracionPage() {
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [mostrarClaves, setMostrarClaves] = useState(false);
+  const { data: session } = useSession() || {};
   const { toast } = useToast();
+
+  const userRole = (session?.user as any)?.role || 'CLIENTE';
 
   useEffect(() => {
     cargarConfiguracion();
@@ -697,21 +702,8 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
-              <Separator />
-
               <div className="space-y-4">
-                <h4 className="font-semibold">Backup y Mantenimiento</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline">
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Sincronizar Datos
-                  </Button>
-                  
-                  <Button variant="outline">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Generar Backup
-                  </Button>
-                </div>
+                <BackupPanel userRole={userRole} />
               </div>
             </CardContent>
           </Card>
