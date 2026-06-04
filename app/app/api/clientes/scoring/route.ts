@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
 
+    const limit = parseInt(searchParams.get('limit') || '50');
+
     // Buscar clientes
     const where: any = {};
     if (search) {
@@ -26,6 +28,7 @@ export async function GET(request: NextRequest) {
 
     const clientes = await prisma.cliente.findMany({
       where,
+      take: limit,
       include: {
         ventas: {
           include: {

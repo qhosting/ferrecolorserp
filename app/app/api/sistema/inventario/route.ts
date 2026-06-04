@@ -101,39 +101,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cargar el producto actual
-    const producto = await prisma.producto.findUnique({
-      where: { id: productoId }
-    });
-
-    if (!producto) {
-      return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    }
-
-    const cantidadAnterior = producto.stock;
-    let cantidadNueva = cantidadAnterior;
-
-    if (tipo === 'ENTRADA') {
-      cantidadNueva = cantidadAnterior + cantidadInt;
-    } else if (tipo === 'SALIDA') {
-      cantidadNueva = cantidadAnterior - cantidadInt;
-    } else if (tipo === 'AJUSTE') {
-      // Si es un ajuste directo de inventario físico
-      cantidadNueva = cantidadInt;
-    }
-
-    if (cantidadNueva < 0) {
-      return NextResponse.json(
-        { error: `Inventario insuficiente. Stock actual: ${cantidadAnterior}. Intentado retirar: ${cantidadInt}` },
-        { status: 400 }
-      );
-    }
-
-    const actualQty = tipo === 'AJUSTE' ? Math.abs(cantidadNueva - cantidadAnterior) : cantidadInt;
-    const adjustType = tipo === 'AJUSTE' ? (cantidadNueva >= cantidadAnterior ? 'ENTRADA' : 'SALIDA') : tipo;
-
-    // Transacción para guardar el movimiento y actualizar el stock
+    // Transacción para guardar el movimiento y actualizar el stock de forma atómica
     const result = await prisma.$transaction(async (tx) => {
+      // 1. Bloquear y cargar el producto con FOR UPDATE
+      const productosRaw = await tx.$queryRaw<any[]>`
+        SELECT * FROM "Producto" WHERE id = ${productoId} FOR UPDATE
+      `;
+      const producto = productosRaw[0];
+
+      if (!producto) {
+        throw new Error('Producto no encontrado');
+      }
+
+      const cantidadAnterior = producto.stock;
+      let cantidadNueva = cantidadAnterior;
+
+      if (tipo === 'ENTRADA') {
+        cantidadNueva = cantidadAnterior + cantidadInt;
+      } else if (tipo === 'SALIDA') {
+        cantidadNueva = cantidadAnterior - cantidadInt;
+      } else if (tipo === 'AJUSTE') {
+        cantidadNueva = cantidadInt;
+      }
+
+      if (cantidadNueva < 0) {
+        throw new Error(`Inventario insuficiente. Stock actual: ${cantidadAnterior}. Intentado retirar: ${cantidadInt}`);
+      }
+
+      const actualQty = tipo === 'AJUSTE' ? Math.abs(cantidadNueva - cantidadAnterior) : cantidadInt;
+      const adjustType = tipo === 'AJUSTE' ? (cantidadNueva >= cantidadAnterior ? 'ENTRADA' : 'SALIDA') : tipo;
+
       const movimiento = await tx.movimientoInventario.create({
         data: {
           productoId,
@@ -185,8 +182,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating inventario movimiento:', error);
+    const msg = (error as Error).message;
+    if (msg.includes('Producto no encontrado')) {
+      return NextResponse.json({ error: msg }, { status: 404 });
+    }
+    if (msg.includes('Inventario insuficiente')) {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
     return NextResponse.json(
-      { error: 'Error interno del servidor', details: (error as Error).message },
+      { error: 'Error interno del servidor', details: msg },
       { status: 500 }
     );
   }

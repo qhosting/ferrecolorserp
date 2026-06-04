@@ -114,6 +114,9 @@ export async function POST(request: NextRequest) {
 
     if (clienteLocal) {
       const resultTx = await prisma.$transaction(async (tx) => {
+        // Bloquear fila del cliente para asegurar ejecución atómica y evitar race conditions
+        await tx.$executeRaw`SELECT * FROM "Cliente" WHERE id = ${clienteLocal.id} FOR UPDATE`;
+
         // Crear pago local
         const localPago = await tx.pago.create({
           data: {
@@ -146,13 +149,14 @@ export async function POST(request: NextRequest) {
             where: { pagareId: pagare.id },
             _sum: { montoAplicado: true }
           });
-          const pagadoPrevio = abonosPrevios._sum.montoAplicado || 0;
-          const saldoPendientePagare = pagare.monto - pagadoPrevio;
+          
+          const pagadoPrevio = Math.round((abonosPrevios._sum.montoAplicado || 0) * 100) / 100;
+          const saldoPendientePagare = Math.round((pagare.monto - pagadoPrevio) * 100) / 100;
 
           if (saldoPendientePagare <= 0) continue;
 
-          const montoAAplicar = Math.min(montoRestantePago, saldoPendientePagare);
-          const nuevoMontoPagado = pagadoPrevio + montoAAplicar;
+          const montoAAplicar = Math.round(Math.min(montoRestantePago, saldoPendientePagare) * 100) / 100;
+          const nuevoMontoPagado = Math.round((pagadoPrevio + montoAAplicar) * 100) / 100;
 
           // Registrar detalle de abono
           await tx.detallePagoPagare.create({
@@ -176,7 +180,7 @@ export async function POST(request: NextRequest) {
             }
           });
 
-          montoRestantePago -= montoAAplicar;
+          montoRestantePago = Math.round((montoRestantePago - montoAAplicar) * 100) / 100;
         }
 
         // Actualizar saldo real del cliente en el ERP local
