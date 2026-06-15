@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import PublicCatalog from '@/components/public/PublicCatalog';
 import { Button } from '@/components/ui/button';
+import { LoginDialog } from '@/components/auth/login-dialog';
+import { WhatsAppFloat } from '@/components/public/whatsapp-float';
 import { 
   Building, 
   Phone, 
@@ -151,12 +153,12 @@ export default async function HomePage() {
                 </Button>
               </Link>
             ) : (
-              <Link href="/login">
+              <LoginDialog>
                 <Button variant="outline" className="border-[#002d72]/20 hover:border-[#002d72] hover:bg-[#002d72]/5 dark:border-[#009bdf]/20 dark:hover:border-[#009bdf] dark:hover:bg-[#009bdf]/10 text-[#002d72] dark:text-[#009bdf] rounded-xl gap-2 font-bold text-xs h-9 px-4">
                   <Lock className="h-3.5 w-3.5" />
                   Acceso ERP
                 </Button>
-              </Link>
+              </LoginDialog>
             )}
           </div>
         </div>
@@ -600,10 +602,18 @@ export default async function HomePage() {
             <div className="space-y-3">
               <h4 className="font-bold text-foreground text-xs uppercase tracking-widest">Portal Seguro</h4>
               <p className="text-xs">Accede al administrador corporativo del ERP de FerreColors.</p>
-              <Link href="/login" className="inline-flex items-center gap-1.5 text-xs text-[#002d72] dark:text-[#009bdf] font-bold hover:underline">
-                <Lock className="h-3 w-3" />
-                Acceder al ERP Administrativo ➡️
-              </Link>
+              {session ? (
+                <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-xs text-[#002d72] dark:text-[#009bdf] font-bold hover:underline">
+                  Ir al Dashboard ➡️
+                </Link>
+              ) : (
+                <LoginDialog>
+                  <button className="inline-flex items-center gap-1.5 text-xs text-[#002d72] dark:text-[#009bdf] font-bold hover:underline bg-transparent border-none p-0 cursor-pointer text-left">
+                    <Lock className="h-3 w-3" />
+                    Acceder al ERP Administrativo ➡️
+                  </button>
+                </LoginDialog>
+              )}
             </div>
 
           </div>
@@ -616,7 +626,7 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
+      <WhatsAppFloat />
     </div>
   );
 }
