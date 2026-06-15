@@ -19,18 +19,14 @@ export default withAuth(
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
-    // If not authenticated and accessing root, redirect to signin
-    if (!token && req.nextUrl.pathname === '/') {
-      return NextResponse.redirect(new URL('/auth/signin', req.url));
-    }
-
     return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Allow access to auth pages and test pages
-        if (req.nextUrl.pathname.startsWith('/auth') || 
+        // Allow access to root page, auth pages, and test pages
+        if (req.nextUrl.pathname === '/' ||
+            req.nextUrl.pathname.startsWith('/auth') || 
             req.nextUrl.pathname.startsWith('/api/auth') ||
             req.nextUrl.pathname.startsWith('/test-')) {
           return true;
