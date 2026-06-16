@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { offlineStorage } from '@/lib/offline-storage';
+import { ticketPrinter, TicketData } from '@/lib/ticket-printer';
 import { 
   CreditCard, 
   DollarSign, 
@@ -159,22 +160,23 @@ export function PaymentFormCard({
     setPrinting(true);
     
     try {
-      const ticketData = {
-        clienteNombre: client.nombre,
-        clienteCodigo: client.codigoCliente,
-        monto: parseFloat(formData.monto),
-        tipoPago: formData.tipoPago,
-        referencia: formData.referencia || generateReference(),
-        fecha: new Date().toLocaleDateString('es-MX'),
-        hora: new Date().toLocaleTimeString('es-MX'),
-        gestor: session?.user?.name,
-        ubicacion: location ? `${location.lat}, ${location.lng}` : 'Sin ubicación'
+      const ticketData: TicketData = {
+        cod_cliente: client.codigoCliente,
+        nombre_cliente: client.nombre,
+        telefono: client.telefono1 || '',
+        direccion: client.direccion || '',
+        monto_pago: parseFloat(formData.monto),
+        saldo_anterior: client.saldoActual || 0,
+        saldo_actual: (client.saldoActual || 0) - parseFloat(formData.monto),
+        fecha_pago: new Date().toLocaleDateString('es-MX'),
+        fecha_impresion: new Date().toISOString(),
+        codigo_gestor: session?.user?.id || '',
+        nombre_gestor: session?.user?.name || '',
+        latitud: location?.lat?.toString(),
+        longitud: location?.lng?.toString()
       };
 
-      // Simulamos la impresión
-      // En una implementación real, aquí se conectaría con la impresora Bluetooth
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await ticketPrinter.printTicket(ticketData);
       toast.success('Ticket impreso correctamente');
     } catch (error) {
       console.error('Error printing ticket:', error);

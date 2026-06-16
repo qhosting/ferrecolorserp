@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { offlineStorage } from '@/lib/offline-storage';
+import { ticketPrinter, TicketData } from '@/lib/ticket-printer';
 import { 
   CreditCard, 
   Calendar, 
@@ -111,10 +112,26 @@ export function RecentPayments({ gestorId, isOnline }: RecentPaymentsProps) {
 
   const handlePrintTicket = async (payment: any) => {
     try {
-      // Simulamos la reimpresión del ticket
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success(`Ticket reimpreso para ${payment.nombreCliente}`);
+      const ticketData: TicketData = {
+        cod_cliente: payment.codigoCliente || payment.cliente?.codigoCliente || '',
+        nombre_cliente: payment.nombreCliente || payment.cliente?.nombre || '',
+        telefono: payment.cliente?.telefono1 || '',
+        direccion: payment.cliente?.direccion || '',
+        monto_pago: payment.monto,
+        saldo_anterior: payment.cliente?.saldoActual || 0,
+        saldo_actual: (payment.cliente?.saldoActual || 0) - payment.monto,
+        fecha_pago: new Date(payment.fechaPago).toLocaleDateString('es-MX'),
+        fecha_impresion: new Date().toISOString(),
+        codigo_gestor: payment.gestorId || gestorId || '',
+        nombre_gestor: payment.gestorNombre || '',
+        latitud: payment.latitud || undefined,
+        longitud: payment.longitud || undefined
+      };
+
+      await ticketPrinter.printTicket(ticketData);
+      toast.success(`Ticket reimpreso para ${ticketData.nombre_cliente}`);
     } catch (error) {
+      console.error('Error printing ticket:', error);
       toast.error('Error al reimprimir ticket');
     }
   };

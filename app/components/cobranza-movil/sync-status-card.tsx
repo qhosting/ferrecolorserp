@@ -53,20 +53,27 @@ export function SyncStatusCard({ syncStatus, onSync, isOnline }: SyncStatusCardP
       const pendingItems = await offlineStorage.getPendingSync();
       
       if (pendingItems.length === 0) {
-        toast.success('No hay elementos pendientes de sincronización');
+        await syncMasterData();
+        await offlineStorage.saveConfig('lastSync', new Date().toISOString());
+        toast.success('Datos maestros actualizados. No hay pagos pendientes.');
         setSyncing(false);
+        onSync();
         return;
       }
 
       setSyncStats(prev => ({ ...prev, totalItems: pendingItems.length }));
       
+      let successCount = 0;
+      let errorCount = 0;
+
       // Procesar cada elemento
       for (let i = 0; i < pendingItems.length; i++) {
         const item = pendingItems[i];
         
         try {
           await syncItem(item);
-          setSyncStats(prev => ({ ...prev, processedItems: prev.processedItems + 1 }));
+          successCount++;
+          setSyncStats(prev => ({ ...prev, processedItems: successCount }));
           setSyncProgress(((i + 1) / pendingItems.length) * 100);
           
           // Remover elemento de la cola
@@ -74,7 +81,8 @@ export function SyncStatusCard({ syncStatus, onSync, isOnline }: SyncStatusCardP
           
         } catch (error) {
           console.error('Error syncing item:', item, error);
-          setSyncStats(prev => ({ ...prev, errors: prev.errors + 1 }));
+          errorCount++;
+          setSyncStats(prev => ({ ...prev, errors: errorCount }));
         }
 
         // Pequeña pausa para evitar saturar el servidor
@@ -84,8 +92,8 @@ export function SyncStatusCard({ syncStatus, onSync, isOnline }: SyncStatusCardP
       // Sincronizar datos maestros (clientes) desde el servidor
       await syncMasterData();
       
-      const successCount = syncStats.processedItems;
-      const errorCount = syncStats.errors;
+      // Guardar fecha de última sincronización
+      await offlineStorage.saveConfig('lastSync', new Date().toISOString());
       
       if (errorCount === 0) {
         toast.success(`Sincronización completada: ${successCount} elementos`);
@@ -256,6 +264,8 @@ export function SyncStatusCard({ syncStatus, onSync, isOnline }: SyncStatusCardP
               onClick={async () => {
                 try {
                   await syncMasterData();
+                  await offlineStorage.saveConfig('lastSync', new Date().toISOString());
+                  onSync();
                   toast.success('Datos maestros actualizados');
                 } catch (error) {
                   toast.error('Error al actualizar datos');

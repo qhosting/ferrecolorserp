@@ -10,7 +10,7 @@ import { OfflineIndicator } from '@/components/cobranza-movil/offline-indicator'
 import { RecentPayments } from '@/components/cobranza-movil/recent-payments';
 import { SyncStatusCard } from '@/components/cobranza-movil/sync-status-card';
 import { DailySummary } from '@/components/cobranza-movil/daily-summary';
-import { useOfflineStorage } from '@/lib/offline-storage';
+import { useOfflineStorage, offlineStorage } from '@/lib/offline-storage';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -41,8 +41,27 @@ export default function CobranzaMovilPage() {
 
   useEffect(() => {
     requestLocationPermission();
-    loadSyncStatus();
   }, []);
+
+  useEffect(() => {
+    if (isInitialized) {
+      loadSyncStatus();
+    }
+  }, [isInitialized]);
+
+  const loadSyncStatus = async () => {
+    try {
+      const pending = await offlineStorage.getPendingSync();
+      const lastSyncStr = await offlineStorage.getConfig('lastSync');
+      setSyncStatus({
+        pendingPayments: pending.length,
+        lastSync: lastSyncStr ? new Date(lastSyncStr) : null,
+        syncing: false
+      });
+    } catch (error) {
+      console.error('Error cargando estado de sincronización:', error);
+    }
+  };
 
   const requestLocationPermission = () => {
     if (navigator.geolocation) {
@@ -61,16 +80,6 @@ export default function CobranzaMovilPage() {
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
-  };
-
-  const loadSyncStatus = async () => {
-    // Aquí cargaríamos el estado de sincronización
-    // Por ahora usamos datos de ejemplo
-    setSyncStatus({
-      pendingPayments: 0,
-      lastSync: new Date(),
-      syncing: false
-    });
   };
 
   const handlePaymentSuccess = () => {
