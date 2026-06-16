@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Readable } from 'stream';
 import csv from 'csv-parser';
+import { prisma } from '@/lib/db';
+import { Periodicidad, StatusCliente } from '@prisma/client';
 
 interface ImportRow {
   codigo_cliente: string;
@@ -21,6 +23,24 @@ interface ImportRow {
   status: string;
   dia_cobro: string;
   observaciones?: string;
+}
+
+function getPeriodicidad(value?: string): Periodicidad {
+  if (!value) return Periodicidad.SEMANAL;
+  const upper = value.trim().toUpperCase();
+  if (Object.values(Periodicidad).includes(upper as Periodicidad)) {
+    return upper as Periodicidad;
+  }
+  return Periodicidad.SEMANAL;
+}
+
+function getStatusCliente(value?: string): StatusCliente {
+  if (!value) return StatusCliente.ACTIVO;
+  const upper = value.trim().toUpperCase();
+  if (Object.values(StatusCliente).includes(upper as StatusCliente)) {
+    return upper as StatusCliente;
+  }
+  return StatusCliente.ACTIVO;
 }
 
 export async function POST(request: NextRequest) {
@@ -77,15 +97,46 @@ export async function POST(request: NextRequest) {
                 continue;
               }
 
-              // En un sistema real, aquí verificarías si el cliente existe
-              // y lo crearías o actualizarías en la base de datos
-              
-              // Simulamos la verificación
-              const existingCliente = Math.random() > 0.7; // 30% de probabilidad de que exista
+              // Verificar si el cliente existe
+              const existingCliente = await prisma.cliente.findUnique({
+                where: { codigoCliente: row.codigo_cliente }
+              });
+
+              const parsedPeriodicidad = getPeriodicidad(row.periodicidad);
+              const parsedStatus = getStatusCliente(row.status);
+              const parsedPagosPeriodicos = parseFloat(row.pagos_periodicos) || 0;
+
+              const data = {
+                nombre: row.nombre,
+                telefono1: row.telefono1 || null,
+                telefono2: row.telefono2 || null,
+                email: row.email || null,
+                municipio: row.municipio || null,
+                estado: row.estado || null,
+                colonia: row.colonia || null,
+                calle: row.calle || null,
+                numeroExterior: row.numero_exterior || null,
+                numeroInterior: row.numero_interior || null,
+                codigoPostal: row.codigo_postal || null,
+                pagosPeriodicos: parsedPagosPeriodicos,
+                periodicidad: parsedPeriodicidad,
+                status: parsedStatus,
+                diaCobro: row.dia_cobro || null,
+              };
 
               if (existingCliente) {
+                await prisma.cliente.update({
+                  where: { id: existingCliente.id },
+                  data
+                });
                 updated++;
               } else {
+                await prisma.cliente.create({
+                  data: {
+                    codigoCliente: row.codigo_cliente,
+                    ...data
+                  }
+                });
                 created++;
               }
 

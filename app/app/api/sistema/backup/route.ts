@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       }
 
       const fileBuffer = await fs.promises.readFile(filePath);
-      return new NextResponse(fileBuffer, {
+      return new NextResponse(fileBuffer as unknown as BodyInit, {
         headers: {
           'Content-Type': 'application/gzip',
           'Content-Disposition': `attachment; filename="${safeFile}"`

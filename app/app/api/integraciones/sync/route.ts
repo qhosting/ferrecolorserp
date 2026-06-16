@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { syncAllProductosFromContpaqi } from '@/lib/contpaqi-sync';
 
 const prisma = new PrismaClient();
 
@@ -282,35 +283,17 @@ async function importarProductos(datos: any[]) {
 
 async function sincronizarInventario(destino: string, configuracion: any) {
   try {
-    // Implementar lógica específica según el destino
-    // Por ejemplo, sincronizar con Shopify, MercadoLibre, etc.
-    
-    const productos = await prisma.producto.findMany({
-      where: { isActive: true },
-      select: {
-        codigo: true,
-        nombre: true,
-        stock: true,
-        precio1: true,
-      },
-    });
-
-    // Simular sincronización (aquí iría la lógica real de API externa)
-    const resultados = productos.map(producto => ({
-      codigo: producto.codigo,
-      sincronizado: true,
-      stockAnterior: producto.stock,
-      stockNuevo: producto.stock,
-    }));
+    const { importados, fallidos } = await syncAllProductosFromContpaqi();
 
     return NextResponse.json({
       success: true,
       destino,
-      productos: resultados.length,
-      sincronizados: resultados.filter(r => r.sincronizado).length,
+      productos: importados + fallidos,
+      sincronizados: importados,
+      fallidos,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sincronizando inventario:', error);
-    return NextResponse.json({ error: 'Error sincronizando inventario' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Error sincronizando inventario' }, { status: 500 });
   }
 }

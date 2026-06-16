@@ -63,6 +63,28 @@ interface PredictionData {
   probabilidad: number;
 }
 
+const getIconNode = (iconName: string) => {
+  switch (iconName) {
+    case 'dollar':
+      return <DollarSign className="h-4 w-4" />;
+    case 'users':
+      return <Users className="h-4 w-4" />;
+    case 'target':
+      return <Target className="h-4 w-4" />;
+    case 'package':
+      return <Package className="h-4 w-4" />;
+    default:
+      return <Activity className="h-4 w-4" />;
+  }
+};
+
+interface KeyMetrics {
+  conversionRate: number;
+  retentionRate: number;
+  avgTicket: number;
+  responseTime: number;
+}
+
 export default function BusinessIntelligencePage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState('mes');
@@ -71,6 +93,9 @@ export default function BusinessIntelligencePage() {
   const [kpiData, setKpiData] = useState<KPIData[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [predictions, setPredictions] = useState<PredictionData[]>([]);
+  const [pieData, setPieData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [cobranzaData, setCobranzaData] = useState<ChartData[]>([]);
+  const [keyMetrics, setKeyMetrics] = useState<KeyMetrics | null>(null);
 
   const { toast } = useToast();
 
@@ -81,65 +106,23 @@ export default function BusinessIntelligencePage() {
   const loadBIData = async () => {
     setLoading(true);
     try {
-      // Simulación de datos de BI
-      const kpis: KPIData[] = [
-        {
-          titulo: 'Ingresos Totales',
-          valor: 2847650,
-          cambio: 12.5,
-          icono: <DollarSign className="h-4 w-4" />,
-          formato: 'currency',
-          descripcion: 'Comparado con el período anterior'
-        },
-        {
-          titulo: 'Clientes Activos',
-          valor: 1248,
-          cambio: 8.3,
-          icono: <Users className="h-4 w-4" />,
-          formato: 'number',
-          descripcion: 'Clientes con actividad reciente'
-        },
-        {
-          titulo: 'Margen de Utilidad',
-          valor: 34.7,
-          cambio: -2.1,
-          icono: <Target className="h-4 w-4" />,
-          formato: 'percentage',
-          descripcion: 'Margen promedio de productos'
-        },
-        {
-          titulo: 'Rotación de Inventario',
-          valor: 6.8,
-          cambio: 15.2,
-          icono: <Package className="h-4 w-4" />,
-          formato: 'number',
-          descripcion: 'Veces por año'
-        }
-      ];
-
-      const ventasData: ChartData[] = [
-        { name: 'Ene', valor: 425000, mes: 'Enero' },
-        { name: 'Feb', valor: 380000, mes: 'Febrero' },
-        { name: 'Mar', valor: 520000, mes: 'Marzo' },
-        { name: 'Abr', valor: 465000, mes: 'Abril' },
-        { name: 'May', valor: 590000, mes: 'Mayo' },
-        { name: 'Jun', valor: 612000, mes: 'Junio' },
-        { name: 'Jul', valor: 580000, mes: 'Julio' },
-        { name: 'Ago', valor: 645000, mes: 'Agosto' },
-        { name: 'Sep', valor: 710000, mes: 'Septiembre' }
-      ];
-
-      const predictionsData: PredictionData[] = [
-        { periodo: 'Oct 2024', prediccion: 735000, probabilidad: 85 },
-        { periodo: 'Nov 2024', prediccion: 798000, probabilidad: 78 },
-        { periodo: 'Dec 2024', prediccion: 856000, probabilidad: 72 },
-        { periodo: 'Ene 2025', prediccion: 623000, probabilidad: 68 },
-        { periodo: 'Feb 2025', prediccion: 687000, probabilidad: 65 }
-      ];
+      const response = await fetch(`/api/business-intelligence?periodo=${selectedPeriod}`);
+      if (!response.ok) {
+        throw new Error('Error al obtener datos de Business Intelligence');
+      }
+      const data = await response.json();
+      
+      const kpis: KPIData[] = (data.kpiData || []).map((kpi: any) => ({
+        ...kpi,
+        icono: getIconNode(kpi.icono)
+      }));
 
       setKpiData(kpis);
-      setChartData(ventasData);
-      setPredictions(predictionsData);
+      setChartData(data.chartData || []);
+      setPredictions(data.predictions || []);
+      setPieData(data.pieData || []);
+      setCobranzaData(data.cobranzaData || []);
+      setKeyMetrics(data.keyMetrics || null);
     } catch (error) {
       console.error('Error loading BI data:', error);
       toast({
@@ -186,7 +169,7 @@ export default function BusinessIntelligencePage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `reporte-bi-${tipo}-${Date.now()}.xlsx`;
+        a.download = `reporte-bi-${tipo}-${Date.now()}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
         
@@ -204,22 +187,6 @@ export default function BusinessIntelligencePage() {
       });
     }
   };
-
-  // Datos para gráfico de pastel - categorías de productos
-  const pieData = [
-    { name: 'Electrónicos', value: 45, color: '#0088FE' },
-    { name: 'Ropa', value: 25, color: '#00C49F' },
-    { name: 'Hogar', value: 20, color: '#FFBB28' },
-    { name: 'Deportes', value: 10, color: '#FF8042' }
-  ];
-
-  // Datos para análisis de cobranza
-  const cobranzaData: ChartData[] = [
-    { name: 'Al día', valor: 65, categoria: 'cobranza' },
-    { name: '1-30 días', valor: 20, categoria: 'cobranza' },
-    { name: '31-60 días', valor: 10, categoria: 'cobranza' },
-    { name: '+60 días', valor: 5, categoria: 'cobranza' }
-  ];
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -393,28 +360,30 @@ export default function BusinessIntelligencePage() {
                       <Activity className="h-5 w-5 text-blue-600" />
                       <span className="font-medium">Tasa de Conversión</span>
                     </div>
-                    <Badge className="bg-blue-600">23.4%</Badge>
+                    <Badge className="bg-blue-600">{keyMetrics?.conversionRate ?? 0}%</Badge>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Users className="h-5 w-5 text-green-600" />
                       <span className="font-medium">Retención Clientes</span>
                     </div>
-                    <Badge className="bg-green-600">87.2%</Badge>
+                    <Badge className="bg-green-600">{keyMetrics?.retentionRate ?? 0}%</Badge>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Target className="h-5 w-5 text-orange-600" />
                       <span className="font-medium">Ticket Promedio</span>
                     </div>
-                    <Badge className="bg-orange-600">$2,845</Badge>
+                    <Badge className="bg-orange-600">
+                      {formatValue(keyMetrics?.avgTicket ?? 0, 'currency')}
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Zap className="h-5 w-5 text-purple-600" />
                       <span className="font-medium">Tiempo Respuesta</span>
                     </div>
-                    <Badge className="bg-purple-600">1.2 hrs</Badge>
+                    <Badge className="bg-purple-600">{keyMetrics?.responseTime ?? 0} hrs</Badge>
                   </div>
                 </div>
               </CardContent>

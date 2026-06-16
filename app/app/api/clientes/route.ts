@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { syncClienteFromContpaqi } from '@/lib/contpaqi-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -135,29 +136,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Aquí iría la consulta específica por código de cliente
-    // const mysql = require('mysql2/promise');
-    // const connection = await mysql.createConnection(dbConfig);
-    // const query = `
-    //   SELECT * FROM cat_clientes WHERE cod_cliente = ?
-    // `;
-    // const [rows] = await connection.execute(query, [cod_cliente]);
-    // await connection.end();
+    // Buscar en base de datos local
+    let clienteDb = await prisma.cliente.findUnique({
+      where: { codigoCliente: cod_cliente },
+      include: {
+        gestor: true
+      }
+    });
 
-    // Simular búsqueda de cliente específico
+    // Si no está, intentar sincronizar desde CONTPAQi
+    if (!clienteDb) {
+      console.log(`Cliente ${cod_cliente} no encontrado en DB local, intentando sincronizar desde CONTPAQi...`);
+      const syncSuccess = await syncClienteFromContpaqi(cod_cliente);
+      if (syncSuccess) {
+        clienteDb = await prisma.cliente.findUnique({
+          where: { codigoCliente: cod_cliente },
+          include: {
+            gestor: true
+          }
+        });
+      }
+    }
+
+    if (!clienteDb) {
+      return NextResponse.json(
+        { error: 'Cliente no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Calcular pagarés pendientes y días vencidos
+    const pagares = await prisma.pagare.findMany({
+      where: {
+        venta: {
+          clienteId: clienteDb.id
+        },
+        estatus: {
+          in: ['PENDIENTE', 'PARCIAL', 'VENCIDO']
+        }
+      }
+    });
+
+    const semv = pagares.length.toString();
+
+    let maxDaysOverdue = 0;
+    const now = new Date();
+    for (const pagare of pagares) {
+      if (pagare.fechaVencimiento < now) {
+        const diffTime = now.getTime() - pagare.fechaVencimiento.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > maxDaysOverdue) {
+          maxDaysOverdue = diffDays;
+        }
+      }
+    }
+    const semdv = maxDaysOverdue.toString();
+
     const cliente = {
-      cod_cliente: cod_cliente,
-      nombre_ccliente: 'CLIENTE DE PRUEBA',
-      codigo_gestor: 'DQBOT',
-      periodicidad_cliente: 'SEMANAL',
-      pagos_cliente: 500,
-      calle_dom: 'DIRECCION DE PRUEBA',
-      colonia_dom: 'COLONIA PRUEBA',
-      tel1_cliente: '4420000000',
-      saldo_actualcli: '1000',
-      dia_cobro: 'LUNES',
-      semv: '50',
-      semdv: '1000'
+      cod_cliente: clienteDb.codigoCliente,
+      nombre_ccliente: clienteDb.nombre,
+      codigo_gestor: clienteDb.gestor?.name || clienteDb.gestorId || 'ADMIN',
+      periodicidad_cliente: clienteDb.periodicidad,
+      pagos_cliente: clienteDb.pagosPeriodicos,
+      calle_dom: clienteDb.calle || '',
+      colonia_dom: clienteDb.colonia || '',
+      tel1_cliente: clienteDb.telefono1 || '',
+      saldo_actualcli: clienteDb.saldoActual.toString(),
+      dia_cobro: clienteDb.diaCobro || '',
+      semv: semv,
+      semdv: semdv
     };
 
     return NextResponse.json(cliente, { status: 200 });

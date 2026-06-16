@@ -1,0 +1,841 @@
+/* Reset y configuración base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Hero Section */
+.hero {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.hero-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('img/bg-1-portada.jpg');
+    background-size: cover;
+    background-position: center;
+    z-index: -1;
+}
+
+.hero-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    margin: 0;
+    z-index: 2;
+    position: relative;
+}
+
+
+.hero-left {
+    flex: 0 0 40%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 3rem;
+}
+
+.hero-logo {
+    height: 200px;
+    width: auto;
+    transition: transform 0.3s ease;
+}
+
+.hero-logo:hover {
+    transform: scale(1.2);
+}
+
+.hero-right {
+    flex: 0 0 60%;
+    background: #009bdf;
+    padding: 3rem 4rem;
+    display: flex;
+    align-items: center;
+}
+
+.hero-right h1 {
+    font-size: 3.8rem;
+    font-weight: 600;
+    color: white;
+    text-align: left;
+    margin: 0;
+    text-shadow: none;
+    line-height: 1.1;
+}
+
+/* Split Sections */
+.split-section {
+    display: flex;
+    min-height: 100vh;
+    align-items: stretch;
+}
+
+.split-left, .split-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.split-content {
+    padding: 4rem;
+    width: 100%;
+    max-width: 600px;
+}
+
+/* Misión Section */
+.mision-section .split-left {
+    background: #2da53d;
+    color: white;
+}
+
+.mision-section .split-right {
+    background: url('img/bg-2-mision.jpg');
+    background-size: cover;
+    background-position: center;
+}
+
+.mision-section h2 {
+    color: #002d72;
+}
+
+/* Visión Section */
+.vision-section .split-left {
+    background: #009bdf;
+    color: white;
+}
+
+.vision-section .split-right {
+    background: url('img/bg-3-vision.jpg');
+    background-size: cover;
+    background-position: center;
+}
+
+.vision-section h2 {
+    color: #002c72;
+}
+
+
+
+/* Logo pequeño */
+.logo-small {
+    margin-bottom: 2rem;
+}
+
+.logo-white {
+    height: 60px;
+    width: auto;
+}
+
+h2 {
+    font-size: 4.5rem;
+    font-weight: 900;
+    margin-bottom: 2rem;
+    color: white;
+    text-shadow: none;
+    letter-spacing: -0.02em;
+}
+
+.text-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.accent-line {
+    width: 6px;
+    align-self: stretch;
+    flex-shrink: 0;
+}
+
+/* Accent line específica para Misión */
+.mision-section .accent-line {
+    background: linear-gradient(to bottom, white 50%, #26356a 50%);
+}
+
+/* Accent line específica para Visión */
+.vision-section .accent-line {
+    background: linear-gradient(to bottom, white 50%, #002c72 50%);
+}
+
+/* Accent line para Contacto */
+.contacto-section .accent-line {
+    background: linear-gradient(to bottom, #2EA53E 0%, #009BDE 100%);
+}
+
+.text-block p {
+    font-size: 1.4rem;
+    font-weight: 400;
+    line-height: 1.8;
+    color: white;
+    text-shadow: none;
+}
+
+/* Valores Section */
+.valores-section {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    background: white;
+}
+
+.valores-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    background: url('img/bg-4-valores.jpg');
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+}
+
+.valores-overlay {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 4rem 0;
+    overflow: hidden;
+}
+
+.valores-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    height: 100%;
+    padding: 0;
+}
+
+.valores-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2rem;
+    width: 100%;
+    padding: 2rem 4rem;
+    position: relative;
+    z-index: 3;
+}
+
+.valores-header .logo-small {
+    margin-bottom: 0;
+}
+
+.valores-header h2 {
+    color: white;
+    text-align: left;
+    margin-bottom: 0;
+    font-size: 3.5rem;
+}
+
+.valores-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 250px);
+    gap: 3rem;
+    width: max-content;
+    align-items: center;
+    padding: 4rem;
+    padding-right: 0;
+    margin-top: -100px;
+    position: relative;
+    z-index: 3;
+}
+
+.valor-item {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 3;
+}
+
+.valor-icon {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.valor-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.valor-item h3 {
+    font-size: 2rem;
+    font-weight: 500;
+    color: #8e8e8e;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+}
+
+/* Línea de Venta Section */
+.linea-venta-section {
+    background: white;
+    padding: 6rem 0;
+    position: relative;
+}
+
+.linea-venta-section h2 {
+    text-align: left;
+    color: #002d72;
+    margin-bottom: 3rem;
+    font-size: 4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    padding-left: 4rem;
+}
+
+.linea-venta-image {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 4rem;
+}
+
+.linea-venta-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Clases para mostrar/ocultar */
+.desktop-only {
+    display: block;
+}
+
+.mobile-only {
+    display: none;
+}
+
+/* Tarjetas para móvil */
+.venta-cards {
+    display: none;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 0 2rem;
+}
+
+.venta-card {
+    background: #f5f5f5;
+    border-radius: 15px;
+    padding: 2rem;
+    position: relative;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border-left: 5px solid;
+    border-image: linear-gradient(to bottom, #2da53e 50%, #009bdf 50%) 1;
+}
+
+.card-number {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+    background: #009bdf;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* Colores específicos para cada tarjeta */
+.venta-card:nth-child(1) h3 {
+    color: #2da53e;
+}
+
+.venta-card:nth-child(1) .card-number {
+    background: #2da53e;
+}
+
+.venta-card:nth-child(2) h3 {
+    color: #009bdf;
+}
+
+.venta-card:nth-child(2) .card-number {
+    background: #009bdf;
+}
+
+.venta-card:nth-child(3) h3 {
+    color: #002d72;
+}
+
+.venta-card:nth-child(3) .card-number {
+    background: #002d72;
+}
+
+.venta-card:nth-child(4) h3 {
+    color: #009bdf;
+}
+
+.venta-card:nth-child(4) .card-number {
+    background: #009bdf;
+}
+
+.venta-card:nth-child(5) h3 {
+    color: #2da53e;
+}
+
+.venta-card:nth-child(5) .card-number {
+    background: #2da53e;
+}
+
+.venta-card h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.venta-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.venta-card ul li {
+    position: relative;
+    padding-left: 1.2rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.venta-card ul li:before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #666;
+    font-weight: bold;
+}
+
+.venta-card p {
+    font-size: 0.95rem;
+    color: #333;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Contacto Section */
+.contacto-section .split-left {
+    background: #002d72;
+    color: white;
+}
+
+.contacto-section .split-right {
+    background: url('img/bg-5-footer.jpg');
+    background-size: cover;
+    background-position: center;
+}
+
+.contacto-item .icon {
+    font-size: 1.8rem;
+    width: 35px;
+    text-align: center;
+    color: #2ca23e;
+}
+
+.whatsapp-icon, .email-icon {
+    width: 24px;
+    height: 24px;
+    stroke: #2ca23e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.contacto-item a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.3rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.contacto-item a:hover {
+    color: #2ca23e;
+}
+
+.contacto-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.contacto-text p {
+    font-size: 1.4rem;
+    font-weight: 400;
+    line-height: 1.8;
+    color: white;
+    text-shadow: none;
+}
+
+.contacto-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.contacto-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.contacto-item svg {
+    flex-shrink: 0;
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .hero-right h1 {
+        font-size: 2.8rem;
+    }
+    
+    h2 {
+        font-size: 3rem;
+    }
+    
+    .valores-content {
+        padding: 3rem 0;
+    }
+    
+    .valores-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .valores-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+    }
+    
+    .valor-icon {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .linea-venta-section h2 {
+        text-align: center;
+        padding-left: 2rem;
+        font-size: 3rem;
+    }
+    
+    .venta-grid {
+        gap: 3rem;
+    }
+    
+    .product-category {
+        max-width: 280px;
+    }
+    
+    .category-card {
+        padding: 1.5rem;
+    }
+    
+    .category-number {
+        font-size: 2rem;
+    }
+    
+    .split-content {
+        padding: 3rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero {
+        height: auto;
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .hero-container {
+        flex-direction: column;
+        text-align: center;
+        padding: 0 20px;
+        justify-content: center;
+    }
+    
+    .hero-left {
+        flex: 0 0 auto;
+        padding-right: 0;
+        margin-bottom: 2rem;
+        justify-content: center;
+        order: -1;
+    }
+    
+    .hero-logo {
+        height: 150px;
+    }
+    
+    .hero-right {
+        flex: 0 0 auto;
+        padding: 2rem;
+        border-radius: 15px;
+        width: 100%;
+    }
+    
+    .hero-right h1 {
+        font-size: 2.5rem;
+        text-align: center;
+    }
+    
+    .split-section {
+        flex-direction: column;
+        min-height: auto;
+    }
+    
+    .split-left, .split-right {
+        min-height: 50vh;
+    }
+    
+    .split-content {
+        padding: 2rem;
+    }
+    
+    h2 {
+        font-size: 2.5rem;
+    }
+    
+    .text-block p, .contacto-text p {
+        font-size: 1.2rem;
+    }
+    
+    /* Cambios en valores para responsive */
+    .valores-section {
+        background: url('img/bg-4-valores.jpg');
+        background-size: cover;
+        background-position: center;
+    }
+    
+    .valores-bg {
+        display: none;
+    }
+    
+    .valores-overlay {
+        background: rgba(0, 0, 0, 0.3);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+    
+    .valores-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+        padding: 2rem;
+        margin-top: 0;
+    }
+    
+    .valor-icon {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .valor-item h3 {
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    
+    .linea-venta-section h2 {
+        text-align: center;
+        padding-left: 2rem;
+        font-size: 3rem;
+    }
+    
+    .linea-venta-image {
+        padding: 0 2rem;
+    }
+    
+    /* Mostrar tarjetas en móvil */
+    .desktop-only {
+        display: none;
+    }
+    
+    .mobile-only {
+        display: block;
+    }
+    
+    .venta-cards {
+        display: flex;
+    }
+    
+    .logo-small {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        margin-bottom: 0;
+    }
+    
+    .logo-white {
+        height: 40px;
+    }
+    
+    .split-content {
+        padding-top: 4rem;
+    }
+    
+    .valores-content .logo-small {
+        margin-bottom: 1rem;
+    }
+    
+    .valores-header {
+        padding: 2rem;
+    }
+    
+    /* Cambiar orden del contacto en responsive */
+    .contacto-section {
+        flex-direction: column-reverse;
+    }
+    
+    .contacto-info {
+        flex-direction: row;
+        gap: 2rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .contacto-item {
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-logo {
+        height: 120px;
+    }
+    
+    .hero-right h1 {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 2rem;
+    }
+    
+    .text-block, .contacto-text {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .accent-line {
+        width: 100%;
+        height: 4px;
+        align-self: auto;
+    }
+    
+    .mision-section .accent-line {
+        background: linear-gradient(to right, white 50%, #26356a 50%);
+    }
+    
+    .vision-section .accent-line {
+        background: linear-gradient(to right, white 50%, #002c72 50%);
+    }
+    
+    .contacto-section .accent-line {
+        background: linear-gradient(to right, #2EA53E 0%, #009BDE 100%);
+    }
+    
+    .text-block p, .contacto-text p {
+        font-size: 1.1rem;
+    }
+    
+    .valores-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .valor-icon {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .valor-item h3 {
+        font-size: 1.5rem;
+    }
+    
+    .split-content {
+        padding: 1.5rem;
+    }
+    
+    .linea-venta-image {
+        padding: 0 1rem;
+    }
+    
+    .venta-card {
+        padding: 1.5rem;
+    }
+    
+    .card-number {
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
+    
+    .contacto-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        white-space: normal;
+    }
+    
+    .contacto-item a {
+        font-size: 1rem;
+        word-break: break-word;
+        white-space: normal;
+    }
+}

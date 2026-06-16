@@ -19,113 +19,91 @@ export async function GET(request: NextRequest) {
     const fechaFin = searchParams.get('fechaFin');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Datos simulados de facturas electrónicas
-    const facturas = [
-      {
-        id: '1',
-        uuid: 'A1B2C3D4-E5F6-7890-ABCD-123456789012',
-        folio: '001',
-        serie: 'F',
-        fecha: '2024-09-19T10:00:00Z',
-        cliente: {
-          rfc: 'XAXX010101000',
-          nombre: 'Cliente de Prueba S.A. de C.V.',
-          email: 'cliente@empresa.com'
-        },
-        conceptos: [
-          {
-            claveProdServ: '50211503',
-            descripcion: 'Servicio de consultoría',
-            cantidad: 1,
-            unidad: 'ACT',
-            valorUnitario: 10000,
-            importe: 10000
-          }
-        ],
-        subtotal: 10000,
-        iva: 1600,
-        total: 11600,
-        estado: 'TIMBRADA',
-        pac: 'PAC-Principal',
-        certificado: '20001000000300022762',
-        xmlUrl: '/cfdi/F001.xml',
-        pdfUrl: '/cfdi/F001.pdf',
-        fechaTimbrado: '2024-09-19T10:05:00Z',
-        createdAt: '2024-09-19T10:00:00Z',
-        updatedAt: '2024-09-19T10:05:00Z'
-      },
-      {
-        id: '2',
-        uuid: null,
-        folio: '002',
-        serie: 'F',
-        fecha: '2024-09-19T14:30:00Z',
-        cliente: {
-          rfc: 'XEXX010101000',
-          nombre: 'Otro Cliente S.A.',
-          email: 'otro@cliente.com'
-        },
-        conceptos: [
-          {
-            claveProdServ: '50211503',
-            descripcion: 'Servicio de desarrollo',
-            cantidad: 1,
-            unidad: 'ACT',
-            valorUnitario: 15000,
-            importe: 15000
-          }
-        ],
-        subtotal: 15000,
-        iva: 2400,
-        total: 17400,
-        estado: 'PENDIENTE',
-        pac: 'PAC-Principal',
-        certificado: '20001000000300022762',
-        xmlUrl: null,
-        pdfUrl: null,
-        fechaTimbrado: null,
-        createdAt: '2024-09-19T14:30:00Z',
-        updatedAt: '2024-09-19T14:30:00Z'
-      }
-    ];
-
-    // Aplicar filtros
-    let filteredFacturas = facturas;
+    let whereClause: any = {};
 
     if (estado && estado !== 'all') {
-      filteredFacturas = filteredFacturas.filter(f => f.estado === estado);
-    }
-
-    if (pac && pac !== 'all') {
-      filteredFacturas = filteredFacturas.filter(f => f.pac === pac);
+      const upperEstado = estado.toUpperCase();
+      if (upperEstado === 'TIMBRADA') {
+        whereClause.timbrado = true;
+      } else if (upperEstado === 'PENDIENTE') {
+        whereClause.timbrado = false;
+        whereClause.status = { not: 'CANCELADA' };
+      } else if (upperEstado === 'CANCELADA') {
+        whereClause.status = 'CANCELADA';
+      }
     }
 
     if (fechaInicio && fechaFin) {
-      filteredFacturas = filteredFacturas.filter(f => {
-        const fecha = new Date(f.fecha);
-        return fecha >= new Date(fechaInicio) && fecha <= new Date(fechaFin);
-      });
+      whereClause.fechaVenta = {
+        gte: new Date(fechaInicio),
+        lte: new Date(fechaFin)
+      };
     }
 
-    // Aplicar límite
-    if (limit) {
-      filteredFacturas = filteredFacturas.slice(0, limit);
-    }
+    const ventas = await prisma.venta.findMany({
+      where: whereClause,
+      include: {
+        cliente: true,
+        detalles: {
+          include: {
+            producto: true
+          }
+        }
+      },
+      orderBy: {
+        fechaVenta: 'desc'
+      },
+      take: limit
+    });
+
+    // Mapear ventas a formato de factura esperado por el frontend
+    const facturas = ventas.map((venta) => ({
+      id: venta.id,
+      uuid: venta.uuid,
+      folio: venta.contpaqiFolio?.toString() || venta.folio,
+      serie: venta.contpaqiSerie || 'F',
+      fecha: venta.fechaVenta.toISOString(),
+      cliente: {
+        rfc: venta.cliente.rfc || 'XAXX010101000',
+        nombre: venta.cliente.nombre,
+        email: venta.cliente.email || ''
+      },
+      conceptos: venta.detalles.map((d) => ({
+        claveProdServ: d.producto.claveSat || '01010101',
+        descripcion: d.producto.nombre,
+        cantidad: d.cantidad,
+        unidad: d.producto.claveUnidadSat || 'H87',
+        valorUnitario: d.precioUnitario,
+        importe: d.subtotal
+      })),
+      subtotal: venta.subtotal,
+      iva: venta.iva,
+      total: venta.total,
+      estado: venta.timbrado ? 'TIMBRADA' : (venta.status === 'CANCELADA' ? 'CANCELADA' : 'PENDIENTE'),
+      pac: venta.uuid ? 'PAC-Principal' : null,
+      certificado: '20001000000300022762',
+      xmlUrl: venta.xmlPath || null,
+      pdfUrl: venta.pdfPath || null,
+      fechaTimbrado: venta.contpaqiSyncAt?.toISOString() || null,
+      observaciones: venta.observaciones || '',
+      createdAt: venta.createdAt.toISOString(),
+      updatedAt: venta.updatedAt.toISOString()
+    }));
 
     // Estadísticas
     const estadisticas = {
-      total: filteredFacturas.length,
-      timbradas: filteredFacturas.filter(f => f.estado === 'TIMBRADA').length,
-      pendientes: filteredFacturas.filter(f => f.estado === 'PENDIENTE').length,
-      canceladas: filteredFacturas.filter(f => f.estado === 'CANCELADA').length,
-      montoTotal: filteredFacturas.reduce((sum, f) => sum + f.total, 0),
-      montoTimbrado: filteredFacturas
+      total: facturas.length,
+      timbradas: facturas.filter(f => f.estado === 'TIMBRADA').length,
+      pendientes: facturas.filter(f => f.estado === 'PENDIENTE').length,
+      canceladas: facturas.filter(f => f.estado === 'CANCELADA').length,
+      montoTotal: facturas.reduce((sum, f) => sum + f.total, 0),
+      montoTimbrado: facturas
         .filter(f => f.estado === 'TIMBRADA')
         .reduce((sum, f) => sum + f.total, 0)
     };
 
     return NextResponse.json({
-      facturas: filteredFacturas,
+      facturas,
       estadisticas,
       message: 'Facturas obtenidas exitosamente'
     });
@@ -133,7 +111,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching facturas:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: (error as Error).message },
       { status: 500 }
     );
   }
@@ -145,6 +123,13 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! }
+    });
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario de sesión no encontrado' }, { status: 400 });
     }
 
     const body = await request.json();
@@ -164,51 +149,144 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calcular totales
-    const subtotal = conceptos.reduce((sum: number, item: any) => 
-      sum + (item.cantidad * item.valorUnitario), 0);
+    // Buscar o crear cliente local
+    let cliente = await prisma.cliente.findFirst({
+      where: {
+        OR: [
+          { rfc: clienteRfc },
+          { nombre: clienteNombre }
+        ]
+      }
+    });
+
+    if (!cliente) {
+      const codeSuffix = Math.floor(1000 + Math.random() * 9000);
+      const generatedCode = `CLI-${codeSuffix}`;
+      
+      cliente = await prisma.cliente.create({
+        data: {
+          codigoCliente: generatedCode,
+          nombre: clienteNombre,
+          rfc: clienteRfc,
+          email: clienteEmail || null,
+          status: 'ACTIVO'
+        }
+      });
+    }
+
+    // Resolver/crear productos y calcular totales
+    const detallesData = [];
+    let subtotal = 0;
+
+    for (const item of conceptos) {
+      const prodCode = item.claveProdServ || '01010101';
+      let producto = await prisma.producto.findFirst({
+        where: {
+          OR: [
+            { codigo: prodCode },
+            { nombre: item.descripcion }
+          ]
+        }
+      });
+
+      if (!producto) {
+        producto = await prisma.producto.create({
+          data: {
+            codigo: prodCode,
+            nombre: item.descripcion,
+            descripcion: item.descripcion,
+            precio1: item.valorUnitario,
+            claveSat: item.claveProdServ,
+            claveUnidadSat: item.unidad || 'H87',
+            stock: 100,
+            isActive: true
+          }
+        });
+      }
+
+      const itemSubtotal = item.cantidad * item.valorUnitario;
+      subtotal += itemSubtotal;
+
+      detallesData.push({
+        productoId: producto.id,
+        cantidad: item.cantidad,
+        precioUnitario: item.valorUnitario,
+        descuento: 0,
+        subtotal: itemSubtotal
+      });
+    }
+
     const iva = subtotal * 0.16;
     const total = subtotal + iva;
 
-    // Generar folio consecutivo
-    const folio = String(Date.now()).slice(-3);
-
-    // Simulación de creación de factura
-    const nuevaFactura = {
-      id: Math.random().toString(36).substr(2, 9),
-      uuid: null,
-      folio,
-      serie: 'F',
-      fecha: new Date().toISOString(),
-      cliente: {
-        rfc: clienteRfc,
-        nombre: clienteNombre,
-        email: clienteEmail || ''
+    // Crear la venta localmente
+    const nuevaVenta = await prisma.venta.create({
+      data: {
+        clienteId: cliente.id,
+        vendedorId: user.id,
+        subtotal,
+        iva,
+        descuento: 0,
+        total,
+        status: 'PENDIENTE',
+        observaciones: observaciones || '',
+        detalles: {
+          create: detallesData
+        }
       },
-      conceptos,
-      subtotal,
-      iva,
-      total,
-      estado: 'PENDIENTE',
-      pac: 'PAC-Principal',
+      include: {
+        cliente: true,
+        detalles: {
+          include: {
+            producto: true
+          }
+        }
+      }
+    });
+
+    // Mapear respuesta
+    const facturaResponse = {
+      id: nuevaVenta.id,
+      uuid: nuevaVenta.uuid,
+      folio: nuevaVenta.contpaqiFolio?.toString() || nuevaVenta.folio,
+      serie: nuevaVenta.contpaqiSerie || 'F',
+      fecha: nuevaVenta.fechaVenta.toISOString(),
+      cliente: {
+        rfc: nuevaVenta.cliente.rfc || 'XAXX010101000',
+        nombre: nuevaVenta.cliente.nombre,
+        email: nuevaVenta.cliente.email || ''
+      },
+      conceptos: nuevaVenta.detalles.map((d) => ({
+        claveProdServ: d.producto.claveSat || '01010101',
+        descripcion: d.producto.nombre,
+        cantidad: d.cantidad,
+        unidad: d.producto.claveUnidadSat || 'H87',
+        valorUnitario: d.precioUnitario,
+        importe: d.subtotal
+      })),
+      subtotal: nuevaVenta.subtotal,
+      iva: nuevaVenta.iva,
+      total: nuevaVenta.total,
+      estado: nuevaVenta.timbrado ? 'TIMBRADA' : (nuevaVenta.status === 'CANCELADA' ? 'CANCELADA' : 'PENDIENTE'),
+      pac: nuevaVenta.uuid ? 'PAC-Principal' : null,
       certificado: '20001000000300022762',
-      xmlUrl: null,
-      pdfUrl: null,
-      fechaTimbrado: null,
-      observaciones: observaciones || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      xmlUrl: nuevaVenta.xmlPath || null,
+      pdfUrl: nuevaVenta.pdfPath || null,
+      fechaTimbrado: nuevaVenta.contpaqiSyncAt?.toISOString() || null,
+      observaciones: nuevaVenta.observaciones || '',
+      createdAt: nuevaVenta.createdAt.toISOString(),
+      updatedAt: nuevaVenta.updatedAt.toISOString()
     };
 
     return NextResponse.json({
-      factura: nuevaFactura,
+      factura: facturaResponse,
       message: 'Factura creada exitosamente, lista para timbrar'
     }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating factura:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: (error as Error).message },
       { status: 500 }
     );
   }
