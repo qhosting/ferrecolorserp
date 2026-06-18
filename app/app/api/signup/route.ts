@@ -5,11 +5,15 @@ import { prisma } from "@/lib/db";
 import { UserRole } from "@/lib/types";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimit(req, { key: 'signup', limit: 5, windowMs: 60_000 });
+    if (limited) return limited;
+
     const body = await req.json();
     const { email, password, firstName, lastName, phone, role = "CLIENTE" } = body;
 

@@ -459,8 +459,7 @@ export async function GET(request: NextRequest) {
     console.error('Error in BI API endpoint:', error);
     return NextResponse.json(
       { 
-        error: 'Error interno del servidor',
-        details: (error as Error).message
+        error: 'Error interno del servidor'
       },
       { status: 500 }
     );

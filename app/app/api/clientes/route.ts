@@ -107,8 +107,7 @@ export async function GET(request: NextRequest) {
     console.error('Error obteniendo clientes:', error);
     return NextResponse.json(
       { 
-        error: 'Error interno del servidor',
-        details: (error as Error).message
+        error: 'Error interno del servidor'
       },
       { status: 500 }
     );
@@ -213,8 +212,7 @@ export async function POST(request: NextRequest) {
     console.error('Error buscando cliente:', error);
     return NextResponse.json(
       { 
-        error: 'Error interno del servidor',
-        details: (error as Error).message
+        error: 'Error interno del servidor'
       },
       { status: 500 }
     );

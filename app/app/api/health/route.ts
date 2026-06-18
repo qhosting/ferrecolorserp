@@ -30,7 +30,7 @@ export async function GET() {
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
         database: 'disconnected',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Error interno del servidor',
       },
       { status: 503 }
     );

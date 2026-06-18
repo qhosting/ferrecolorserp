@@ -208,7 +208,7 @@ export async function POST(
   } catch (error) {
     console.error('Error al procesar garantía:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error interno del servidor' },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }

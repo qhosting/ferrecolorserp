@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'Ocurrió un error al registrar el pago en CONTPAQi',
-        details: error.message,
       },
       { status: 500 }
     );

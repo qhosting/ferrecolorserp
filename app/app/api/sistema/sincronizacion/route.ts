@@ -198,14 +198,15 @@ export async function POST(request: NextRequest) {
       });
     } catch (err: any) {
       status = 'error';
-      resultMsg = `Error al sincronizar: ${err.message}`;
+      console.error('Error al sincronizar:', err);
+      resultMsg = 'Error al sincronizar el servicio';
       await prisma.syncLog.create({
         data: {
           tipo: servicioId,
           accion: 'pull',
           entidadId: 'sistema',
           status: 'error',
-          error: err.message
+          error: 'Error interno del servidor'
         }
       });
     }
@@ -224,7 +225,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error starting sync:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor', details: (error as Error).message },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }
@@ -295,7 +296,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating sync config:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor', details: (error as Error).message },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }

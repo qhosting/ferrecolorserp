@@ -161,14 +161,14 @@ Componentes UI:           53 + 12 directorios de negocio
 - Sincronización y consulta real verificadas sobre la base de datos de producción `adFERRE_COLORS`.
 - Punto de Venta conectado a la emisión y encolado de timbrado real a través de Kestrel.
 
-## 🔑 CREDENCIALES DE ACCESO (PRODUCCIÓN)
+## 🔑 CREDENCIALES DE ACCESO
 
-```
-Root:      root@aurumcapital.mx / x0420EZS* (Superadmin)
-Admin:     admin@sistema.com / 123456
-Gestor:    gestor1@sistema.com / password123
-Vendedor:  vendedor1@sistema.com / password123
-```
+> ⚠️ **Las credenciales NO se versionan.** Se gestionan fuera del repositorio
+> (gestor de secretos / variables de entorno). Los usuarios y contraseñas
+> iniciales se definen en el proceso de `seed` leyendo variables de entorno.
+>
+> 🚨 Si alguna credencial estuvo previamente en este archivo, debe considerarse
+> comprometida y **rotarse de inmediato** (ver `ROADMAP_ESTADO.md` → S1).
 
 ---
 

@@ -3,19 +3,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import LabsMobileSMSService from '@/lib/sms-labsmobile';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
       );
     }
+
+    const limited = rateLimit(request, { key: 'sms-bulk', limit: 5, windowMs: 60_000 });
+    if (limited) return limited;
 
     const body = await request.json();
     const { messages } = body;
@@ -80,8 +84,7 @@ export async function POST(request: NextRequest) {
     console.error('Bulk SMS API Error:', error);
     return NextResponse.json(
       { 
-        error: 'Error interno del servidor',
-        details: (error as Error).message
+        error: 'Error interno del servidor'
       },
       { status: 500 }
     );

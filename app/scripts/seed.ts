@@ -28,7 +28,10 @@ async function main() {
     console.log('Main admin user created/updated');
 
     // Create Root Aurum user
-    const rootPwd = process.env.SEED_ROOT_PASSWORD || 'x0420EZS*';
+    const rootPwd = process.env.SEED_ROOT_PASSWORD;
+    if (!rootPwd) {
+      throw new Error('SEED_ROOT_PASSWORD es obligatorio para crear el usuario root. Defínelo en el entorno.');
+    }
     const rootHashedPassword = await bcrypt.hash(rootPwd, 12);
     await prisma.user.upsert({
       where: { email: 'root@aurumcapital.mx' },

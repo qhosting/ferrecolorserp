@@ -40,6 +40,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: any) {
     console.error('Error synchronizing products:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Error interno del servidor' }, { status: 500 });
   }
 }

@@ -13,18 +13,24 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Webhook] Evento recibido: ${eventType}`);
 
-    // 1. Validar firma HMAC-SHA256 para seguridad
-    const secret = process.env.CONTPAQI_WEBHOOK_SECRET || 'ferrecolors_webhook_secret_2026';
-    if (signature) {
-      const hmac = crypto.createHmac('sha256', secret);
-      const computedSignature = hmac.update(rawBody).digest('hex').toUpperCase();
-      
-      if (computedSignature !== signature.toUpperCase()) {
-        console.error('[Webhook Error] Firma inválida detectada.');
-        return NextResponse.json({ error: 'Firma inválida' }, { status: 401 });
-      }
-    } else {
-      console.warn('[Webhook Warning] Recibido webhook sin firma. Continuando en modo desarrollo/pruebas.');
+    // 1. Validar firma HMAC-SHA256 para seguridad (obligatoria, sin excepciones)
+    const secret = process.env.CONTPAQI_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error('[Webhook Error] CONTPAQI_WEBHOOK_SECRET no está configurado.');
+      return NextResponse.json({ error: 'Servicio no configurado' }, { status: 503 });
+    }
+
+    if (!signature) {
+      console.error('[Webhook Error] Petición sin firma rechazada.');
+      return NextResponse.json({ error: 'Firma requerida' }, { status: 401 });
+    }
+
+    const computedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    const expected = Buffer.from(computedSignature.toUpperCase());
+    const received = Buffer.from(signature.toUpperCase());
+    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+      console.error('[Webhook Error] Firma inválida detectada.');
+      return NextResponse.json({ error: 'Firma inválida' }, { status: 401 });
     }
 
     const payload = JSON.parse(rawBody);
@@ -108,6 +114,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error procesando webhook CONTPAQi:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Error interno del servidor' }, { status: 500 });
   }
 }

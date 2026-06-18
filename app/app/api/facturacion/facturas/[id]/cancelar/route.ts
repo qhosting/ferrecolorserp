@@ -84,8 +84,7 @@ export async function POST(
       {
         success: false,
         error: 'Ocurrió un error al cancelar la factura en CONTPAQi',
-        message: error.message,
-        details: error.message,
+        message: 'Error interno del servidor',
       },
       { status: 500 }
     );

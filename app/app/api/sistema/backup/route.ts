@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
         await fs.promises.writeFile(tempJsonFile, JSON.stringify({
           ...metaInfo,
           estado: 'FALLIDO',
-          error: (err as Error).message
+          error: 'Error interno del servidor'
         }, null, 2));
       }
     };
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating backup:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor', details: (error as Error).message },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }

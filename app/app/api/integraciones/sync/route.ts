@@ -294,6 +294,6 @@ async function sincronizarInventario(destino: string, configuracion: any) {
     });
   } catch (error: any) {
     console.error('Error sincronizando inventario:', error);
-    return NextResponse.json({ error: error.message || 'Error sincronizando inventario' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

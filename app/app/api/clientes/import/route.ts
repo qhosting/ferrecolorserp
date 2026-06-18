@@ -4,6 +4,8 @@ import { Readable } from 'stream';
 import csv from 'csv-parser';
 import { prisma } from '@/lib/db';
 import { Periodicidad, StatusCliente } from '@prisma/client';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 interface ImportRow {
   codigo_cliente: string;
@@ -45,6 +47,15 @@ function getStatusCliente(value?: string): StatusCliente {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+    const role = (session.user as any)?.role;
+    if (role !== 'SUPERADMIN' && role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -145,7 +156,7 @@ export async function POST(request: NextRequest) {
               console.error(`Error processing row ${rowNumber}:`, error);
               errors.push({
                 row: rowNumber,
-                error: `Error al procesar: ${(error as Error).message}`
+                error: 'Error al procesar la fila'
               });
             }
           }

@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching facturas:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor', details: (error as Error).message },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating factura:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor', details: (error as Error).message },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }

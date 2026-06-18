@@ -99,7 +99,6 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'Ocurrió un error al registrar la nota de cargo en CONTPAQi',
-        details: error.message,
       },
       { status: 500 }
     );

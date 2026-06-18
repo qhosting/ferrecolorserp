@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: 'No se pudo establecer comunicación con el servidor CONTPAQi',
-        details: error.message,
       },
       { status: 500 }
     );

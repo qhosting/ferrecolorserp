@@ -214,8 +214,7 @@ export async function POST(request: NextRequest) {
     console.error('Error sincronizando pago:', error);
     return NextResponse.json(
       { 
-        error: 'Error interno del servidor',
-        details: (error as Error).message
+        error: 'Error interno del servidor'
       },
       { status: 500 }
     );

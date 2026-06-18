@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating inventario movimiento:', error);
-    const msg = (error as Error).message;
+    const msg = 'Error interno del servidor';
     if (msg.includes('Producto no encontrado')) {
       return NextResponse.json({ error: msg }, { status: 404 });
     }

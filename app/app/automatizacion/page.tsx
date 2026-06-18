@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,33 +9,26 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Plus, 
-  Play, 
-  Pause, 
-  Settings, 
-  Bot, 
-  Calendar, 
-  Clock, 
+import {
+  Plus,
+  Settings,
+  Bot,
+  Calendar,
   AlertCircle,
   CheckCircle,
-  Activity,
-  Zap,
-  Mail,
   Bell,
-  Workflow,
-  Timer
+  Trash2,
+  XCircle,
 } from "lucide-react";
 
 interface WorkflowRule {
@@ -59,7 +51,7 @@ interface TaskAutomatizada {
   id: string;
   nombre: string;
   descripcion: string;
-  tipo: 'COBRANZA' | 'INVENTARIO' | 'REPORTES' | 'NOTIFICACION';
+  tipo: string;
   frecuencia: 'DIARIA' | 'SEMANAL' | 'MENSUAL' | 'PERSONALIZADA';
   horario: string;
   activo: boolean;
@@ -76,11 +68,20 @@ interface NotificationRule {
   titulo: string;
   mensaje: string;
   destinatarios: string[];
-  canales: ('EMAIL' | 'SMS' | 'PUSH' | 'SISTEMA')[];
+  canales: string[];
   condiciones: any[];
   activo: boolean;
   enviadas: number;
   createdAt: string;
+}
+
+interface AutomationLog {
+  id: string;
+  fecha: string;
+  accion: string;
+  status: string;
+  detalles: any;
+  error?: string | null;
 }
 
 export default function AutomatizacionPage() {
@@ -88,150 +89,211 @@ export default function AutomatizacionPage() {
   const [workflows, setWorkflows] = useState<WorkflowRule[]>([]);
   const [tasks, setTasks] = useState<TaskAutomatizada[]>([]);
   const [notifications, setNotifications] = useState<NotificationRule[]>([]);
+  const [logs, setLogs] = useState<AutomationLog[]>([]);
+  const [logResumen, setLogResumen] = useState({ total24h: 0, exitosas24h: 0, errores24h: 0 });
   const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'workflow' | 'task' | 'notification'>('workflow');
+
+  const [dialogType, setDialogType] = useState<'workflow' | 'task' | 'notification' | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Workflow form
+  const [wfForm, setWfForm] = useState({ nombre: '', descripcion: '', tipo: 'EVENTO', trigger: '' });
+  // Task form
+  const [taskForm, setTaskForm] = useState({ nombre: '', descripcion: '', tipo: 'COBRANZA', frecuencia: 'DIARIA', horario: '02:00' });
+  // Notification form
+  const [notifForm, setNotifForm] = useState({ evento: '', titulo: '', mensaje: '', destinatarios: '', canales: 'EMAIL' });
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [workflowsRes, tasksRes, notificationsRes] = await Promise.all([
+      const [workflowsRes, tasksRes, notificationsRes, logsRes] = await Promise.all([
         fetch('/api/automatizacion/workflows'),
         fetch('/api/automatizacion/tasks'),
-        fetch('/api/automatizacion/notifications')
+        fetch('/api/automatizacion/notifications'),
+        fetch('/api/automatizacion/logs'),
       ]);
-
-      const [workflowsData, tasksData, notificationsData] = await Promise.all([
-        workflowsRes.json(),
-        tasksRes.json(),
-        notificationsRes.json()
+      const [workflowsData, tasksData, notificationsData, logsData] = await Promise.all([
+        workflowsRes.json(), tasksRes.json(), notificationsRes.json(), logsRes.json(),
       ]);
-
       setWorkflows(workflowsData.workflows || []);
       setTasks(tasksData.tasks || []);
       setNotifications(notificationsData.notifications || []);
+      setLogs(logsData.logs || []);
+      setLogResumen(logsData.resumen || { total24h: 0, exitosas24h: 0, errores24h: 0 });
     } catch (error) {
       console.error('Error loading data:', error);
-      toast({
-        title: "Error",
-        description: "Error al cargar los datos de automatización",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Error al cargar los datos de automatización", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const closeDialog = () => {
+    setDialogType(null);
+    setWfForm({ nombre: '', descripcion: '', tipo: 'EVENTO', trigger: '' });
+    setTaskForm({ nombre: '', descripcion: '', tipo: 'COBRANZA', frecuencia: 'DIARIA', horario: '02:00' });
+    setNotifForm({ evento: '', titulo: '', mensaje: '', destinatarios: '', canales: 'EMAIL' });
+  };
+
   const toggleWorkflow = async (id: string, activo: boolean) => {
     try {
-      const response = await fetch(`/api/automatizacion/workflows/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ activo }),
+      const res = await fetch(`/api/automatizacion/workflows/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }),
       });
-
-      if (response.ok) {
-        setWorkflows(prev => 
-          prev.map(w => w.id === id ? { ...w, activo } : w)
-        );
-        toast({
-          title: "Éxito",
-          description: `Workflow ${activo ? 'activado' : 'desactivado'} correctamente`,
-        });
-      }
-    } catch (error) {
-      console.error('Error updating workflow:', error);
-      toast({
-        title: "Error",
-        description: "Error al actualizar el workflow",
-        variant: "destructive",
-      });
+      if (res.ok) {
+        setWorkflows(prev => prev.map(w => w.id === id ? { ...w, activo } : w));
+        toast({ title: "Éxito", description: `Workflow ${activo ? 'activado' : 'desactivado'}` });
+      } else throw new Error();
+    } catch {
+      toast({ title: "Error", description: "Error al actualizar el workflow", variant: "destructive" });
     }
   };
 
   const toggleTask = async (id: string, activo: boolean) => {
     try {
-      const response = await fetch(`/api/automatizacion/tasks/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ activo }),
+      const res = await fetch(`/api/automatizacion/tasks/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }),
       });
+      if (res.ok) {
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, activo } : t));
+        toast({ title: "Éxito", description: `Tarea ${activo ? 'activada' : 'desactivada'}` });
+      } else throw new Error();
+    } catch {
+      toast({ title: "Error", description: "Error al actualizar la tarea", variant: "destructive" });
+    }
+  };
 
-      if (response.ok) {
-        setTasks(prev => 
-          prev.map(t => t.id === id ? { ...t, activo } : t)
-        );
-        toast({
-          title: "Éxito",
-          description: `Tarea ${activo ? 'activada' : 'desactivada'} correctamente`,
-        });
-      }
-    } catch (error) {
-      console.error('Error updating task:', error);
-      toast({
-        title: "Error",
-        description: "Error al actualizar la tarea",
-        variant: "destructive",
+  const toggleNotification = async (id: string, activo: boolean) => {
+    try {
+      const res = await fetch(`/api/automatizacion/notifications/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }),
       });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, activo } : n));
+        toast({ title: "Éxito", description: `Notificación ${activo ? 'activada' : 'desactivada'}` });
+      } else throw new Error();
+    } catch {
+      toast({ title: "Error", description: "Error al actualizar la notificación", variant: "destructive" });
+    }
+  };
+
+  const deleteItem = async (tipo: 'workflows' | 'tasks', id: string) => {
+    try {
+      const res = await fetch(`/api/automatizacion/${tipo}/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: "Eliminado", description: "Elemento eliminado correctamente" });
+        loadData();
+      } else throw new Error();
+    } catch {
+      toast({ title: "Error", description: "Error al eliminar", variant: "destructive" });
     }
   };
 
   const executeMaintenance = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/automatizacion/maintenance', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Éxito",
-          description: "Mantenimiento automático ejecutado correctamente",
-        });
+      const res = await fetch('/api/automatizacion/maintenance', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast({ title: "Mantenimiento ejecutado", description: data.message || "Completado" });
         loadData();
+      } else {
+        toast({ title: "Error", description: data.error || "Error al ejecutar el mantenimiento", variant: "destructive" });
       }
     } catch (error) {
       console.error('Error running maintenance:', error);
-      toast({
-        title: "Error",
-        description: "Error al ejecutar el mantenimiento",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Error al ejecutar el mantenimiento", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const submitWorkflow = async () => {
+    if (!wfForm.nombre || !wfForm.trigger) {
+      toast({ title: "Datos incompletos", description: "Nombre y trigger son obligatorios", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/automatizacion/workflows', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(wfForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al crear workflow');
+      toast({ title: "Workflow creado", description: data.workflow?.nombre });
+      closeDialog();
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitTask = async () => {
+    if (!taskForm.nombre || !taskForm.horario) {
+      toast({ title: "Datos incompletos", description: "Nombre y horario son obligatorios", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/automatizacion/tasks', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(taskForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al crear tarea');
+      toast({ title: "Tarea creada", description: data.task?.nombre });
+      closeDialog();
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitNotification = async () => {
+    if (!notifForm.evento || !notifForm.titulo || !notifForm.mensaje || !notifForm.destinatarios) {
+      toast({ title: "Datos incompletos", description: "Completa todos los campos", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/automatizacion/notifications', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...notifForm,
+          destinatarios: notifForm.destinatarios.split(',').map(s => s.trim()).filter(Boolean),
+          canales: [notifForm.canales],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al crear notificación');
+      toast({ title: "Notificación creada", description: data.notification?.titulo });
+      closeDialog();
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getTipoBadge = (tipo: string) => {
     const colors: Record<string, "default" | "secondary" | "destructive"> = {
-      'PROGRAMADA': 'default',
-      'EVENTO': 'secondary',
-      'CONDICIONAL': 'default',
-      'COBRANZA': 'secondary',
-      'INVENTARIO': 'default',
-      'REPORTES': 'secondary',
-      'NOTIFICACION': 'default'
+      'PROGRAMADA': 'default', 'EVENTO': 'secondary', 'CONDICIONAL': 'default',
+      'COBRANZA': 'secondary', 'INVENTARIO': 'default', 'REPORTES': 'secondary', 'NOTIFICACION': 'default',
     };
     return <Badge variant={colors[tipo] || 'default'}>{tipo}</Badge>;
   };
 
   const getEstadoBadge = (activo: boolean, errores?: number) => {
-    if (!activo) {
-      return <Badge variant="secondary">Inactivo</Badge>;
-    }
-    if (errores && errores > 0) {
-      return <Badge variant="destructive">Con Errores</Badge>;
-    }
+    if (!activo) return <Badge variant="secondary">Inactivo</Badge>;
+    if (errores && errores > 0) return <Badge variant="destructive">Con Errores</Badge>;
     return <Badge variant="default" className="bg-green-500">Activo</Badge>;
   };
 
@@ -250,14 +312,14 @@ export default function AutomatizacionPage() {
             <Settings className="h-4 w-4 mr-2" />
             Mantenimiento
           </Button>
-          <Button onClick={() => { setDialogType('workflow'); setDialogOpen(true); }}>
+          <Button onClick={() => setDialogType('workflow')}>
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Workflow
           </Button>
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -287,34 +349,28 @@ export default function AutomatizacionPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Notificaciones</CardTitle>
+            <CardTitle className="text-sm font-medium">Ejecuciones (24h)</CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{notifications.filter(n => n.activo).length}</div>
-            <p className="text-xs text-muted-foreground">
-              {notifications.reduce((sum, n) => sum + n.enviadas, 0)} enviadas hoy
-            </p>
+            <div className="text-2xl font-bold">{logResumen.total24h}</div>
+            <p className="text-xs text-muted-foreground">{logResumen.exitosas24h} exitosas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Errores</CardTitle>
+            <CardTitle className="text-sm font-medium">Errores (24h)</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {workflows.reduce((sum, w) => sum + w.errores, 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              En las últimas 24 horas
-            </p>
+            <div className="text-2xl font-bold">{logResumen.errores24h}</div>
+            <p className="text-xs text-muted-foreground">En las últimas 24 horas</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="workflows">Workflows</TabsTrigger>
@@ -323,13 +379,12 @@ export default function AutomatizacionPage() {
           <TabsTrigger value="monitoreo">Monitoreo</TabsTrigger>
         </TabsList>
 
+        {/* Workflows */}
         <TabsContent value="workflows" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Reglas de Workflow</CardTitle>
-              <CardDescription>
-                Automatización de procesos basada en eventos y condiciones
-              </CardDescription>
+              <CardDescription>Automatización de procesos basada en eventos y condiciones</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -345,6 +400,11 @@ export default function AutomatizacionPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {workflows.length === 0 && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                        {loading ? 'Cargando...' : 'No hay workflows configurados'}
+                      </td></tr>
+                    )}
                     {workflows.map((workflow) => (
                       <tr key={workflow.id} className="border-b">
                         <td className="px-4 py-3">
@@ -358,20 +418,17 @@ export default function AutomatizacionPage() {
                         <td className="px-4 py-3">
                           <div className="text-sm">
                             <p className="font-medium text-green-600">{workflow.ejecutado}</p>
-                            {workflow.errores > 0 && (
-                              <p className="text-red-600">{workflow.errores} errores</p>
-                            )}
+                            {workflow.errores > 0 && <p className="text-red-600">{workflow.errores} errores</p>}
                           </div>
                         </td>
                         <td className="px-4 py-3">{getEstadoBadge(workflow.activo, workflow.errores)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Switch
-                              checked={workflow.activo}
-                              onCheckedChange={(checked) => toggleWorkflow(workflow.id, checked)}
-                            />
-                            <Button variant="ghost" size="sm">
-                              <Settings className="h-4 w-4" />
+                            <Switch checked={workflow.activo}
+                              onCheckedChange={(checked) => toggleWorkflow(workflow.id, checked)} />
+                            <Button variant="ghost" size="sm" title="Eliminar"
+                              onClick={() => deleteItem('workflows', workflow.id)}>
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </td>
@@ -384,13 +441,17 @@ export default function AutomatizacionPage() {
           </Card>
         </TabsContent>
 
+        {/* Tareas */}
         <TabsContent value="tareas" className="space-y-4">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setDialogType('task')}>
+              <Plus className="h-4 w-4 mr-2" /> Nueva Tarea
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Tareas Programadas</CardTitle>
-              <CardDescription>
-                Ejecución automática de procesos en horarios específicos
-              </CardDescription>
+              <CardDescription>Ejecución automática de procesos en horarios específicos</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -406,6 +467,11 @@ export default function AutomatizacionPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {tasks.length === 0 && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                        {loading ? 'Cargando...' : 'No hay tareas programadas'}
+                      </td></tr>
+                    )}
                     {tasks.map((task) => (
                       <tr key={task.id} className="border-b">
                         <td className="px-4 py-3">
@@ -425,9 +491,7 @@ export default function AutomatizacionPage() {
                           {task.proximaEjecucion ? (
                             <div className="text-sm">
                               <p>{new Date(task.proximaEjecucion).toLocaleDateString()}</p>
-                              <p className="text-muted-foreground">
-                                {new Date(task.proximaEjecucion).toLocaleTimeString()}
-                              </p>
+                              <p className="text-muted-foreground">{new Date(task.proximaEjecucion).toLocaleTimeString()}</p>
                             </div>
                           ) : (
                             <span className="text-muted-foreground">No programada</span>
@@ -436,15 +500,11 @@ export default function AutomatizacionPage() {
                         <td className="px-4 py-3">{getEstadoBadge(task.activo)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Switch
-                              checked={task.activo}
-                              onCheckedChange={(checked) => toggleTask(task.id, checked)}
-                            />
-                            <Button variant="ghost" size="sm">
-                              <Play className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Settings className="h-4 w-4" />
+                            <Switch checked={task.activo}
+                              onCheckedChange={(checked) => toggleTask(task.id, checked)} />
+                            <Button variant="ghost" size="sm" title="Eliminar"
+                              onClick={() => deleteItem('tasks', task.id)}>
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </td>
@@ -457,13 +517,17 @@ export default function AutomatizacionPage() {
           </Card>
         </TabsContent>
 
+        {/* Notificaciones */}
         <TabsContent value="notificaciones" className="space-y-4">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setDialogType('notification')}>
+              <Plus className="h-4 w-4 mr-2" /> Nueva Notificación
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Reglas de Notificación</CardTitle>
-              <CardDescription>
-                Configuración de alertas automáticas por email, SMS y push
-              </CardDescription>
+              <CardDescription>Configuración de alertas automáticas por email, SMS y push</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -479,6 +543,11 @@ export default function AutomatizacionPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {notifications.length === 0 && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                        {loading ? 'Cargando...' : 'No hay reglas de notificación'}
+                      </td></tr>
+                    )}
                     {notifications.map((notification) => (
                       <tr key={notification.id} className="border-b">
                         <td className="px-4 py-3 font-medium">{notification.evento}</td>
@@ -493,23 +562,15 @@ export default function AutomatizacionPage() {
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {notification.canales.map((canal) => (
-                              <Badge key={canal} variant="outline" className="text-xs">
-                                {canal}
-                              </Badge>
+                              <Badge key={canal} variant="outline" className="text-xs">{canal}</Badge>
                             ))}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-green-600 font-medium">
-                          {notification.enviadas}
-                        </td>
+                        <td className="px-4 py-3 text-green-600 font-medium">{notification.enviadas}</td>
                         <td className="px-4 py-3">{getEstadoBadge(notification.activo)}</td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Switch checked={notification.activo} />
-                            <Button variant="ghost" size="sm">
-                              <Settings className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Switch checked={notification.activo}
+                            onCheckedChange={(checked) => toggleNotification(notification.id, checked)} />
                         </td>
                       </tr>
                     ))}
@@ -520,113 +581,198 @@ export default function AutomatizacionPage() {
           </Card>
         </TabsContent>
 
+        {/* Monitoreo */}
         <TabsContent value="monitoreo" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Actividad del Sistema</CardTitle>
-                <CardDescription>
-                  Monitoreo en tiempo real de automatizaciones
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Workflow de Cobranza</p>
-                      <p className="text-sm text-muted-foreground">Ejecutado hace 5 minutos</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-                    <Activity className="h-5 w-5 text-blue-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Reporte Diario</p>
-                      <p className="text-sm text-muted-foreground">En ejecución...</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-orange-50 rounded-lg">
-                    <Clock className="h-5 w-5 text-orange-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Backup Automático</p>
-                      <p className="text-sm text-muted-foreground">Programado para 02:00 AM</p>
-                    </div>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Actividad de Automatización</CardTitle>
+              <CardDescription>Últimas ejecuciones registradas del scheduler</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {logs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Bot className="mx-auto h-12 w-12 mb-3" />
+                  <p>Sin ejecuciones registradas todavía.</p>
+                  <p className="text-sm">Ejecuta "Mantenimiento" o configura el cron externo para ver actividad.</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Performance</CardTitle>
-                <CardDescription>
-                  Métricas de rendimiento y uso de recursos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>CPU Usage</span>
-                      <span>45%</span>
+              ) : (
+                <div className="space-y-2">
+                  {logs.map((log) => (
+                    <div key={log.id}
+                      className={`flex items-center gap-4 p-3 rounded-lg ${log.status === 'success' ? 'bg-green-50' : 'bg-red-50'}`}>
+                      {log.status === 'success'
+                        ? <CheckCircle className="h-5 w-5 text-green-600" />
+                        : <XCircle className="h-5 w-5 text-red-600" />}
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          {log.detalles?.nombre || log.detalles?.mensaje || log.accion}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {log.detalles?.mensaje && log.detalles?.nombre ? `${log.detalles.mensaje} · ` : ''}
+                          {new Date(log.fecha).toLocaleString()}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">{log.accion}</Badge>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full" style={{width: '45%'}}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Memory Usage</span>
-                      <span>62%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{width: '62%'}}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Database Load</span>
-                      <span>28%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-yellow-600 h-2 rounded-full" style={{width: '28%'}}></div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Dialog for Create/Edit */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Dialog Workflow */}
+      <Dialog open={dialogType === 'workflow'} onOpenChange={(o) => !o && closeDialog()}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>
-              {dialogType === 'workflow' && 'Nuevo Workflow'}
-              {dialogType === 'task' && 'Nueva Tarea Programada'}
-              {dialogType === 'notification' && 'Nueva Regla de Notificación'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure los parámetros para la automatización.
-            </DialogDescription>
+            <DialogTitle>Nuevo Workflow</DialogTitle>
+            <DialogDescription>Define una regla de automatización basada en eventos.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="text-center py-8">
-              <Bot className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">Configuración Avanzada</h3>
-              <p className="text-muted-foreground">
-                Esta funcionalidad estará disponible próximamente
-              </p>
+            <div className="grid gap-2">
+              <Label htmlFor="wfNombre">Nombre *</Label>
+              <Input id="wfNombre" value={wfForm.nombre} placeholder="Recordatorio de pago vencido"
+                onChange={(e) => setWfForm({ ...wfForm, nombre: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="wfDesc">Descripción</Label>
+              <Textarea id="wfDesc" value={wfForm.descripcion}
+                onChange={(e) => setWfForm({ ...wfForm, descripcion: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Tipo</Label>
+                <Select value={wfForm.tipo} onValueChange={(v) => setWfForm({ ...wfForm, tipo: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EVENTO">Evento</SelectItem>
+                    <SelectItem value="PROGRAMADA">Programada</SelectItem>
+                    <SelectItem value="CONDICIONAL">Condicional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="wfTrigger">Trigger *</Label>
+                <Input id="wfTrigger" value={wfForm.trigger} placeholder="pagare.vencido"
+                  onChange={(e) => setWfForm({ ...wfForm, trigger: e.target.value })} />
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={submitWorkflow} disabled={submitting}>
+              {submitting ? 'Guardando...' : 'Crear Workflow'}
             </Button>
-            <Button>
-              Crear Automatización
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Task */}
+      <Dialog open={dialogType === 'task'} onOpenChange={(o) => !o && closeDialog()}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Nueva Tarea Programada</DialogTitle>
+            <DialogDescription>Las tareas se ejecutan cuando el cron externo llama a /api/cron/run.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="tNombre">Nombre *</Label>
+              <Input id="tNombre" value={taskForm.nombre} placeholder="Recalcular intereses moratorios"
+                onChange={(e) => setTaskForm({ ...taskForm, nombre: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tDesc">Descripción</Label>
+              <Textarea id="tDesc" value={taskForm.descripcion}
+                onChange={(e) => setTaskForm({ ...taskForm, descripcion: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label>Tipo</Label>
+                <Select value={taskForm.tipo} onValueChange={(v) => setTaskForm({ ...taskForm, tipo: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COBRANZA">Cobranza (intereses)</SelectItem>
+                    <SelectItem value="INVENTARIO">Inventario (stock bajo)</SelectItem>
+                    <SelectItem value="REPORTES">Reportes</SelectItem>
+                    <SelectItem value="NOTIFICACION">Notificación</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Frecuencia</Label>
+                <Select value={taskForm.frecuencia} onValueChange={(v) => setTaskForm({ ...taskForm, frecuencia: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DIARIA">Diaria</SelectItem>
+                    <SelectItem value="SEMANAL">Semanal</SelectItem>
+                    <SelectItem value="MENSUAL">Mensual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tHorario">Horario *</Label>
+                <Input id="tHorario" type="time" value={taskForm.horario}
+                  onChange={(e) => setTaskForm({ ...taskForm, horario: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={submitTask} disabled={submitting}>
+              {submitting ? 'Guardando...' : 'Crear Tarea'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Notification */}
+      <Dialog open={dialogType === 'notification'} onOpenChange={(o) => !o && closeDialog()}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Nueva Regla de Notificación</DialogTitle>
+            <DialogDescription>Define alertas automáticas por evento.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="nEvento">Evento *</Label>
+                <Input id="nEvento" value={notifForm.evento} placeholder="pagare.vencido"
+                  onChange={(e) => setNotifForm({ ...notifForm, evento: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Canal</Label>
+                <Select value={notifForm.canales} onValueChange={(v) => setNotifForm({ ...notifForm, canales: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EMAIL">Email</SelectItem>
+                    <SelectItem value="SMS">SMS</SelectItem>
+                    <SelectItem value="PUSH">Push</SelectItem>
+                    <SelectItem value="SISTEMA">Sistema</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="nTitulo">Título *</Label>
+              <Input id="nTitulo" value={notifForm.titulo} placeholder="Pago Vencido"
+                onChange={(e) => setNotifForm({ ...notifForm, titulo: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="nMensaje">Mensaje *</Label>
+              <Textarea id="nMensaje" value={notifForm.mensaje} placeholder="Su pago está vencido..."
+                onChange={(e) => setNotifForm({ ...notifForm, mensaje: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="nDest">Destinatarios * (separados por coma)</Label>
+              <Input id="nDest" value={notifForm.destinatarios} placeholder="{cliente.email}, {cliente.telefono}"
+                onChange={(e) => setNotifForm({ ...notifForm, destinatarios: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={submitNotification} disabled={submitting}>
+              {submitting ? 'Guardando...' : 'Crear Notificación'}
             </Button>
           </DialogFooter>
         </DialogContent>
