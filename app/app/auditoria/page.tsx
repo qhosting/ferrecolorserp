@@ -9,6 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Search, 
   Filter, 
@@ -91,8 +99,43 @@ export default function AuditoriaPage() {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedResult, setSelectedResult] = useState<string>('');
   const [dateRange, setDateRange] = useState<string>('today');
+  const [detalle, setDetalle] = useState<{ titulo: string; data: any } | null>(null);
 
   const { toast } = useToast();
+
+  // Análisis real derivado de los logs cargados
+  const analisis = (() => {
+    const total = auditLogs.length;
+    const errores = auditLogs.filter((l) => l.resultado === 'ERROR').length;
+    const tasaError = total > 0 ? (errores / total) * 100 : 0;
+
+    const porModulo: Record<string, number> = {};
+    const porUsuario: Record<string, number> = {};
+    const porHora: Record<number, number> = {};
+    for (const l of auditLogs) {
+      porModulo[l.modulo] = (porModulo[l.modulo] || 0) + 1;
+      const nombre = l.usuario?.nombre || l.usuario?.email || 'Desconocido';
+      porUsuario[nombre] = (porUsuario[nombre] || 0) + 1;
+      const h = new Date(l.timestamp).getHours();
+      porHora[h] = (porHora[h] || 0) + 1;
+    }
+
+    const topModulo = Object.entries(porModulo).sort((a, b) => b[1] - a[1])[0];
+    const topUsuario = Object.entries(porUsuario).sort((a, b) => b[1] - a[1])[0];
+    const topHora = Object.entries(porHora).sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      total,
+      tasaError,
+      topModulo: topModulo ? { nombre: topModulo[0], pct: total > 0 ? (topModulo[1] / total) * 100 : 0 } : null,
+      topUsuario: topUsuario ? { nombre: topUsuario[0], count: topUsuario[1] } : null,
+      topHora: topHora ? `${topHora[0].padStart(2, '0')}:00 - ${String(Number(topHora[0]) + 1).padStart(2, '0')}:00` : null,
+    };
+  })();
+
+  const alertasSeguridad = securityEvents
+    .filter((e) => e.tipo === 'LOGIN_FALLIDO' || e.tipo === 'ACCESO_DENEGADO' || e.riesgo === 'ALTO')
+    .slice(0, 5);
 
   useEffect(() => {
     loadAuditData();
@@ -232,7 +275,7 @@ export default function AuditoriaPage() {
             <Download className="h-4 w-4 mr-2" />
             Exportar Reporte
           </Button>
-          <Button>
+          <Button onClick={() => { window.location.href = '/configuracion'; }}>
             <Settings className="h-4 w-4 mr-2" />
             Configurar
           </Button>
@@ -403,7 +446,7 @@ export default function AuditoriaPage() {
                         </td>
                         <td className="px-4 py-3">{getResultadoBadge(log.resultado)}</td>
                         <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => setDetalle({ titulo: `Log · ${log.accion}`, data: log })}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </td>
@@ -466,7 +509,7 @@ export default function AuditoriaPage() {
                         <td className="px-4 py-3 font-mono text-sm">{event.ip}</td>
                         <td className="px-4 py-3">{getRiesgoBadge(event.riesgo)}</td>
                         <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => setDetalle({ titulo: `Evento · ${event.tipo}`, data: event })}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </td>
@@ -533,7 +576,7 @@ export default function AuditoriaPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => setDetalle({ titulo: `Cambio · ${change.tabla}`, data: change })}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </td>
@@ -552,26 +595,32 @@ export default function AuditoriaPage() {
               <CardHeader>
                 <CardTitle>Análisis de Actividad</CardTitle>
                 <CardDescription>
-                  Patrones de uso y actividad del sistema
+                  Patrones de uso derivados de {analisis.total} registros de auditoría
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span>Horario de mayor actividad</span>
-                    <Badge>09:00 - 12:00</Badge>
+                    <Badge>{analisis.topHora ?? '—'}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Módulo más utilizado</span>
-                    <Badge>Ventas (45%)</Badge>
+                    <Badge>
+                      {analisis.topModulo ? `${analisis.topModulo.nombre} (${analisis.topModulo.pct.toFixed(0)}%)` : '—'}
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Usuario más activo</span>
-                    <Badge>Juan Pérez (234 acciones)</Badge>
+                    <Badge>
+                      {analisis.topUsuario ? `${analisis.topUsuario.nombre} (${analisis.topUsuario.count} acciones)` : '—'}
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Tasa de errores</span>
-                    <Badge variant="destructive">2.1%</Badge>
+                    <Badge variant={analisis.tasaError > 5 ? 'destructive' : 'default'}>
+                      {analisis.tasaError.toFixed(1)}%
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
@@ -581,38 +630,55 @@ export default function AuditoriaPage() {
               <CardHeader>
                 <CardTitle>Alertas de Seguridad</CardTitle>
                 <CardDescription>
-                  Eventos y patrones que requieren atención
+                  Eventos reales que requieren atención
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-3 bg-yellow-50 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Intentos fallidos de login</p>
-                      <p className="text-sm text-muted-foreground">5 intentos desde IP 192.168.1.100</p>
+                  {alertasSeguridad.length === 0 ? (
+                    <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div className="flex-1">
+                        <p className="font-medium">Sistema estable</p>
+                        <p className="text-sm text-muted-foreground">No se detectaron eventos de riesgo recientes</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-red-50 rounded-lg">
-                    <Lock className="h-5 w-5 text-red-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Acceso denegado repetido</p>
-                      <p className="text-sm text-muted-foreground">Usuario sin permisos suficientes</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <div className="flex-1">
-                      <p className="font-medium">Sistema estable</p>
-                      <p className="text-sm text-muted-foreground">No se detectaron amenazas</p>
-                    </div>
-                  </div>
+                  ) : (
+                    alertasSeguridad.map((e) => (
+                      <div key={e.id} className={`flex items-center gap-4 p-3 rounded-lg ${e.riesgo === 'ALTO' ? 'bg-red-50' : 'bg-yellow-50'}`}>
+                        {e.riesgo === 'ALTO' ? <Lock className="h-5 w-5 text-red-600" /> : <AlertTriangle className="h-5 w-5 text-yellow-600" />}
+                        <div className="flex-1">
+                          <p className="font-medium">{e.tipo.replace(/_/g, ' ')}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {e.usuario?.email ?? 'Usuario desconocido'} · IP {e.ip} · {format(new Date(e.timestamp), 'dd MMM HH:mm', { locale: es })}
+                          </p>
+                        </div>
+                        <Badge variant={e.riesgo === 'ALTO' ? 'destructive' : 'secondary'} className="text-xs">{e.riesgo}</Badge>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de detalle */}
+      <Dialog open={!!detalle} onOpenChange={(o) => !o && setDetalle(null)}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>{detalle?.titulo}</DialogTitle>
+            <DialogDescription>Detalle completo del registro de auditoría.</DialogDescription>
+          </DialogHeader>
+          <pre className="text-xs bg-muted/50 rounded-md p-3 max-h-[60vh] overflow-auto whitespace-pre-wrap break-all">
+            {detalle ? JSON.stringify(detalle.data, null, 2) : ''}
+          </pre>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetalle(null)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

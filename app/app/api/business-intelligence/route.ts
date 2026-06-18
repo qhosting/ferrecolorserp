@@ -446,13 +446,55 @@ export async function GET(request: NextRequest) {
       responseTime: Number(avgResponseTime.toFixed(1))
     };
 
+    // 10. Segmentación de Clientes (top clientes, nuevos vs recurrentes, por estado)
+    const ventasPorCliente = await prisma.venta.groupBy({
+      by: ['clienteId'],
+      where: { status: { not: 'CANCELADA' } },
+      _sum: { total: true },
+      _count: { id: true },
+    });
+
+    const topClienteIds = [...ventasPorCliente]
+      .sort((a, b) => (b._sum.total ?? 0) - (a._sum.total ?? 0))
+      .slice(0, 5);
+
+    const clientesInfo = await prisma.cliente.findMany({
+      where: { id: { in: topClienteIds.map((c) => c.clienteId) } },
+      select: { id: true, nombre: true, codigoCliente: true },
+    });
+    const clienteNombre = new Map(clientesInfo.map((c) => [c.id, c]));
+
+    const topClientes = topClienteIds.map((c) => ({
+      nombre: clienteNombre.get(c.clienteId)?.nombre ?? 'N/D',
+      codigo: clienteNombre.get(c.clienteId)?.codigoCliente ?? '',
+      total: Math.round(c._sum.total ?? 0),
+      compras: c._count.id,
+    }));
+
+    const nuevos = ventasPorCliente.filter((c) => c._count.id === 1).length;
+    const recurrentes = ventasPorCliente.filter((c) => c._count.id > 1).length;
+
+    const clientesPorEstado = await prisma.cliente.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    });
+
+    const clientesData = {
+      topClientes,
+      nuevos,
+      recurrentes,
+      totalConCompras: ventasPorCliente.length,
+      porEstado: clientesPorEstado.map((e) => ({ estado: e.status, count: e._count.id })),
+    };
+
     return NextResponse.json({
       kpiData,
       chartData,
       predictions,
       pieData,
       cobranzaData,
-      keyMetrics
+      keyMetrics,
+      clientesData
     }, { status: 200 });
 
   } catch (error) {

@@ -63,6 +63,8 @@ export default function CreditoPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState<ClientScore | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [historial, setHistorial] = useState<any | null>(null);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   useEffect(() => {
     fetchScoring();
@@ -97,9 +99,31 @@ export default function CreditoPage() {
     }).format(price);
   };
 
-  const openDetailModal = (client: ClientScore) => {
+  const openDetailModal = async (client: ClientScore) => {
     setSelectedClient(client);
     setShowDetailModal(true);
+    setHistorial(null);
+    setLoadingHistorial(true);
+    try {
+      const res = await fetch(`/api/clientes/${client.id}/historial`);
+      if (res.ok) {
+        setHistorial(await res.json());
+      }
+    } catch (error) {
+      console.error('Error fetching historial:', error);
+    } finally {
+      setLoadingHistorial(false);
+    }
+  };
+
+  const estatusBadge = (estatus: string) => {
+    const map: Record<string, string> = {
+      PAGADO: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+      VENCIDO: 'bg-rose-500/10 text-rose-600 border-rose-200',
+      PARCIAL: 'bg-amber-500/10 text-amber-600 border-amber-200',
+      PENDIENTE: 'bg-blue-500/10 text-blue-600 border-blue-200',
+    };
+    return map[estatus] || 'bg-slate-500/10 text-slate-600 border-slate-200';
   };
 
   // Stats Calculations
@@ -313,7 +337,7 @@ export default function CreditoPage() {
 
       {/* Detail breakdown dialog */}
       <Dialog open={showDetailModal} onOpenChange={(open) => !open && setShowDetailModal(false)}>
-        <DialogContent className="max-w-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl">
           <DialogHeader>
             <DialogTitle>Análisis y Desglose Crediticio</DialogTitle>
             <DialogDescription>
@@ -406,6 +430,86 @@ export default function CreditoPage() {
                     'Cliente de alto riesgo con pagarés vencidos acumulados y/o estado de morosidad activa. La cuenta se encuentra en suspensión automática de ventas a crédito.'
                   )}
                 </p>
+              </div>
+
+              {/* Historial real de pagarés y pagos */}
+              <div className="space-y-3">
+                <h5 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Historial de Pagos y Pagarés</h5>
+                {loadingHistorial ? (
+                  <p className="text-sm text-slate-500 py-4 text-center">Cargando historial...</p>
+                ) : !historial ? (
+                  <p className="text-sm text-slate-500 py-4 text-center">No se pudo cargar el historial.</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                        <p className="text-lg font-bold">{historial.resumen.totalPagares}</p>
+                        <p className="text-[10px] text-slate-500 uppercase">Pagarés</p>
+                      </div>
+                      <div className="p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-emerald-600">{historial.resumen.pagados}</p>
+                        <p className="text-[10px] text-slate-500 uppercase">Pagados</p>
+                      </div>
+                      <div className="p-2 bg-rose-50 dark:bg-rose-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-rose-600">{historial.resumen.vencidos}</p>
+                        <p className="text-[10px] text-slate-500 uppercase">Vencidos</p>
+                      </div>
+                      <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-blue-600">{historial.resumen.pendientes}</p>
+                        <p className="text-[10px] text-slate-500 uppercase">Pendientes</p>
+                      </div>
+                    </div>
+
+                    {historial.pagares.length > 0 && (
+                      <div className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden">
+                        <div className="max-h-48 overflow-y-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
+                              <tr>
+                                <th className="text-left px-3 py-2 font-semibold text-slate-600">Pagaré</th>
+                                <th className="text-left px-3 py-2 font-semibold text-slate-600">Vencimiento</th>
+                                <th className="text-right px-3 py-2 font-semibold text-slate-600">Monto</th>
+                                <th className="text-center px-3 py-2 font-semibold text-slate-600">Estatus</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {historial.pagares.map((p: any) => (
+                                <tr key={p.id} className="border-t border-slate-100 dark:border-slate-800">
+                                  <td className="px-3 py-2">
+                                    <span className="font-mono">{p.folio ?? '—'} #{p.numeroPago}</span>
+                                  </td>
+                                  <td className="px-3 py-2 text-slate-500">{new Date(p.fechaVencimiento).toLocaleDateString('es-MX')}</td>
+                                  <td className="px-3 py-2 text-right font-medium">{formatPrice(p.monto)}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <Badge variant="outline" className={`text-[9px] ${estatusBadge(p.estatus)}`}>{p.estatus}</Badge>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {historial.pagos.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-slate-600 mb-1">Últimos pagos · Total {formatPrice(historial.resumen.totalPagado)}</p>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {historial.pagos.map((pago: any) => (
+                            <div key={pago.id} className="flex justify-between text-xs px-3 py-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                              <span className="text-slate-500">{new Date(pago.fecha).toLocaleDateString('es-MX')} · {pago.tipoPago}</span>
+                              <span className="font-medium text-emerald-600">{formatPrice(pago.monto)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {historial.pagares.length === 0 && historial.pagos.length === 0 && (
+                      <p className="text-sm text-slate-500 py-2 text-center">Sin movimientos registrados para este cliente.</p>
+                    )}
+                  </>
+                )}
               </div>
 
               <DialogFooter className="pt-2">

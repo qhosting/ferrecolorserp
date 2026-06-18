@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       telefono,
       email,
       direccion,
+      rfc,
       diasCredito,
       limiteCredito
     } = body;
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
         telefono: telefono || null,
         email: email || null,
         direccion: direccion || null,
+        rfc: rfc || null,
         diasCredito: diasCredito ? parseInt(diasCredito.toString()) : 0,
         limiteCredito: limiteCredito ? parseFloat(limiteCredito.toString()) : 0,
         isActive: true

@@ -7,21 +7,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Building2,
   Plus,
   Search,
   Edit3,
-  Trash2,
   Eye,
   DollarSign,
   Phone,
   Mail,
   MapPin,
   CheckCircle,
-  XCircle,
   AlertCircle,
-  FileText,
   RefreshCw,
 } from 'lucide-react';
 import {
@@ -48,12 +56,24 @@ interface Proveedor {
   limiteCredito?: number;
 }
 
+const emptyForm = {
+  codigo: '', nombre: '', rfc: '', contacto: '', telefono: '', email: '',
+  direccion: '', diasCredito: '', limiteCredito: '',
+};
+
 export default function ProveedoresPage() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [saldoFiltro, setSaldoFiltro] = useState('todos');
+
+  const [dialogMode, setDialogMode] = useState<'crear' | 'editar' | 'ver' | null>(null);
+  const [form, setForm] = useState({ ...emptyForm });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [verProveedor, setVerProveedor] = useState<Proveedor | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const fetchProveedores = async () => {
     setLoading(true);
@@ -75,6 +95,50 @@ export default function ProveedoresPage() {
     fetchProveedores();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estadoFiltro]);
+
+  const closeDialog = () => {
+    setDialogMode(null);
+    setForm({ ...emptyForm });
+    setEditId(null);
+    setVerProveedor(null);
+  };
+
+  const openCrear = () => { setForm({ ...emptyForm }); setEditId(null); setDialogMode('crear'); };
+
+  const openEditar = (p: Proveedor) => {
+    setForm({
+      codigo: p.codigo, nombre: p.nombre, rfc: p.rfc ?? '', contacto: p.contacto ?? '',
+      telefono: p.telefono ?? '', email: p.email ?? '', direccion: '',
+      diasCredito: p.diasCredito != null ? String(p.diasCredito) : '',
+      limiteCredito: p.limiteCredito != null ? String(p.limiteCredito) : '',
+    });
+    setEditId(p.id);
+    setDialogMode('editar');
+  };
+
+  const submitProveedor = async () => {
+    if (!form.codigo || !form.nombre) {
+      toast({ title: 'Datos incompletos', description: 'Código y nombre son obligatorios', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const url = editId ? `/api/compras/proveedores/${editId}` : '/api/compras/proveedores';
+      const method = editId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar el proveedor');
+      toast({ title: editId ? 'Proveedor actualizado' : 'Proveedor creado', description: data.proveedor?.nombre });
+      closeDialog();
+      fetchProveedores();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const proveedoresFiltrados = proveedores.filter((p) => {
     const matchSearch =
@@ -122,7 +186,7 @@ export default function ProveedoresPage() {
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Actualizar
             </Button>
-            <Button className="gap-2 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/20">
+            <Button onClick={openCrear} className="gap-2 bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/20">
               <Plus className="h-4 w-4" />
               Nuevo Proveedor
             </Button>
@@ -309,14 +373,11 @@ export default function ProveedoresPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
+                            <Button variant="ghost" size="sm" title="Ver" onClick={() => { setVerProveedor(p); setDialogMode('ver'); }} className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600">
+                            <Button variant="ghost" size="sm" title="Editar" onClick={() => openEditar(p)} className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600">
                               <Edit3 className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-cyan-600">
-                              <FileText className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </td>
@@ -339,6 +400,103 @@ export default function ProveedoresPage() {
           </span>
         </div>
       </div>
+
+      {/* Dialog Crear/Editar */}
+      <Dialog open={dialogMode === 'crear' || dialogMode === 'editar'} onOpenChange={(o) => !o && closeDialog()}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{dialogMode === 'editar' ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>
+            <DialogDescription>Datos comerciales y de contacto del proveedor.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="codigo">Código *</Label>
+                <Input id="codigo" placeholder="PROV001" value={form.codigo} disabled={dialogMode === 'editar'}
+                  onChange={(e) => setForm({ ...form, codigo: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="nombre">Nombre *</Label>
+                <Input id="nombre" placeholder="Nombre del proveedor" value={form.nombre}
+                  onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="rfc">RFC</Label>
+                <Input id="rfc" placeholder="XAXX010101000" value={form.rfc}
+                  onChange={(e) => setForm({ ...form, rfc: e.target.value.toUpperCase() })} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contacto">Contacto</Label>
+                <Input id="contacto" placeholder="Persona de contacto" value={form.contacto}
+                  onChange={(e) => setForm({ ...form, contacto: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="telefono">Teléfono</Label>
+                <Input id="telefono" value={form.telefono}
+                  onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="direccion">Dirección</Label>
+              <Textarea id="direccion" value={form.direccion}
+                onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="diasCredito">Días de Crédito</Label>
+                <Input id="diasCredito" type="number" value={form.diasCredito}
+                  onChange={(e) => setForm({ ...form, diasCredito: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="limiteCredito">Límite de Crédito</Label>
+                <Input id="limiteCredito" type="number" value={form.limiteCredito}
+                  onChange={(e) => setForm({ ...form, limiteCredito: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={submitProveedor} disabled={submitting}>
+              {submitting ? 'Guardando...' : (dialogMode === 'editar' ? 'Guardar Cambios' : 'Crear Proveedor')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Ver */}
+      <Dialog open={dialogMode === 'ver'} onOpenChange={(o) => !o && closeDialog()}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{verProveedor?.nombre}</DialogTitle>
+            <DialogDescription>{verProveedor?.codigo}</DialogDescription>
+          </DialogHeader>
+          {verProveedor && (
+            <div className="grid gap-2 py-4 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">RFC</span><span>{verProveedor.rfc ?? '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Contacto</span><span>{verProveedor.contacto ?? '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Teléfono</span><span>{verProveedor.telefono ?? '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{verProveedor.email ?? '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Días de crédito</span><span>{verProveedor.diasCredito ?? 0}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Límite de crédito</span><span>${(verProveedor.limiteCredito ?? 0).toLocaleString('es-MX')}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Saldo pendiente</span><span className={verProveedor.saldoActual > 0 ? 'text-rose-600 font-semibold' : 'text-emerald-600'}>${verProveedor.saldoActual.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Estado</span><span>{verProveedor.activo ? 'Activo' : 'Inactivo'}</span></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cerrar</Button>
+            {verProveedor && <Button onClick={() => openEditar(verProveedor)}>Editar</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

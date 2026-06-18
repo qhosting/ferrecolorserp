@@ -96,6 +96,7 @@ export default function BusinessIntelligencePage() {
   const [pieData, setPieData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [cobranzaData, setCobranzaData] = useState<ChartData[]>([]);
   const [keyMetrics, setKeyMetrics] = useState<KeyMetrics | null>(null);
+  const [clientesData, setClientesData] = useState<any | null>(null);
 
   const { toast } = useToast();
 
@@ -123,6 +124,7 @@ export default function BusinessIntelligencePage() {
       setPieData(data.pieData || []);
       setCobranzaData(data.cobranzaData || []);
       setKeyMetrics(data.keyMetrics || null);
+      setClientesData(data.clientesData || null);
     } catch (error) {
       console.error('Error loading BI data:', error);
       toast({
@@ -392,43 +394,178 @@ export default function BusinessIntelligencePage() {
         </TabsContent>
 
         <TabsContent value="ventas" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Análisis Detallado de Ventas</CardTitle>
-              <CardDescription>
-                Segmentación y análisis profundo de datos de ventas
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Análisis Avanzado de Ventas</h3>
-                <p className="text-muted-foreground">
-                  Funcionalidad completa disponible próximamente
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {(() => {
+            const totalAnual = chartData.reduce((s, c) => s + c.valor, 0);
+            const promedioMensual = chartData.length ? totalAnual / chartData.length : 0;
+            const mejorMes = chartData.reduce((max, c) => (c.valor > (max?.valor ?? -1) ? c : max), null as ChartData | null);
+            const ultimo = chartData[chartData.length - 1]?.valor ?? 0;
+            const penultimo = chartData[chartData.length - 2]?.valor ?? 0;
+            const crecimiento = penultimo > 0 ? ((ultimo - penultimo) / penultimo) * 100 : 0;
+            return (
+              <>
+                <div className="grid gap-4 md:grid-cols-4">
+                  <Card><CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground">Total 12 meses</p>
+                    <p className="text-2xl font-bold">{formatValue(totalAnual, 'currency')}</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground">Promedio mensual</p>
+                    <p className="text-2xl font-bold">{formatValue(promedioMensual, 'currency')}</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground">Mejor mes</p>
+                    <p className="text-2xl font-bold">{mejorMes?.mes ?? '—'}</p>
+                    <p className="text-xs text-muted-foreground">{formatValue(mejorMes?.valor ?? 0, 'currency')}</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground">Crecimiento mensual</p>
+                    <p className={`text-2xl font-bold ${crecimiento >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {crecimiento >= 0 ? '+' : ''}{crecimiento.toFixed(1)}%
+                    </p>
+                  </CardContent></Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tendencia de Ventas (12 meses)</CardTitle>
+                    <CardDescription>Evolución mensual de ingresos por ventas</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip formatter={(v: any) => formatValue(v, 'currency')} />
+                        <Legend />
+                        <Line type="monotone" dataKey="valor" name="Ventas" stroke="#3B82F6" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ventas por Categoría de Producto</CardTitle>
+                    <CardDescription>Distribución de ingresos según categoría</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {pieData.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-6">Sin datos de categorías.</p>
+                    ) : (
+                      <div className="rounded-md border">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="px-4 py-2 text-left">Categoría</th>
+                              <th className="px-4 py-2 text-right">Ventas</th>
+                              <th className="px-4 py-2 text-right">% del total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const totalPie = pieData.reduce((s, p) => s + p.value, 0);
+                              return pieData.map((p) => (
+                                <tr key={p.name} className="border-b">
+                                  <td className="px-4 py-2 flex items-center gap-2">
+                                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: p.color }} />
+                                    {p.name}
+                                  </td>
+                                  <td className="px-4 py-2 text-right">{formatValue(p.value, 'currency')}</td>
+                                  <td className="px-4 py-2 text-right">{totalPie > 0 ? ((p.value / totalPie) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="clientes" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Segmentación de Clientes</CardTitle>
-              <CardDescription>
-                Análisis de comportamiento y segmentación RFM
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Análisis de Clientes</h3>
-                <p className="text-muted-foreground">
-                  Segmentación avanzada disponible próximamente
-                </p>
+          {!clientesData ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">
+              {loading ? 'Cargando...' : 'Sin datos de clientes.'}
+            </CardContent></Card>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card><CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground">Clientes con compras</p>
+                  <p className="text-2xl font-bold">{clientesData.totalConCompras}</p>
+                </CardContent></Card>
+                <Card><CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground">Recurrentes</p>
+                  <p className="text-2xl font-bold text-green-600">{clientesData.recurrentes}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {clientesData.totalConCompras > 0 ? ((clientesData.recurrentes / clientesData.totalConCompras) * 100).toFixed(0) : 0}% del total
+                  </p>
+                </CardContent></Card>
+                <Card><CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground">Nuevos (1 compra)</p>
+                  <p className="text-2xl font-bold text-blue-600">{clientesData.nuevos}</p>
+                </CardContent></Card>
               </div>
-            </CardContent>
-          </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top 5 Clientes</CardTitle>
+                  <CardDescription>Clientes con mayor volumen de compras</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {clientesData.topClientes.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-6">Sin clientes con compras.</p>
+                  ) : (
+                    <div className="rounded-md border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="px-4 py-2 text-left">Cliente</th>
+                            <th className="px-4 py-2 text-right">Compras</th>
+                            <th className="px-4 py-2 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {clientesData.topClientes.map((c: any, i: number) => (
+                            <tr key={i} className="border-b">
+                              <td className="px-4 py-2">
+                                <p className="font-medium">{c.nombre}</p>
+                                <p className="text-xs text-muted-foreground font-mono">{c.codigo}</p>
+                              </td>
+                              <td className="px-4 py-2 text-right">{c.compras}</td>
+                              <td className="px-4 py-2 text-right font-medium">{formatValue(c.total, 'currency')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distribución por Estado</CardTitle>
+                  <CardDescription>Segmentación de la cartera por estatus del cliente</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                    {clientesData.porEstado.map((e: any) => (
+                      <div key={e.estado} className="p-3 rounded-lg bg-muted/40 text-center">
+                        <p className="text-2xl font-bold">{e.count}</p>
+                        <Badge variant="outline" className="mt-1 text-xs">{e.estado}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="predicciones" className="space-y-4">
