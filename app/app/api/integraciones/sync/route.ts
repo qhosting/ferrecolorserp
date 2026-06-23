@@ -111,28 +111,40 @@ async function exportarProductos(destino: string, filtros: any) {
     
     const productos = await prisma.producto.findMany({
       where: whereClause,
-      select: {
-        codigo: true,
-        nombre: true,
-        descripcion: true,
-        categoria: true,
-        marca: true,
-        modelo: true,
-        precio1: true,
-        precio2: true,
-        precio3: true,
-        precioCompra: true,
-        stock: true,
-        stockMinimo: true,
-        stockMaximo: true,
-        unidadMedida: true,
-      },
+      include: {
+        stockSucursales: {
+          include: {
+            sucursal: true
+          }
+        }
+      }
     });
 
-    let datosFormateados: any = productos;
+    const mappedProductos = productos.map(p => {
+      const stock = p.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+      const defaultStock = p.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || p.stockSucursales[0];
+      return {
+        codigo: p.codigo,
+        nombre: p.nombre,
+        descripcion: p.descripcion,
+        categoria: p.categoria,
+        marca: p.marca,
+        modelo: p.modelo,
+        precio1: p.precio1,
+        precio2: p.precio2,
+        precio3: p.precio3,
+        precioCompra: p.precioCompra,
+        stock,
+        stockMinimo: defaultStock?.stockMinimo ?? 0,
+        stockMaximo: defaultStock?.stockMaximo ?? 1000,
+        unidadMedida: p.unidadMedida,
+      };
+    });
+
+    let datosFormateados: any = mappedProductos;
     
     if (destino === 'ecommerce') {
-      datosFormateados = productos.map(producto => ({
+      datosFormateados = mappedProductos.map(producto => ({
         sku: producto.codigo,
         name: producto.nombre,
         description: producto.descripcion,
@@ -230,6 +242,23 @@ async function importarProductos(datos: any[]) {
           where: { codigo: item.codigo },
         });
 
+        let defaultSucursal = await prisma.sucursal.findFirst({
+          where: { esMatriz: true }
+        }) || await prisma.sucursal.findFirst({
+          where: { isActive: true }
+        });
+        if (!defaultSucursal) {
+          defaultSucursal = await prisma.sucursal.create({
+            data: {
+              codigo: 'MATRIZ',
+              nombre: 'Sucursal Matriz',
+              esMatriz: true,
+              listaPrecioDefecto: 1,
+              impuestoIncluido: false
+            }
+          });
+        }
+
         if (productoExistente) {
           // Actualizar producto existente
           await prisma.producto.update({
@@ -241,12 +270,30 @@ async function importarProductos(datos: any[]) {
               marca: item.marca || productoExistente.marca,
               precio1: item.precio || productoExistente.precio1,
               precioCompra: item.precioCompra || productoExistente.precioCompra,
-              stock: item.stock !== undefined ? item.stock : productoExistente.stock,
             },
           });
+
+          if (item.stock !== undefined) {
+            await prisma.stockSucursal.upsert({
+              where: {
+                sucursalId_productoId: {
+                  sucursalId: defaultSucursal.id,
+                  productoId: productoExistente.id
+                }
+              },
+              update: { stock: item.stock },
+              create: {
+                sucursalId: defaultSucursal.id,
+                productoId: productoExistente.id,
+                stock: item.stock,
+                stockMinimo: 0,
+                stockMaximo: 1000
+              }
+            });
+          }
         } else {
           // Crear nuevo producto
-          await prisma.producto.create({
+          const nuevoProd = await prisma.producto.create({
             data: {
               codigo: item.codigo,
               nombre: item.nombre,
@@ -255,11 +302,25 @@ async function importarProductos(datos: any[]) {
               marca: item.marca || '',
               precio1: item.precio || 0,
               precioCompra: item.precioCompra || 0,
-              stock: item.stock || 0,
-              stockMinimo: item.stockMinimo || 0,
-              stockMaximo: item.stockMaximo || 1000,
             },
           });
+
+          // Initialize StockSucursal for all active branches
+          const sucursales = await prisma.sucursal.findMany({
+            where: { isActive: true }
+          });
+
+          for (const suc of sucursales) {
+            await prisma.stockSucursal.create({
+              data: {
+                sucursalId: suc.id,
+                productoId: nuevoProd.id,
+                stock: suc.id === defaultSucursal.id ? (item.stock || 0) : 0,
+                stockMinimo: suc.id === defaultSucursal.id ? (item.stockMinimo || 0) : 0,
+                stockMaximo: suc.id === defaultSucursal.id ? (item.stockMaximo || 1000) : 1000,
+              }
+            });
+          }
         }
         
         procesados++;

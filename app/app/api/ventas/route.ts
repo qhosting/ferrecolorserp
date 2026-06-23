@@ -183,23 +183,67 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = ventaDirectaSchema.parse(body)
 
+    // 1. Obtener la sucursal asociada al usuario o la por defecto
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { sucursalDefaultId: true }
+    });
+
+    let sucursalId = user?.sucursalDefaultId;
+
+    if (!sucursalId) {
+      let defaultSucursal = await prisma.sucursal.findFirst({
+        where: { esMatriz: true }
+      });
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.findFirst({
+          where: { isActive: true }
+        });
+      }
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.create({
+          data: {
+            codigo: 'MATRIZ',
+            nombre: 'Sucursal Matriz',
+            esMatriz: true,
+            listaPrecioDefecto: 1,
+            impuestoIncluido: false
+          }
+        });
+      }
+      sucursalId = defaultSucursal.id;
+    }
+
+    const activeSucursalId = sucursalId as string;
+
     // Verificar stock si se va a aplicar al inventario
     if (validatedData.aplicarInventario) {
       for (const detalle of validatedData.detalles) {
-        const producto = await prisma.producto.findUnique({
-          where: { id: detalle.productoId },
-          select: { id: true, codigo: true, nombre: true, stock: true }
+        const stockSucursal = await prisma.stockSucursal.findUnique({
+          where: {
+            sucursalId_productoId: {
+              sucursalId: activeSucursalId,
+              productoId: detalle.productoId
+            }
+          },
+          include: {
+            producto: {
+              select: {
+                nombre: true
+              }
+            }
+          }
         })
 
-        if (!producto) {
+        if (!stockSucursal) {
           return NextResponse.json({ 
-            error: `Producto ${detalle.productoId} no encontrado` 
+            error: `Producto no inicializado en la sucursal para ID ${detalle.productoId}` 
           }, { status: 400 })
         }
 
-        if (producto.stock < detalle.cantidad) {
+        if (stockSucursal.stock < detalle.cantidad) {
           return NextResponse.json({ 
-            error: `Stock insuficiente para ${producto.nombre}. Stock disponible: ${producto.stock}` 
+            error: `Stock insuficiente para ${stockSucursal.producto.nombre}. Stock disponible: ${stockSucursal.stock}, solicitado: ${detalle.cantidad}` 
           }, { status: 400 })
         }
       }
@@ -252,6 +296,7 @@ export async function POST(request: NextRequest) {
           numeroFactura: validatedData.numeroFactura,
           clienteId: validatedData.clienteId,
           vendedorId: session.user.id!,
+          sucursalId: activeSucursalId,
           subtotal,
           iva,
           total,
@@ -307,13 +352,20 @@ export async function POST(request: NextRequest) {
       // 3. Actualizar inventario si aplica
       if (validatedData.aplicarInventario) {
         for (const detalle of detallesCalculados) {
-          const producto = await prisma.producto.findUnique({
-            where: { id: detalle.productoId }
+          const stockSucursal = await prisma.stockSucursal.findUnique({
+            where: {
+              sucursalId_productoId: {
+                sucursalId: activeSucursalId,
+                productoId: detalle.productoId
+              }
+            }
           })
 
-          if (producto) {
-            await prisma.producto.update({
-              where: { id: detalle.productoId },
+          if (stockSucursal) {
+            await prisma.stockSucursal.update({
+              where: {
+                id: stockSucursal.id
+              },
               data: {
                 stock: {
                   decrement: detalle.cantidad
@@ -324,12 +376,14 @@ export async function POST(request: NextRequest) {
             await prisma.movimientoInventario.create({
               data: {
                 productoId: detalle.productoId,
+                sucursalId: activeSucursalId,
                 tipo: 'SALIDA',
                 cantidad: detalle.cantidad,
-                cantidadAnterior: producto.stock,
-                cantidadNueva: producto.stock - detalle.cantidad,
+                cantidadAnterior: stockSucursal.stock,
+                cantidadNueva: stockSucursal.stock - detalle.cantidad,
                 motivo: 'VENTA_DIRECTA',
-                referencia: `Venta directa ${folio}`
+                referencia: `Venta directa ${folio}`,
+                userId: session.user.id
               }
             })
           }

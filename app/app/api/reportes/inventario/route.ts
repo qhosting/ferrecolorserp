@@ -30,26 +30,38 @@ export async function GET(request: NextRequest) {
 
       const productos = await prisma.producto.findMany({
         where: whereClause,
-        select: {
-          codigo: true,
-          nombre: true,
-          categoria: true,
-          marca: true,
-          stock: true,
-          precioCompra: true,
-          precio1: true,
-          precio2: true,
-          precio3: true,
-          stockMinimo: true,
-          stockMaximo: true,
-          fechaVencimiento: true,
+        include: {
+          stockSucursales: {
+            include: {
+              sucursal: true
+            }
+          }
         },
         orderBy: {
           nombre: 'asc',
         },
       });
 
-      const valoracion = productos.map(producto => ({
+      const mappedProductos = productos.map(p => {
+        const stock = p.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+        const defaultStock = p.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || p.stockSucursales[0];
+        return {
+          codigo: p.codigo,
+          nombre: p.nombre,
+          categoria: p.categoria,
+          marca: p.marca,
+          stock,
+          precioCompra: p.precioCompra,
+          precio1: p.precio1,
+          precio2: p.precio2,
+          precio3: p.precio3,
+          stockMinimo: defaultStock?.stockMinimo ?? 0,
+          stockMaximo: defaultStock?.stockMaximo ?? 1000,
+          fechaVencimiento: p.fechaVencimiento,
+        };
+      });
+
+      const valoracion = mappedProductos.map(producto => ({
         ...producto,
         valorInventarioCompra: producto.stock * producto.precioCompra,
         valorInventarioVenta: producto.stock * producto.precio1,
@@ -153,6 +165,11 @@ export async function GET(request: NextRequest) {
     const productos = await prisma.producto.findMany({
       where: whereClause,
       include: {
+        stockSucursales: {
+          include: {
+            sucursal: true
+          }
+        },
         movimientos: {
           where: fechaInicio && fechaFin ? {
             fechaMovimiento: {
@@ -166,32 +183,44 @@ export async function GET(request: NextRequest) {
           take: 5,
         },
       },
-      orderBy: {
-        stock: 'asc', // Mostrar primero los de menor stock
-      },
     });
 
-    const stockCritico = productos.filter(p => p.stock <= p.stockMinimo);
-    const stockBajo = productos.filter(p => 
+    const mappedProductos = productos.map(p => {
+      const stock = p.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+      const defaultStock = p.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || p.stockSucursales[0];
+      return {
+        ...p,
+        stock,
+        stockMinimo: defaultStock?.stockMinimo ?? 0,
+        stockMaximo: defaultStock?.stockMaximo ?? 1000,
+        stockSucursales: undefined
+      };
+    });
+
+    // Mostrar primero los de menor stock
+    mappedProductos.sort((a, b) => a.stock - b.stock);
+
+    const stockCritico = mappedProductos.filter(p => p.stock <= p.stockMinimo);
+    const stockBajo = mappedProductos.filter(p => 
       p.stock > p.stockMinimo && p.stock <= p.stockMinimo * 1.5
     );
-    const stockAlto = productos.filter(p => p.stock >= p.stockMaximo * 0.8);
-    const stockNormal = productos.filter(p => 
+    const stockAlto = mappedProductos.filter(p => p.stock >= p.stockMaximo * 0.8);
+    const stockNormal = mappedProductos.filter(p => 
       p.stock > p.stockMinimo * 1.5 && p.stock < p.stockMaximo * 0.8
     );
 
     const resumenStock = {
-      totalProductos: productos.length,
+      totalProductos: mappedProductos.length,
       stockCritico: stockCritico.length,
       stockBajo: stockBajo.length,
       stockAlto: stockAlto.length,
       stockNormal: stockNormal.length,
-      valorTotalInventario: productos.reduce((sum, p) => sum + (p.stock * p.precioCompra), 0),
+      valorTotalInventario: mappedProductos.reduce((sum, p) => sum + (p.stock * p.precioCompra), 0),
     };
 
     if (formato === 'csv') {
       const csvHeader = 'Código,Nombre,Categoría,Marca,Stock,Stock Min,Stock Max,Precio Compra,Valor Inventario,Estado\n';
-      const csvData = productos.map(p => [
+      const csvData = mappedProductos.map(p => [
         p.codigo,
         p.nombre,
         p.categoria || '',
@@ -215,7 +244,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      productos,
+      productos: mappedProductos,
       stockCritico,
       stockBajo,
       stockAlto,

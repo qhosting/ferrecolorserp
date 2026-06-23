@@ -48,16 +48,40 @@ export async function POST(
       );
     }
 
-    // Verificar que la garantía está en proceso
-    if (garantia.estatus !== 'EN_PROCESO' && garantia.estatus !== 'RECLAMADA') {
-      return NextResponse.json(
-        { error: 'La garantía no está en un estado que permita procesamiento' },
-        { status: 400 }
-      );
+    // Obtener usuario para sucursal por defecto
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    });
+
+    let sucursalId = user?.sucursalDefaultId;
+
+    if (!sucursalId) {
+      let defaultSucursal = await prisma.sucursal.findFirst({
+        where: { esMatriz: true }
+      });
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.findFirst({
+          where: { isActive: true }
+        });
+      }
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.create({
+          data: {
+            codigo: 'MATRIZ',
+            nombre: 'Sucursal Matriz',
+            esMatriz: true,
+            listaPrecioDefecto: 1,
+            impuestoIncluido: false
+          }
+        });
+      }
+      sucursalId = defaultSucursal.id;
     }
 
+    const activeSucursalId = sucursalId as string;
+
     // Procesar según la acción
-    const resultado = await prisma.$transaction(async (prisma) => {
+    const resultado = await prisma.$transaction(async (tx) => {
       let updateData: any = {
         diagnostico,
         solucionAplicada: solucionAplicada || `Acción tomada: ${accion}`,
@@ -76,18 +100,22 @@ export async function POST(
             throw new Error('Se requiere especificar el producto de reemplazo');
           }
 
-          // Verificar que el producto de reemplazo existe
-          const productoReemplazo = await prisma.producto.findUnique({
-            where: { id: productoReemplazoId },
+          // Verificar stock del producto de reemplazo en la sucursal
+          const stockReemplazo = await tx.stockSucursal.findUnique({
+            where: {
+              sucursalId_productoId: {
+                sucursalId: activeSucursalId,
+                productoId: productoReemplazoId
+              }
+            }
           });
 
-          if (!productoReemplazo) {
-            throw new Error('Producto de reemplazo no encontrado');
+          if (!stockReemplazo) {
+            throw new Error('El producto de reemplazo no está inicializado en esta sucursal');
           }
 
-          // Verificar stock del producto de reemplazo
-          if (productoReemplazo.stock < 1) {
-            throw new Error('No hay stock suficiente del producto de reemplazo');
+          if (stockReemplazo.stock < 1) {
+            throw new Error('No hay stock suficiente del producto de reemplazo en esta sucursal');
           }
 
           updateData.estatus = 'RESUELTA';
@@ -98,8 +126,8 @@ export async function POST(
           updateData.inventarioAfectado = true;
 
           // Decrementar stock del producto de reemplazo
-          await prisma.producto.update({
-            where: { id: productoReemplazoId },
+          await tx.stockSucursal.update({
+            where: { id: stockReemplazo.id },
             data: {
               stock: {
                 decrement: 1,
@@ -108,8 +136,29 @@ export async function POST(
           });
 
           // Incrementar stock del producto original (devuelto)
-          await prisma.producto.update({
-            where: { id: garantia.productoId },
+          let stockOriginal = await tx.stockSucursal.findUnique({
+            where: {
+              sucursalId_productoId: {
+                sucursalId: activeSucursalId,
+                productoId: garantia.productoId
+              }
+            }
+          });
+
+          if (!stockOriginal) {
+            stockOriginal = await tx.stockSucursal.create({
+              data: {
+                sucursalId: activeSucursalId,
+                productoId: garantia.productoId,
+                stock: 0,
+                stockMinimo: 0,
+                stockMaximo: 1000
+              }
+            });
+          }
+
+          await tx.stockSucursal.update({
+            where: { id: stockOriginal.id },
             data: {
               stock: {
                 increment: 1,
@@ -118,26 +167,28 @@ export async function POST(
           });
 
           // Registrar movimientos de inventario
-          await prisma.movimientoInventario.create({
+          await tx.movimientoInventario.create({
             data: {
               productoId: productoReemplazoId,
+              sucursalId: activeSucursalId,
               tipo: 'SALIDA',
               cantidad: 1,
-              cantidadAnterior: productoReemplazo.stock,
-              cantidadNueva: productoReemplazo.stock - 1,
+              cantidadAnterior: stockReemplazo.stock,
+              cantidadNueva: stockReemplazo.stock - 1,
               motivo: 'Garantía - Reemplazo de producto',
               referencia: `Garantía: ${garantia.folio}`,
               userId: session.user.id,
             },
           });
 
-          await prisma.movimientoInventario.create({
+          await tx.movimientoInventario.create({
             data: {
               productoId: garantia.productoId,
+              sucursalId: activeSucursalId,
               tipo: 'ENTRADA',
               cantidad: 1,
-              cantidadAnterior: garantia.producto?.stock || 0,
-              cantidadNueva: (garantia.producto?.stock || 0) + 1,
+              cantidadAnterior: stockOriginal.stock,
+              cantidadNueva: stockOriginal.stock + 1,
               motivo: 'Garantía - Devolución de producto',
               referencia: `Garantía: ${garantia.folio}`,
               userId: session.user.id,

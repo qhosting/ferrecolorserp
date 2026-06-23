@@ -143,6 +143,12 @@ const navigationItems: NavigationItem[] = [
     icon: <FileCheck className="h-4 w-4" />,
     group: 'Notas de venta'
   },
+  {
+    title: 'Punto de Venta (POS)',
+    href: '/pos',
+    icon: <ShoppingCart className="h-4 w-4" />,
+    group: 'Notas de venta'
+  },
   // 6. Procesos
   {
     title: 'Pagarés',
@@ -216,6 +222,12 @@ const navigationItems: NavigationItem[] = [
     title: 'Automatización',
     href: '/automatizacion',
     icon: <Bot className="h-4 w-4" />,
+    group: 'Configuración'
+  },
+  {
+    title: 'Sucursales',
+    href: '/sucursales',
+    icon: <Building className="h-4 w-4" />,
     group: 'Configuración'
   },
   // 9. Buzón

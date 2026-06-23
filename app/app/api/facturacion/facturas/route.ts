@@ -190,6 +190,30 @@ export async function POST(request: NextRequest) {
       });
 
       if (!producto) {
+        let sucursalId = user.sucursalDefaultId;
+        if (!sucursalId) {
+          let defaultSucursal = await prisma.sucursal.findFirst({
+            where: { esMatriz: true }
+          });
+          if (!defaultSucursal) {
+            defaultSucursal = await prisma.sucursal.findFirst({
+              where: { isActive: true }
+            });
+          }
+          if (!defaultSucursal) {
+            defaultSucursal = await prisma.sucursal.create({
+              data: {
+                codigo: 'MATRIZ',
+                nombre: 'Sucursal Matriz',
+                esMatriz: true,
+                listaPrecioDefecto: 1,
+                impuestoIncluido: false
+              }
+            });
+          }
+          sucursalId = defaultSucursal.id;
+        }
+
         producto = await prisma.producto.create({
           data: {
             codigo: prodCode,
@@ -198,8 +222,15 @@ export async function POST(request: NextRequest) {
             precio1: item.valorUnitario,
             claveSat: item.claveProdServ,
             claveUnidadSat: item.unidad || 'H87',
-            stock: 100,
-            isActive: true
+            isActive: true,
+            stockSucursales: {
+              create: {
+                sucursalId: sucursalId,
+                stock: 100,
+                stockMinimo: 0,
+                stockMaximo: 1000
+              }
+            }
           }
         });
       }

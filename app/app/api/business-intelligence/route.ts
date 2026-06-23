@@ -160,14 +160,19 @@ export async function GET(request: NextRequest) {
     const activeProducts = await prisma.producto.findMany({
       where: { isActive: true },
       select: {
-        stock: true,
-        precioCompra: true
+        precioCompra: true,
+        stockSucursales: {
+          select: {
+            stock: true
+          }
+        }
       }
     });
 
     let inventoryAssetValue = 0;
     for (const p of activeProducts) {
-      inventoryAssetValue += p.stock * p.precioCompra;
+      const stock = p.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+      inventoryAssetValue += stock * p.precioCompra;
     }
 
     const daysInPeriod = Math.max(1, Math.round((now.getTime() - currentStart.getTime()) / (1000 * 60 * 60 * 24)));

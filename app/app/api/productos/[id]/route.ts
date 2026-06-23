@@ -26,6 +26,11 @@ export async function GET(
     const producto = await prisma.producto.findUnique({
       where: { id: params.id },
       include: {
+        stockSucursales: {
+          include: {
+            sucursal: true
+          }
+        },
         _count: {
           select: {
             detallesVenta: true,
@@ -39,7 +44,18 @@ export async function GET(
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json({ producto });
+    const stockTotal = producto.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+    const defaultStock = producto.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || producto.stockSucursales[0];
+
+    const mappedProducto = {
+      ...producto,
+      stock: stockTotal,
+      stockMinimo: defaultStock?.stockMinimo ?? 0,
+      stockMaximo: defaultStock?.stockMaximo ?? 1000,
+      stockSucursales: undefined
+    };
+
+    return NextResponse.json({ producto: mappedProducto });
   } catch (error) {
     console.error('Error fetching producto:', error);
     return NextResponse.json(
@@ -82,6 +98,13 @@ export async function PUT(
     // Verificar si el producto existe
     const existingProduct = await prisma.producto.findUnique({
       where: { id: params.id },
+      include: {
+        stockSucursales: {
+          include: {
+            sucursal: true
+          }
+        }
+      }
     });
 
     if (!existingProduct) {
@@ -102,7 +125,7 @@ export async function PUT(
       }
     }
 
-    const producto = await prisma.producto.update({
+    const updatedProduct = await prisma.producto.update({
       where: { id: params.id },
       data: {
         codigo: data.codigo !== undefined ? data.codigo : existingProduct.codigo,
@@ -130,9 +153,6 @@ export async function PUT(
         etiquetaPrecio5: data.etiquetaPrecio5 !== undefined ? data.etiquetaPrecio5 : existingProduct.etiquetaPrecio5,
         precioCompra: data.precioCompra !== undefined ? data.precioCompra : existingProduct.precioCompra,
         porcentajeGanancia: data.porcentajeGanancia !== undefined ? data.porcentajeGanancia : existingProduct.porcentajeGanancia,
-        stock: data.stock !== undefined ? data.stock : existingProduct.stock,
-        stockMinimo: data.stockMinimo !== undefined ? data.stockMinimo : existingProduct.stockMinimo,
-        stockMaximo: data.stockMaximo !== undefined ? data.stockMaximo : existingProduct.stockMaximo,
         unidadMedida: data.unidadMedida !== undefined ? data.unidadMedida : existingProduct.unidadMedida,
         pasillo: data.pasillo !== undefined ? data.pasillo : existingProduct.pasillo,
         estante: data.estante !== undefined ? data.estante : existingProduct.estante,
@@ -153,7 +173,80 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ producto });
+    // Actualizar stock de la sucursal por defecto si se proveen stock, stockMinimo o stockMaximo
+    if (data.stock !== undefined || data.stockMinimo !== undefined || data.stockMaximo !== undefined) {
+      let defaultSucursal = await prisma.sucursal.findFirst({
+        where: { esMatriz: true }
+      });
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.findFirst({
+          where: { isActive: true }
+        });
+      }
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.create({
+          data: {
+            codigo: 'MATRIZ',
+            nombre: 'Sucursal Matriz',
+            esMatriz: true,
+            listaPrecioDefecto: 1,
+            impuestoIncluido: false
+          }
+        });
+      }
+
+      const existingStock = existingProduct.stockSucursales.find(sp => sp.sucursalId === defaultSucursal!.id);
+
+      if (existingStock) {
+        await prisma.stockSucursal.update({
+          where: { id: existingStock.id },
+          data: {
+            stock: data.stock !== undefined ? data.stock : existingStock.stock,
+            stockMinimo: data.stockMinimo !== undefined ? data.stockMinimo : existingStock.stockMinimo,
+            stockMaximo: data.stockMaximo !== undefined ? data.stockMaximo : existingStock.stockMaximo,
+          }
+        });
+      } else {
+        await prisma.stockSucursal.create({
+          data: {
+            sucursalId: defaultSucursal.id,
+            productoId: params.id,
+            stock: data.stock || 0,
+            stockMinimo: data.stockMinimo || 0,
+            stockMaximo: data.stockMaximo !== undefined ? data.stockMaximo : 1000,
+          }
+        });
+      }
+    }
+
+    // Obtener producto final con la información de inventario actualizada
+    const finalProduct = await prisma.producto.findUnique({
+      where: { id: params.id },
+      include: {
+        stockSucursales: {
+          include: {
+            sucursal: true
+          }
+        }
+      }
+    });
+
+    if (!finalProduct) {
+      return NextResponse.json({ error: 'Producto no encontrado tras actualización' }, { status: 404 });
+    }
+
+    const stockTotal = finalProduct.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+    const defaultStock = finalProduct.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || finalProduct.stockSucursales[0];
+
+    const mappedProducto = {
+      ...finalProduct,
+      stock: stockTotal,
+      stockMinimo: defaultStock?.stockMinimo ?? 0,
+      stockMaximo: defaultStock?.stockMaximo ?? 1000,
+      stockSucursales: undefined
+    };
+
+    return NextResponse.json({ producto: mappedProducto });
   } catch (error) {
     console.error('Error updating producto:', error);
     return NextResponse.json(

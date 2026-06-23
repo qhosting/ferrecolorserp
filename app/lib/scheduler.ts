@@ -93,11 +93,25 @@ export async function recalcularInteresesMora(now: Date): Promise<{ pagaresActua
 
 /** Cuenta productos por debajo del stock mínimo. */
 export async function detectarStockBajo(): Promise<number> {
-  const productos = await prisma.producto.findMany({
-    where: { isActive: true },
-    select: { stock: true, stockMinimo: true },
+  const stockBajos = await prisma.stockSucursal.findMany({
+    where: {
+      stockMinimo: { gt: 0 },
+      producto: { isActive: true }
+    },
+    select: {
+      stock: true,
+      stockMinimo: true,
+      productoId: true
+    }
   });
-  return productos.filter((p) => p.stockMinimo > 0 && p.stock <= p.stockMinimo).length;
+
+  const uniqueProductIds = new Set(
+    stockBajos
+      .filter((s) => s.stock <= s.stockMinimo)
+      .map((s) => s.productoId)
+  );
+
+  return uniqueProductIds.size;
 }
 
 /** Ejecuta la acción correspondiente a una tarea según su tipo. */

@@ -65,18 +65,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         detalles: {
           include: {
             producto: {
-              select: {
-                id: true,
-                codigo: true,
-                nombre: true,
-                descripcion: true,
-                precio1: true,
-                precio2: true,
-                precio3: true,
-                stock: true,
-                unidadMedida: true,
-                categoria: true,
-                marca: true
+              include: {
+                stockSucursales: {
+                  include: {
+                    sucursal: true
+                  }
+                }
               }
             }
           }
@@ -200,14 +194,35 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       pagaresVencidos: pagaresVencidos.length,
       proximoVencimiento: proximoPagare?.fechaVencimiento || null,
       diasVencidoProximo: proximoPagare?.diasVencido || 0,
-      totalNotasCargo: ventaAny.notasCargo?.filter((n: any) => n.aplicada).reduce((sum: number, n: any) => sum + n.monto, 0) || 0,
+      totalNotasCargo: ventaAny.notesCargo?.filter((n: any) => n.aplicada).reduce((sum: number, n: any) => sum + n.monto, 0) || 0,
       totalNotasCredito: ventaAny.notasCredito?.filter((n: any) => n.aplicada).reduce((sum: number, n: any) => sum + n.monto, 0) || 0
     }
+
+    const mappedDetalles = (venta as any).detalles.map((d: any) => {
+      const stock = d.producto.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+      return {
+        ...d,
+        producto: {
+          id: d.producto.id,
+          codigo: d.producto.codigo,
+          nombre: d.producto.nombre,
+          descripcion: d.producto.descripcion,
+          precio1: d.producto.precio1,
+          precio2: d.producto.precio2,
+          precio3: d.producto.precio3,
+          stock,
+          unidadMedida: d.producto.unidadMedida,
+          categoria: d.producto.categoria,
+          marca: d.producto.marca
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
       data: {
         ...venta,
+        detalles: mappedDetalles,
         estadisticas
       }
     })
@@ -371,27 +386,54 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
       // Revertir inventario si fue afectado
       if (venta.inventarioAfectado) {
-        for (const detalle of venta.detalles) {
-          await prisma.producto.update({
-            where: { id: detalle.productoId },
-            data: {
-              stock: {
-                increment: detalle.cantidad
-              }
-            }
-          })
+        // Encontrar sucursalId
+        let sucursalId = venta.sucursalId;
+        if (!sucursalId) {
+          const defaultSucursal = await prisma.sucursal.findFirst({
+            where: { esMatriz: true }
+          }) || await prisma.sucursal.findFirst({
+            where: { isActive: true }
+          });
+          if (defaultSucursal) {
+            sucursalId = defaultSucursal.id;
+          }
+        }
 
-          await prisma.movimientoInventario.create({
-            data: {
-              productoId: detalle.productoId,
-              tipo: 'ENTRADA',
-              cantidad: detalle.cantidad,
-              cantidadAnterior: detalle.producto.stock,
-              cantidadNueva: detalle.producto.stock + detalle.cantidad,
-              motivo: 'CANCELACION_VENTA',
-              referencia: `Cancelación venta ${venta.folio}`
+        if (sucursalId) {
+          for (const detalle of venta.detalles) {
+            const stockSucursal = await prisma.stockSucursal.findUnique({
+              where: {
+                sucursalId_productoId: {
+                  sucursalId,
+                  productoId: detalle.productoId
+                }
+              }
+            });
+
+            if (stockSucursal) {
+              await prisma.stockSucursal.update({
+                where: { id: stockSucursal.id },
+                data: {
+                  stock: {
+                    increment: detalle.cantidad
+                  }
+                }
+              });
+
+              await prisma.movimientoInventario.create({
+                data: {
+                  productoId: detalle.productoId,
+                  sucursalId,
+                  tipo: 'ENTRADA',
+                  cantidad: detalle.cantidad,
+                  cantidadAnterior: stockSucursal.stock,
+                  cantidadNueva: stockSucursal.stock + detalle.cantidad,
+                  motivo: 'CANCELACION_VENTA',
+                  referencia: `Cancelación venta ${venta.folio}`
+                }
+              });
             }
-          })
+          }
         }
       }
     })

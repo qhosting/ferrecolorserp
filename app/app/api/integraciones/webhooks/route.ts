@@ -135,10 +135,35 @@ async function procesarWebhookInventario(data: any) {
     
     const producto = await prisma.producto.findUnique({
       where: { codigo: product_code },
+      include: {
+        stockSucursales: {
+          include: {
+            sucursal: true
+          }
+        }
+      }
     });
 
     if (producto) {
-      const cantidadAnterior = producto.stock;
+      let defaultSucursal = await prisma.sucursal.findFirst({
+        where: { esMatriz: true }
+      }) || await prisma.sucursal.findFirst({
+        where: { isActive: true }
+      });
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.create({
+          data: {
+            codigo: 'MATRIZ',
+            nombre: 'Sucursal Matriz',
+            esMatriz: true,
+            listaPrecioDefecto: 1,
+            impuestoIncluido: false
+          }
+        });
+      }
+
+      const stockRecord = producto.stockSucursales.find(sp => sp.sucursalId === defaultSucursal!.id);
+      const cantidadAnterior = stockRecord?.stock ?? 0;
       let cantidadNueva = cantidadAnterior;
       
       if (operation === 'add') {
@@ -149,16 +174,29 @@ async function procesarWebhookInventario(data: any) {
         cantidadNueva = parseInt(quantity);
       }
 
-      // Actualizar stock
-      await prisma.producto.update({
-        where: { id: producto.id },
-        data: { stock: cantidadNueva },
-      });
+      // Actualizar stock en la sucursal
+      if (stockRecord) {
+        await prisma.stockSucursal.update({
+          where: { id: stockRecord.id },
+          data: { stock: cantidadNueva },
+        });
+      } else {
+        await prisma.stockSucursal.create({
+          data: {
+            sucursalId: defaultSucursal.id,
+            productoId: producto.id,
+            stock: cantidadNueva,
+            stockMinimo: 0,
+            stockMaximo: 1000
+          }
+        });
+      }
 
       // Registrar movimiento
       await prisma.movimientoInventario.create({
         data: {
           productoId: producto.id,
+          sucursalId: defaultSucursal.id,
           tipo: operation === 'add' ? 'ENTRADA' : 'SALIDA',
           cantidad: Math.abs(parseInt(quantity)),
           cantidadAnterior,

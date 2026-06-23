@@ -97,8 +97,12 @@ export async function GET(req: NextRequest) {
       // Productos con stock
       prisma.producto.count({
         where: {
-          stock: { gt: 0 },
           isActive: true,
+          stockSucursales: {
+            some: {
+              stock: { gt: 0 }
+            }
+          }
         }
       }),
 

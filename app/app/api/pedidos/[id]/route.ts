@@ -57,16 +57,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         detalles: {
           include: {
             producto: {
-              select: {
-                id: true,
-                codigo: true,
-                nombre: true,
-                descripcion: true,
-                precio1: true,
-                precio2: true,
-                precio3: true,
-                stock: true,
-                unidadMedida: true
+              include: {
+                stockSucursales: {
+                  include: {
+                    sucursal: true
+                  }
+                }
               }
             }
           }
@@ -96,9 +92,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }, { status: 403 })
     }
 
+    const mappedDetalles = pedido.detalles.map(d => {
+      const stock = d.producto.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+      return {
+        ...d,
+        producto: {
+          id: d.producto.id,
+          codigo: d.producto.codigo,
+          nombre: d.producto.nombre,
+          descripcion: d.producto.descripcion,
+          precio1: d.producto.precio1,
+          precio2: d.producto.precio2,
+          precio3: d.producto.precio3,
+          stock,
+          unidadMedida: d.producto.unidadMedida
+        }
+      }
+    });
+
+    const mappedPedido = {
+      ...pedido,
+      detalles: mappedDetalles
+    };
+
     return NextResponse.json({
       success: true,
-      data: pedido
+      data: mappedPedido
     })
 
   } catch (error) {

@@ -214,10 +214,40 @@ export async function syncProductoFromContpaqi(codigo: string): Promise<boolean>
       const nuevoProd = await prisma.producto.create({
         data: {
           ...data,
-          stock: 0,
           isActive: true,
         },
       });
+
+      // Inicializar StockSucursal para todas las sucursales activas
+      let sucursales = await prisma.sucursal.findMany({
+        where: { isActive: true }
+      });
+
+      if (sucursales.length === 0) {
+        const defaultSucursal = await prisma.sucursal.create({
+          data: {
+            codigo: 'MATRIZ',
+            nombre: 'Sucursal Matriz',
+            esMatriz: true,
+            listaPrecioDefecto: 1,
+            impuestoIncluido: false
+          }
+        });
+        sucursales = [defaultSucursal];
+      }
+
+      for (const suc of sucursales) {
+        await prisma.stockSucursal.create({
+          data: {
+            sucursalId: suc.id,
+            productoId: nuevoProd.id,
+            stock: 0,
+            stockMinimo: 0,
+            stockMaximo: 1000
+          }
+        });
+      }
+
       await registrarLog('producto', 'pull', nuevoProd.id, 'success', ext.codigo, ext);
     }
 

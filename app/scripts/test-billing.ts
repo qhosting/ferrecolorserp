@@ -40,7 +40,6 @@ async function main() {
         codigo: '(Ninguno)',
         contpaqiCodigo: '(Ninguno)',
         nombre: 'PRODUCTO ADICIONAL (NINGUNO)',
-        stock: 10,
         precio1: 100,
       }
     });

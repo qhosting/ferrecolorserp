@@ -160,10 +160,11 @@ export default function ConfiguracionPage() {
         </div>
 
       <Tabs defaultValue="empresa" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="apariencia">Apariencia</TabsTrigger>
           <TabsTrigger value="financiero">Financiero</TabsTrigger>
+          <TabsTrigger value="pos">POS</TabsTrigger>
           <TabsTrigger value="notificaciones">Notificaciones</TabsTrigger>
           <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
           <TabsTrigger value="avanzado">Avanzado</TabsTrigger>
@@ -453,6 +454,67 @@ export default function ConfiguracionPage() {
                     />
                     <Label>Enviar recordatorios de pago</Label>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Configuración del POS */}
+        <TabsContent value="pos" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="w-5 h-5" />
+                Configuración del Punto de Venta (POS)
+              </CardTitle>
+              <CardDescription>
+                Ajustes y configuraciones por defecto del módulo POS
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2 py-4">
+                  <Switch
+                    checked={configuracion.configJson?.pos?.automaticPrint || false}
+                    onCheckedChange={(checked) => actualizarConfig('pos', 'automaticPrint', checked)}
+                  />
+                  <Label>Impresión automática de ticket al confirmar venta</Label>
+                </div>
+
+                <div className="flex items-center space-x-2 py-4">
+                  <Switch
+                    checked={configuracion.configJson?.pos?.allowOverSell || false}
+                    onCheckedChange={(checked) => actualizarConfig('pos', 'allowOverSell', checked)}
+                  />
+                  <Label>Permitir vender sin stock (Venta Negativa)</Label>
+                </div>
+
+                <div>
+                  <Label>Serie para Tickets POS</Label>
+                  <Input
+                    value={configuracion.configJson?.pos?.ticketSerie || 'TKT'}
+                    onChange={(e) => actualizarConfig('pos', 'ticketSerie', e.target.value)}
+                    placeholder="TKT"
+                  />
+                </div>
+
+                <div>
+                  <Label>Baud Rate por Defecto (Impresora Serial)</Label>
+                  <Select 
+                    value={configuracion.configJson?.pos?.defaultBaudRate?.toString() || '9600'}
+                    onValueChange={(value) => actualizarConfig('pos', 'defaultBaudRate', parseInt(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccionar velocidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="9600">9600</SelectItem>
+                      <SelectItem value="19200">19200</SelectItem>
+                      <SelectItem value="38400">38400</SelectItem>
+                      <SelectItem value="115200">115200</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>

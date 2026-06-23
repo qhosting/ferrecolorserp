@@ -92,17 +92,65 @@ export async function POST(request: NextRequest) {
 
     // Transacción para guardar el movimiento y actualizar el stock de forma atómica
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Bloquear y cargar el producto con FOR UPDATE
-      const productosRaw = await tx.$queryRaw<any[]>`
-        SELECT * FROM "Producto" WHERE id = ${productoId} FOR UPDATE
-      `;
-      const producto = productosRaw[0];
-
-      if (!producto) {
-        throw new Error('Producto no encontrado');
+      // 1. Obtener sucursalId
+      let sucursalId = body.sucursalId;
+      if (!sucursalId) {
+        const user = await tx.user.findUnique({
+          where: { id: session.user.id },
+          select: { sucursalDefaultId: true }
+        });
+        sucursalId = user?.sucursalDefaultId;
+      }
+      if (!sucursalId) {
+        const defaultSucursal = await tx.sucursal.findFirst({
+          where: { esMatriz: true }
+        }) || await tx.sucursal.findFirst({
+          where: { isActive: true }
+        }) || await tx.sucursal.create({
+          data: {
+            codigo: 'MATRIZ',
+            nombre: 'Sucursal Matriz',
+            esMatriz: true,
+            listaPrecioDefecto: 1,
+            impuestoIncluido: false
+          }
+        });
+        sucursalId = defaultSucursal.id;
       }
 
-      const cantidadAnterior = producto.stock;
+      // 2. Bloquear y cargar el stock de la sucursal con FOR UPDATE
+      // Si no existe, crear un registro de StockSucursal primero (con stock 0)
+      const existingStock = await tx.stockSucursal.findUnique({
+        where: {
+          sucursalId_productoId: {
+            sucursalId,
+            productoId
+          }
+        }
+      });
+
+      if (!existingStock) {
+        await tx.stockSucursal.create({
+          data: {
+            sucursalId,
+            productoId,
+            stock: 0,
+            stockMinimo: 0,
+            stockMaximo: 1000
+          }
+        });
+      }
+
+      const stockRaw = await tx.$queryRaw<any[]>`
+        SELECT * FROM "stock_sucursales" WHERE "sucursalId" = ${sucursalId} AND "productoId" = ${productoId} FOR UPDATE
+      `;
+      const stockRecord = stockRaw[0];
+
+      if (!stockRecord) {
+        throw new Error('Registro de stock no encontrado');
+      }
+
+      const cantidadAnterior = stockRecord.stock;
       let cantidadNueva = cantidadAnterior;
 
       if (tipo === 'ENTRADA') {
@@ -123,6 +171,7 @@ export async function POST(request: NextRequest) {
       const movimiento = await tx.movimientoInventario.create({
         data: {
           productoId,
+          sucursalId,
           tipo: adjustType as any,
           cantidad: actualQty,
           cantidadAnterior,
@@ -142,8 +191,8 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      const updatedProduct = await tx.producto.update({
-        where: { id: productoId },
+      const updatedStock = await tx.stockSucursal.update({
+        where: { id: stockRecord.id },
         data: { stock: cantidadNueva }
       });
 
@@ -152,26 +201,52 @@ export async function POST(request: NextRequest) {
         data: {
           userId: session.user.id || null,
           accion: 'UPDATE',
-          tabla: 'productos',
-          registroId: productoId,
-          datosAnteriores: { stock: cantidadAnterior },
-          datosNuevos: { stock: cantidadNueva }
+          tabla: 'stock_sucursales',
+          registroId: stockRecord.id,
+          datosAnteriores: { stock: cantidadAnterior, sucursalId },
+          datosNuevos: { stock: cantidadNueva, sucursalId }
         }
       });
 
-      return { movimiento, producto: updatedProduct };
+      return { movimiento, sucursalId, cantidadNueva };
     });
+
+    const finalProduct = await prisma.producto.findUnique({
+      where: { id: productoId },
+      include: {
+        stockSucursales: {
+          include: {
+            sucursal: true
+          }
+        }
+      }
+    });
+    
+    // Map it to have the aggregated stock
+    const stockTotal = finalProduct?.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0) ?? 0;
+    const defaultStock = finalProduct?.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || finalProduct?.stockSucursales[0];
+
+    const mappedProducto = finalProduct ? {
+      ...finalProduct,
+      stock: stockTotal,
+      stockMinimo: defaultStock?.stockMinimo ?? 0,
+      stockMaximo: defaultStock?.stockMaximo ?? 1000,
+      stockSucursales: undefined
+    } : null;
 
     return NextResponse.json({
       success: true,
       movimiento: result.movimiento,
-      producto: result.producto,
+      producto: mappedProducto,
       message: 'Ajuste de inventario registrado exitosamente'
     });
 
   } catch (error) {
     console.error('Error creating inventario movimiento:', error);
-    const msg = 'Error interno del servidor';
+    let msg = 'Error interno del servidor';
+    if (error instanceof Error) {
+      msg = error.message;
+    }
     if (msg.includes('Producto no encontrado')) {
       return NextResponse.json({ error: msg }, { status: 404 });
     }

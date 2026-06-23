@@ -50,7 +50,8 @@ model User {
   phone         String?
   role          UserRole  @default(CLIENTE)
   isActive      Boolean   @default(true)
-  sucursal      String?
+  sucursal      String?   // Legacy: nombre libre; usar sucursalDefaultId para POS
+  sucursalDefaultId String? // FK a Sucursal para el POS
   lastLogin     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -79,6 +80,10 @@ model User {
   
   // Integración CONTPAQi
   agentes            Agente[]
+  
+  // POS
+  sucursalDefault    Sucursal?  @relation("UserSucursalDefault", fields: [sucursalDefaultId], references: [id])
+  sesionesCAja       SesionCaja[] @relation("CajeroPOS")
 }
 
 model VerificationToken {
@@ -122,6 +127,7 @@ model Cliente {
   codigoCliente     String    @unique // cod_cliente
   contrato          String?   // contrato_cliente
   nombre            String    // nombre_ccliente
+  listaPrecio       Int?      // 1-5; null = usa la lista de la sucursal
   
   // Información de contacto
   telefono1         String?   // tel1_cliente
@@ -228,10 +234,7 @@ model Producto {
   precioCompra  Float    @default(0)
   porcentajeGanancia Float @default(0)
   
-  // Inventario
-  stock         Int      @default(0)
-  stockMinimo   Int      @default(0)
-  stockMaximo   Int      @default(1000)
+  // Inventario (stock gestionado por sucursal en StockSucursal)
   unidadMedida  String   @default("PZA")
   
   // Campos de Integración CONTPAQi
@@ -280,6 +283,10 @@ model Producto {
   // Nuevas relaciones - Garantías
   garantias     Garantia[]
   garantiasReemplazo Garantia[] @relation("ProductoReemplazoGarantia")
+  
+  // Multi-sucursal
+  stockSucursales       StockSucursal[]
+  detallesTransferencia DetalleTransferencia[]
   
   @@map("productos")
 }
@@ -402,6 +409,7 @@ model Venta {
   numeroFactura     String?     @unique // Número oficial de factura
   clienteId         String
   vendedorId        String
+  sucursalId        String?     // Sucursal donde se realizó la venta
   
   // Origen del pedido (si aplica)
   pedidoId          String?     @unique
@@ -453,6 +461,7 @@ model Venta {
   cliente           Cliente     @relation(fields: [clienteId], references: [id])
   vendedor          User        @relation("VentaCreador", fields: [vendedorId], references: [id])
   pedidoOrigen      Pedido?     @relation("PedidoToVenta")
+  sucursal          Sucursal?   @relation(fields: [sucursalId], references: [id])
   detalles          DetalleVenta[]
   pagares           Pagare[]
   pagos             Pago[]
@@ -460,6 +469,7 @@ model Venta {
   notasCredito      NotaCredito[]
   reestructuras     ReestructuraCredito[]
   garantias         Garantia[]
+  ventaPOS          VentaPOS?   @relation("VentaToVentaPOS")
   
   @@index([clienteId])
   @@map("ventas")
@@ -806,6 +816,7 @@ model CompraItem {
 model MovimientoInventario {
   id          String            @id @default(cuid())
   productoId  String
+  sucursalId  String?           // Sucursal donde ocurrió el movimiento
   tipo        TipoMovimiento
   cantidad    Int
   cantidadAnterior Int
@@ -816,6 +827,7 @@ model MovimientoInventario {
   userId      String?
   
   producto    Producto         @relation(fields: [productoId], references: [id])
+  sucursal    Sucursal?        @relation(fields: [sucursalId], references: [id])
   
   @@index([productoId])
   @@map("movimientos_inventario")
@@ -917,6 +929,165 @@ model SyncLog {
   createdAt   DateTime @default(now())
   
   @@map("sync_logs")
+}
+
+// ============= MÓDULO MULTI-SUCURSAL =============
+
+model Sucursal {
+  id                 String   @id @default(cuid())
+  codigo             String   @unique
+  nombre             String
+  direccion          String?
+  telefono           String?
+  email              String?
+  
+  // Configuración POS
+  listaPrecioDefecto Int      @default(1)    // 1-5: cuál precio usar en el POS
+  impuestoIncluido   Boolean  @default(false) // precio ya incluye IVA
+  
+  // Control
+  isActive           Boolean  @default(true)
+  esMatriz           Boolean  @default(false)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // Relaciones
+  stockProductos             StockSucursal[]
+  sesiones                   SesionCaja[]
+  ventas                     Venta[]
+  movimientos                MovimientoInventario[]
+  transferenciasOrigen       TransferenciaInventario[] @relation("TransferenciaOrigen")
+  transferenciasDestino      TransferenciaInventario[] @relation("TransferenciaDestino")
+  usuariosDefault            User[]                    @relation("UserSucursalDefault")
+  
+  @@map("sucursales")
+}
+
+model StockSucursal {
+  id          String   @id @default(cuid())
+  sucursalId  String
+  productoId  String
+  stock       Int      @default(0)
+  stockMinimo Int      @default(0)
+  stockMaximo Int      @default(1000)
+  updatedAt   DateTime @updatedAt
+  
+  sucursal    Sucursal @relation(fields: [sucursalId], references: [id])
+  producto    Producto @relation(fields: [productoId], references: [id])
+  
+  @@unique([sucursalId, productoId])
+  @@index([sucursalId])
+  @@map("stock_sucursales")
+}
+
+model TransferenciaInventario {
+  id                String              @id @default(cuid())
+  folio             String              @unique
+  sucursalOrigenId  String
+  sucursalDestinoId String
+  usuarioId         String
+  estatus           StatusTransferencia @default(PENDIENTE)
+  observaciones     String?
+  fechaSolicitud    DateTime            @default(now())
+  fechaEnvio        DateTime?
+  fechaRecepcion    DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  sucursalOrigen    Sucursal            @relation("TransferenciaOrigen", fields: [sucursalOrigenId], references: [id])
+  sucursalDestino   Sucursal            @relation("TransferenciaDestino", fields: [sucursalDestinoId], references: [id])
+  detalles          DetalleTransferencia[]
+  
+  @@map("transferencias_inventario")
+}
+
+model DetalleTransferencia {
+  id                 String                  @id @default(cuid())
+  transferenciaId    String
+  productoId         String
+  cantidadSolicitada Int
+  cantidadEnviada    Int                     @default(0)
+  cantidadRecibida   Int                     @default(0)
+  
+  transferencia      TransferenciaInventario @relation(fields: [transferenciaId], references: [id], onDelete: Cascade)
+  producto           Producto                @relation(fields: [productoId], references: [id])
+  
+  @@map("detalle_transferencias")
+}
+
+// ============= MÓDULO PUNTO DE VENTA (POS) =============
+
+model SesionCaja {
+  id                     String   @id @default(cuid())
+  cajeroId               String
+  sucursalId             String
+  numeroTerminal         String?  // Identificador de la terminal/caja física
+  
+  // Apertura
+  fechaApertura          DateTime @default(now())
+  montoApertura          Float    @default(0)  // Fondo inicial en caja
+  
+  // Cierre — cuadro Z
+  fechaCierre            DateTime?
+  montoEfectivoDeclarado Float?   // Conteo físico del cajero al cerrar
+  totalEfectivoSistema   Float?   // Suma de movimientos EFECTIVO según sistema
+  totalTarjetaSistema    Float?   // Suma de cobros en tarjeta
+  totalVentas            Float?   // Total de ventas del turno
+  totalTransacciones     Int?     // Número de ventas del turno
+  diferencia             Float?   // efectivo_declarado - efectivo_sistema
+  observacionesCierre    String?
+  
+  activa                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  
+  cajero                 User       @relation("CajeroPOS", fields: [cajeroId], references: [id])
+  sucursal               Sucursal   @relation(fields: [sucursalId], references: [id])
+  movimientos            MovimientoCaja[]
+  ventasPOS              VentaPOS[]
+  
+  @@index([cajeroId])
+  @@index([sucursalId])
+  @@map("sesiones_caja")
+}
+
+model MovimientoCaja {
+  id          String             @id @default(cuid())
+  sesionId    String
+  tipo        TipoMovimientoCaja
+  monto       Float
+  concepto    String
+  referencia  String?            // Folio de ticket / número de venta
+  createdAt   DateTime           @default(now())
+  
+  sesion      SesionCaja @relation(fields: [sesionId], references: [id])
+  
+  @@index([sesionId])
+  @@map("movimientos_caja")
+}
+
+model VentaPOS {
+  id                 String     @id @default(cuid())
+  sesionId           String
+  ventaId            String     @unique
+  numeroTicket       String     @unique
+  
+  // Desglose del cobro
+  pagoEfectivo       Float      @default(0)
+  pagoTarjeta        Float      @default(0)
+  referenciaTerminal String?    // Número de autorización de la terminal bancaria
+  cambio             Float      @default(0)  // Vuelto entregado al cliente
+  
+  // Auditoría de precio usado
+  listaPrecioUsada   Int        @default(1)  // 1-5
+  
+  createdAt          DateTime   @default(now())
+  
+  sesion             SesionCaja @relation(fields: [sesionId], references: [id])
+  venta              Venta      @relation("VentaToVentaPOS", fields: [ventaId], references: [id])
+  
+  @@map("ventas_pos")
 }
 
 // ============= ENUMS =============
@@ -1040,5 +1211,24 @@ enum StatusGarantia {
   EN_PROCESO
   RESUELTA
   VENCIDA
+  CANCELADA
+}
+
+// ============= ENUMS POS + MULTI-SUCURSAL =============
+
+enum TipoMovimientoCaja {
+  APERTURA
+  VENTA_EFECTIVO
+  VENTA_TARJETA
+  DEVOLUCION
+  RETIRO
+  DEPOSITO
+  CIERRE
+}
+
+enum StatusTransferencia {
+  PENDIENTE
+  EN_TRANSITO
+  RECIBIDA
   CANCELADA
 }

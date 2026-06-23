@@ -109,6 +109,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Obtener usuario para sucursal por defecto
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    let sucursalId = user?.sucursalDefaultId;
+
+    if (!sucursalId) {
+      let defaultSucursal = await prisma.sucursal.findFirst({
+        where: { esMatriz: true }
+      });
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.findFirst({
+          where: { isActive: true }
+        });
+      }
+      if (!defaultSucursal) {
+        defaultSucursal = await prisma.sucursal.create({
+          data: {
+            codigo: 'MATRIZ',
+            nombre: 'Sucursal Matriz',
+            esMatriz: true,
+            listaPrecioDefecto: 1,
+            impuestoIncluido: false
+          }
+        });
+      }
+      sucursalId = defaultSucursal.id;
+    }
+
+    const activeSucursalId = sucursalId as string;
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Obtener la orden de compra
       const compra = await tx.compra.findUnique({
@@ -164,20 +196,36 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const producto = await tx.producto.findUnique({
-          where: { id: prodId },
+        // Buscar o crear StockSucursal
+        let stockSucursal = await tx.stockSucursal.findUnique({
+          where: {
+            sucursalId_productoId: {
+              sucursalId: activeSucursalId,
+              productoId: prodId
+            }
+          }
         });
 
-        if (!producto) {
-          throw new Error(`Producto con ID ${prodId} no encontrado`);
+        if (!stockSucursal) {
+          stockSucursal = await tx.stockSucursal.create({
+            data: {
+              sucursalId: activeSucursalId,
+              productoId: prodId,
+              stock: 0,
+              stockMinimo: 0,
+              stockMaximo: 1000
+            }
+          });
         }
 
-        const cantidadAnterior = producto.stock;
+        const cantidadAnterior = stockSucursal.stock;
         const cantidadNueva = cantidadAnterior + cantidadRecibida;
 
-        // Actualizar stock del producto
-        await tx.producto.update({
-          where: { id: prodId },
+        // Actualizar stock del producto en la sucursal
+        await tx.stockSucursal.update({
+          where: {
+            id: stockSucursal.id
+          },
           data: {
             stock: cantidadNueva,
           },
@@ -187,12 +235,14 @@ export async function POST(request: NextRequest) {
         await tx.movimientoInventario.create({
           data: {
             productoId: prodId,
+            sucursalId: activeSucursalId,
             tipo: 'ENTRADA',
             cantidad: cantidadRecibida,
             cantidadAnterior,
             cantidadNueva,
             motivo: `Recepción de compra ${compra.numeroCompra}`,
             referencia: compra.numeroCompra,
+            userId: user?.id
           },
         });
       }

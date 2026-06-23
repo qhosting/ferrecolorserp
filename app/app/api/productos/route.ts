@@ -56,12 +56,31 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: {
+          stockSucursales: {
+            include: {
+              sucursal: true
+            }
+          }
+        }
       }),
       prisma.producto.count({ where }),
     ]);
 
+    const mappedProductos = productos.map(p => {
+      const stockTotal = p.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+      const defaultStock = p.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || p.stockSucursales[0];
+      return {
+        ...p,
+        stock: stockTotal,
+        stockMinimo: defaultStock?.stockMinimo ?? 0,
+        stockMaximo: defaultStock?.stockMaximo ?? 1000,
+        stockSucursales: undefined
+      };
+    });
+
     return NextResponse.json({
-      productos,
+      productos: mappedProductos,
       pagination: {
         page,
         limit,
@@ -144,9 +163,6 @@ export async function POST(request: NextRequest) {
         etiquetaPrecio5: data.etiquetaPrecio5 || 'Promocional',
         precioCompra: data.precioCompra || 0,
         porcentajeGanancia: data.porcentajeGanancia || 0,
-        stock: data.stock || 0,
-        stockMinimo: data.stockMinimo || 0,
-        stockMaximo: data.stockMaximo !== undefined ? data.stockMaximo : 1000,
         unidadMedida: data.unidadMedida || 'PZA',
         pasillo: data.pasillo || null,
         estante: data.estante || null,
@@ -166,6 +182,39 @@ export async function POST(request: NextRequest) {
         claveUnidadSat: data.claveUnidadSat || null,
       },
     });
+
+    // Inicializar inventario en las sucursales
+    let sucursales = await prisma.sucursal.findMany({
+      where: { isActive: true }
+    });
+
+    if (sucursales.length === 0) {
+      // Crear sucursal matriz por defecto si no hay ninguna sucursal
+      const defaultSucursal = await prisma.sucursal.create({
+        data: {
+          codigo: 'MATRIZ',
+          nombre: 'Sucursal Matriz',
+          esMatriz: true,
+          listaPrecioDefecto: 1,
+          impuestoIncluido: false
+        }
+      });
+      sucursales = [defaultSucursal];
+    }
+
+    const defaultSucursal = sucursales.find(s => s.esMatriz) || sucursales[0];
+
+    for (const suc of sucursales) {
+      await prisma.stockSucursal.create({
+        data: {
+          sucursalId: suc.id,
+          productoId: producto.id,
+          stock: suc.id === defaultSucursal.id ? (data.stock || 0) : 0,
+          stockMinimo: suc.id === defaultSucursal.id ? (data.stockMinimo || 0) : 0,
+          stockMaximo: suc.id === defaultSucursal.id ? (data.stockMaximo !== undefined ? data.stockMaximo : 1000) : 1000,
+        }
+      });
+    }
 
     return NextResponse.json({ producto }, { status: 201 });
   } catch (error) {

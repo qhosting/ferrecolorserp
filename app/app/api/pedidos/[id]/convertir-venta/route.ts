@@ -46,7 +46,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       include: {
         detalles: {
           include: {
-            producto: true
+            producto: {
+              include: {
+                stockSucursales: {
+                  include: {
+                    sucursal: true
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -70,12 +78,34 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
+    // Obtener sucursal de destino
+    const user = await prisma.user.findUnique({
+      where: { id: pedido.vendedorId },
+      select: { sucursalDefaultId: true }
+    });
+
+    let sucursalId = user?.sucursalDefaultId;
+
+    if (!sucursalId) {
+      const defaultSucursal = await prisma.sucursal.findFirst({
+        where: { esMatriz: true }
+      }) || await prisma.sucursal.findFirst({
+        where: { isActive: true }
+      });
+      if (defaultSucursal) {
+        sucursalId = defaultSucursal.id;
+      }
+    }
+    const activeSucursalId = sucursalId as string;
+
     // Verificar stock si se va a aplicar al inventario
     if (validatedData.aplicarInventario) {
       for (const detalle of pedido.detalles) {
-        if (detalle.producto.stock < detalle.cantidad) {
+        const stockRecord = detalle.producto.stockSucursales.find(sp => sp.sucursalId === activeSucursalId);
+        const stock = stockRecord?.stock ?? 0;
+        if (stock < detalle.cantidad) {
           return NextResponse.json({ 
-            error: `Stock insuficiente para ${detalle.producto.nombre}. Stock disponible: ${detalle.producto.stock}` 
+            error: `Stock insuficiente para ${detalle.producto.nombre}. Stock disponible: ${stock}, solicitado: ${detalle.cantidad}` 
           }, { status: 400 })
         }
       }
@@ -116,6 +146,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           numeroFactura: validatedData.numeroFactura,
           clienteId: pedido.clienteId,
           vendedorId: pedido.vendedorId,
+          sucursalId: activeSucursalId,
           pedidoId: pedido.id,
           subtotal: pedido.subtotal,
           iva: pedido.iva,
@@ -177,23 +208,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // 3. Actualizar inventario si aplica
       if (validatedData.aplicarInventario) {
         for (const detalle of pedido.detalles) {
-          await prisma.producto.update({
-            where: { id: detalle.productoId },
-            data: {
-              stock: {
-                decrement: detalle.cantidad
+          const stockRecord = await prisma.stockSucursal.findUnique({
+            where: {
+              sucursalId_productoId: {
+                sucursalId: activeSucursalId,
+                productoId: detalle.productoId
               }
             }
-          })
+          });
+
+          const cantidadAnterior = stockRecord?.stock ?? 0;
+
+          if (stockRecord) {
+            await prisma.stockSucursal.update({
+              where: { id: stockRecord.id },
+              data: {
+                stock: {
+                  decrement: detalle.cantidad
+                }
+              }
+            });
+          }
 
           // Registrar movimiento de inventario
           await prisma.movimientoInventario.create({
             data: {
               productoId: detalle.productoId,
+              sucursalId: activeSucursalId,
               tipo: 'SALIDA',
               cantidad: detalle.cantidad,
-              cantidadAnterior: detalle.producto.stock,
-              cantidadNueva: detalle.producto.stock - detalle.cantidad,
+              cantidadAnterior,
+              cantidadNueva: cantidadAnterior - detalle.cantidad,
               motivo: 'VENTA',
               referencia: `Venta ${folioVenta} - Pedido ${pedido.folio}`
             }

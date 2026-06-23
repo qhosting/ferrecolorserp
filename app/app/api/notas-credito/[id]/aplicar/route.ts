@@ -28,7 +28,11 @@ export async function POST(
         venta: true,
         detalles: {
           include: {
-            producto: true,
+            producto: {
+              include: {
+                stockSucursales: true
+              }
+            },
           },
         },
       },
@@ -117,31 +121,79 @@ export async function POST(
 
       // Si afecta inventario, actualizar stock de productos
       if (notaCredito.afectaInventario && notaCredito.detalles.length > 0) {
-        for (const detalle of notaCredito.detalles) {
-          if (detalle.productoId && detalle.cantidad) {
-            // Incrementar stock (devolver productos)
-            await prisma.producto.update({
-              where: { id: detalle.productoId },
-              data: {
-                stock: {
-                  increment: Math.floor(detalle.cantidad),
-                },
-              },
-            });
+        // Obtener sucursal
+        let sucursalId = notaCredito.venta?.sucursalId;
+        if (!sucursalId) {
+          const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { sucursalDefaultId: true }
+          });
+          sucursalId = user?.sucursalDefaultId;
+        }
+        if (!sucursalId) {
+          const defaultSucursal = await prisma.sucursal.findFirst({
+            where: { esMatriz: true }
+          }) || await prisma.sucursal.findFirst({
+            where: { isActive: true }
+          });
+          if (defaultSucursal) {
+            sucursalId = defaultSucursal.id;
+          }
+        }
 
-            // Registrar movimiento de inventario
-            await prisma.movimientoInventario.create({
-              data: {
-                productoId: detalle.productoId,
-                tipo: 'ENTRADA',
-                cantidad: Math.floor(detalle.cantidad),
-                cantidadAnterior: detalle.producto?.stock || 0,
-                cantidadNueva: (detalle.producto?.stock || 0) + Math.floor(detalle.cantidad),
-                motivo: 'Devolución por nota de crédito',
-                referencia: `Nota de crédito: ${notaCredito.folio}`,
-                userId: session.user.id,
-              },
-            });
+        if (sucursalId) {
+          const activeSucursalId = sucursalId as string;
+          for (const detalle of notaCredito.detalles) {
+            if (detalle.productoId && detalle.cantidad) {
+              const stockRecord = await prisma.stockSucursal.findUnique({
+                where: {
+                  sucursalId_productoId: {
+                    sucursalId: activeSucursalId,
+                    productoId: detalle.productoId
+                  }
+                }
+              });
+
+              const cantidadAnterior = stockRecord?.stock ?? 0;
+              const cantidadIncrementar = Math.floor(detalle.cantidad);
+              const cantidadNueva = cantidadAnterior + cantidadIncrementar;
+
+              if (stockRecord) {
+                await prisma.stockSucursal.update({
+                  where: { id: stockRecord.id },
+                  data: {
+                    stock: {
+                      increment: cantidadIncrementar
+                    }
+                  }
+                });
+              } else {
+                await prisma.stockSucursal.create({
+                  data: {
+                    sucursalId: activeSucursalId,
+                    productoId: detalle.productoId,
+                    stock: cantidadIncrementar,
+                    stockMinimo: 0,
+                    stockMaximo: 1000
+                  }
+                });
+              }
+
+              // Registrar movimiento de inventario
+              await prisma.movimientoInventario.create({
+                data: {
+                  productoId: detalle.productoId,
+                  sucursalId: activeSucursalId,
+                  tipo: 'ENTRADA',
+                  cantidad: cantidadIncrementar,
+                  cantidadAnterior,
+                  cantidadNueva,
+                  motivo: 'Devolución por nota de crédito',
+                  referencia: `Nota de crédito: ${notaCredito.folio}`,
+                  userId: session.user.id,
+                },
+              });
+            }
           }
         }
       }
