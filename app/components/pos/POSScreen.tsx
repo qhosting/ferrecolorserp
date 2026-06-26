@@ -82,6 +82,13 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<any>(null);
+  // Buscador de clientes en POS
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [clientSearchResults, setClientSearchResults] = useState<any[]>([]);
+  const [clientSearchLoading, setClientSearchLoading] = useState(false);
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const clientSearchRef = useRef<HTMLDivElement>(null);
+  const clientSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedPriceList, setSelectedPriceList] = useState<number>(1);
   const [globalDiscountPercent, setGlobalDiscountPercent] = useState<number>(0);
   const [observaciones, setObservaciones] = useState<string>('');
@@ -307,23 +314,67 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
 
   const fetchClientes = async () => {
     try {
-      const res = await fetch('/api/clientes');
+      // La API devuelve un array directo (no {clientes:[]})
+      const res = await fetch('/api/clientes?limit=10');
       if (res.ok) {
         const data = await res.json();
-        setClientes(data.clientes || []);
-        
+        const lista: any[] = Array.isArray(data) ? data : (data.clientes || []);
+        setClientes(lista);
+
         // Asignar Público General por defecto si existe
-        const defaultClient = data.clientes?.find((c: any) => 
-          c.nombre.toLowerCase().includes('publico') || c.nombre.toLowerCase().includes('mostrador')
+        const defaultClient = lista.find((c: any) =>
+          c.nombre?.toLowerCase().includes('publico') ||
+          c.nombre?.toLowerCase().includes('mostrador') ||
+          c.nombre?.toLowerCase().includes('general')
         );
         if (defaultClient) {
           setSelectedCliente(defaultClient);
-        } else if (data.clientes?.length > 0) {
-          setSelectedCliente(data.clientes[0]);
+        } else if (lista.length > 0) {
+          setSelectedCliente(lista[0]);
         }
       }
     } catch (err) {
-      console.error(err);
+      console.error('Error cargando clientes por defecto:', err);
+    }
+  };
+
+  // Búsqueda dinámica de clientes con debounce
+  const handleClientSearch = (query: string) => {
+    setClientSearchQuery(query);
+    if (clientSearchTimerRef.current) clearTimeout(clientSearchTimerRef.current);
+
+    if (query.trim().length < 2) {
+      setClientSearchResults([]);
+      setShowClientDropdown(false);
+      return;
+    }
+
+    clientSearchTimerRef.current = setTimeout(async () => {
+      try {
+        setClientSearchLoading(true);
+        const res = await fetch(`/api/clientes/search?q=${encodeURIComponent(query)}&limit=10`);
+        if (res.ok) {
+          const data = await res.json();
+          const results = Array.isArray(data) ? data : [];
+          setClientSearchResults(results);
+          setShowClientDropdown(true);
+        }
+      } catch (err) {
+        console.error('Error buscando clientes:', err);
+      } finally {
+        setClientSearchLoading(false);
+      }
+    }, 350);
+  };
+
+  const selectClienteFromSearch = (client: any) => {
+    setSelectedCliente(client);
+    setClientSearchQuery('');
+    setClientSearchResults([]);
+    setShowClientDropdown(false);
+    if (client?.listaPrecio) {
+      setSelectedPriceList(client.listaPrecio);
+      toast.info(`Lista de precios "${client.listaPrecio}" aplicada para ${client.nombre}`);
     }
   };
 
@@ -1169,23 +1220,81 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               {/* Cliente */}
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="cliente-select" className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cliente</Label>
+                  <Label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cliente</Label>
                   {selectedCliente?.saldoActual > 0 && (
-                    <span className="text-[10px] text-amber-500 font-bold">Saldo: ${selectedCliente.saldoActual}</span>
+                    <span className="text-[10px] text-amber-500 font-bold">Saldo: ${Number(selectedCliente.saldoActual).toFixed(2)}</span>
                   )}
                 </div>
-                <select
-                  id="cliente-select"
-                  value={selectedCliente?.id || ''}
-                  onChange={(e) => handleClientChange(e.target.value)}
-                  className="w-full h-9 bg-slate-950 border border-slate-800 text-white rounded-xl px-2 text-xs focus:outline-none focus:border-indigo-500 transition-colors"
-                >
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre} ({c.codigoCliente})
-                    </option>
-                  ))}
-                </select>
+
+                {/* Cliente seleccionado actualmente */}
+                {selectedCliente && (
+                  <div className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 bg-indigo-950/40 border border-indigo-500/25 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-white truncate">{selectedCliente.nombre}</p>
+                      <p className="text-[9px] text-indigo-400 font-mono truncate">
+                        {selectedCliente.codigoCliente}
+                        {selectedCliente.rfc ? ` · ${selectedCliente.rfc}` : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCliente(null);
+                        setClientSearchQuery('');
+                      }}
+                      className="text-[9px] text-slate-500 hover:text-rose-400 transition-colors shrink-0 px-1.5 py-0.5 rounded-lg hover:bg-rose-500/10 font-semibold"
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                )}
+
+                {/* Buscador de clientes */}
+                <div ref={clientSearchRef} className="relative">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-500 pointer-events-none" />
+                    {clientSearchLoading && (
+                      <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-indigo-400 animate-spin" />
+                    )}
+                    <input
+                      id="cliente-search"
+                      type="text"
+                      placeholder="Buscar por nombre o RFC..."
+                      value={clientSearchQuery}
+                      onChange={(e) => handleClientSearch(e.target.value)}
+                      onFocus={() => { if (clientSearchResults.length > 0) setShowClientDropdown(true); }}
+                      onBlur={() => setTimeout(() => setShowClientDropdown(false), 200)}
+                      className="w-full h-8 pl-7 pr-7 bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white placeholder-slate-600 rounded-xl text-[11px] focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  {/* Dropdown de resultados */}
+                  {showClientDropdown && clientSearchResults.length > 0 && (
+                    <div className="absolute bottom-full mb-1 left-0 right-0 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
+                      {clientSearchResults.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onMouseDown={() => selectClienteFromSearch(c)}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-800 transition-colors border-b border-slate-800/50 last:border-0"
+                        >
+                          <p className="text-[11px] font-semibold text-white truncate">{c.nombre}</p>
+                          <p className="text-[9px] text-slate-400 font-mono">
+                            {c.codigoCliente}
+                            {c.rfc ? ` · RFC: ${c.rfc}` : ''}
+                            {c.telefono1 ? ` · ${c.telefono1}` : ''}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {showClientDropdown && clientSearchQuery.length >= 2 && clientSearchResults.length === 0 && !clientSearchLoading && (
+                    <div className="absolute bottom-full mb-1 left-0 right-0 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl px-3 py-2">
+                      <p className="text-[11px] text-slate-500 text-center">Sin resultados para "{clientSearchQuery}"</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">

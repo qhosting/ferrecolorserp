@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
           OR: [
             { codigoCliente: { contains: searchTerm, mode: 'insensitive' } },
             { nombre: { contains: searchTerm, mode: 'insensitive' } },
+            { rfc: { contains: searchTerm, mode: 'insensitive' } },
             { telefono1: { contains: searchTerm, mode: 'insensitive' } },
             { telefono2: { contains: searchTerm, mode: 'insensitive' } },
             { telefono3: { contains: searchTerm, mode: 'insensitive' } },
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
       contrato_cliente: cliente.contrato,
       nombre_ccliente: cliente.nombre,
       nombre: cliente.nombre,
+      rfc: cliente.rfc || null,
       tel1_cliente: cliente.telefono1,
       telefono1: cliente.telefono1,
       tel2_cliente: cliente.telefono2,
@@ -106,7 +108,8 @@ export async function GET(request: NextRequest) {
       fechau_cliente: cliente.ultimaActualizacion,
       empleo: cliente.empleo,
       aval: cliente.aval,
-      limite_credito: cliente.limiteCredito
+      limite_credito: cliente.limiteCredito,
+      listaPrecio: cliente.listaPrecio
     }));
 
     return NextResponse.json(formattedClientes);
