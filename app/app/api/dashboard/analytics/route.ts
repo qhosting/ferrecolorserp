@@ -171,21 +171,22 @@ export async function GET(request: NextRequest) {
         SELECT 
           p."codigo",
           p."nombre",
-          p."stock",
-          p."stockMinimo",
-          p."stockMaximo",
+          COALESCE(SUM(ss."stock"), 0)::int as stock,
+          COALESCE(SUM(ss."stockMinimo"), 0)::int as "stockMinimo",
+          COALESCE(SUM(ss."stockMaximo"), 0)::int as "stockMaximo",
           CASE 
-            WHEN p."stock" <= p."stockMinimo" THEN 'critico'
-            WHEN p."stock" <= p."stockMinimo" * 1.5 THEN 'bajo'
-            WHEN p."stock" >= p."stockMaximo" * 0.8 THEN 'alto'
+            WHEN COALESCE(SUM(ss."stock"), 0) <= COALESCE(SUM(ss."stockMinimo"), 0) THEN 'critico'
+            WHEN COALESCE(SUM(ss."stock"), 0) <= COALESCE(SUM(ss."stockMinimo"), 0) * 1.5 THEN 'bajo'
+            WHEN COALESCE(SUM(ss."stock"), 0) >= COALESCE(SUM(ss."stockMaximo"), 0) * 0.8 THEN 'alto'
             ELSE 'normal'
           END as nivel_stock,
-          COUNT(mi."id") as movimientos_recientes
+          COUNT(DISTINCT mi."id")::int as movimientos_recientes
         FROM "productos" p
+        LEFT JOIN "stock_sucursales" ss ON ss."productoId" = p."id"
         LEFT JOIN "movimientos_inventario" mi ON mi."productoId" = p."id" 
           AND mi."fechaMovimiento" >= ${subMonths(fechaFin, 1)}
         WHERE p."isActive" = true
-        GROUP BY p."id", p."codigo", p."nombre", p."stock", p."stockMinimo", p."stockMaximo"
+        GROUP BY p."id", p."codigo", p."nombre"
       ) inventario
       ORDER BY 
         CASE inventario.nivel_stock

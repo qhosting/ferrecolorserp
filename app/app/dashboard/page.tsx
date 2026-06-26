@@ -73,6 +73,7 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [statsBasicas, setStatsBasicas] = useState<StatsBasicas | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState('6');
   const { toast } = useToast();
 
@@ -83,6 +84,7 @@ export default function DashboardPage() {
   const cargarDatos = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       const [analyticsRes, statsRes] = await Promise.all([
         fetch(`/api/dashboard/analytics?periodo=${periodo}`),
@@ -100,8 +102,9 @@ export default function DashboardPage() {
       } else {
         throw new Error('Error al cargar datos del dashboard');
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err: any) {
+      console.error('Error:', err);
+      setError(err.message || 'Error al cargar datos del dashboard');
       toast({
         title: 'Error',
         description: 'Error al cargar datos del dashboard',
@@ -112,10 +115,32 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading || !dashboardData || !statsBasicas) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !dashboardData || !statsBasicas) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header 
+          title="Dashboard Ejecutivo"
+          description="Panel de control y métricas de negocio"
+        />
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
+          <div className="text-center max-w-md p-8 bg-white rounded-2xl shadow-md border border-gray-100">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">No se pudo cargar el Dashboard</h2>
+            <p className="text-gray-500 mb-6">{error || 'Ocurrió un error inesperado al obtener los datos.'}</p>
+            <Button onClick={cargarDatos} className="w-full">
+              <RefreshCcw className="w-4 h-4 mr-2" />
+              Intentar de nuevo
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
