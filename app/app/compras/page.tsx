@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -383,16 +384,13 @@ export default function ComprasPage() {
     .reduce((sum, o) => sum + o.total, 0);
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Módulo de Compras</h1>
-          <p className="text-muted-foreground">
-            Gestión integral de proveedores, órdenes de compra y recepción de mercancía
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Módulo de Compras"
+        description="Gestión integral de proveedores, órdenes de compra y recepción de mercancía"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end gap-2">
           <Button onClick={openProveedor}>
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Proveedor
@@ -402,7 +400,6 @@ export default function ComprasPage() {
             Nueva Orden
           </Button>
         </div>
-      </div>
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -973,6 +970,7 @@ export default function ComprasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }

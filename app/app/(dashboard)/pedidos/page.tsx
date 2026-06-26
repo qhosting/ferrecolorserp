@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Header } from '@/components/navigation/header'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -220,21 +221,21 @@ export default function PedidosPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pedidos</h1>
-          <p className="text-gray-600">Gestión de pedidos y conversión a ventas</p>
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Pedidos"
+        description="Gestión de pedidos y conversión a ventas"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end">
+          <Button 
+            onClick={() => router.push('/pedidos/nuevo')}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Nuevo Pedido
+          </Button>
         </div>
-        <Button 
-          onClick={() => router.push('/pedidos/nuevo')}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Nuevo Pedido
-        </Button>
-      </div>
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -433,6 +434,7 @@ export default function PedidosPage() {
         onConfirm={confirmCancelarPedido}
         onCancel={() => setCancelConfirm({ open: false, id: null, folio: '' })}
       />
+    </div>
     </div>
   )
 }

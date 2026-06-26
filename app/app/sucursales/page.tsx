@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -494,21 +495,13 @@ export default function SucursalesPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 text-slate-100 overflow-y-auto p-6 md:p-8 space-y-6">
-      
-      {/* 1. Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5 shrink-0">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-2">
-            <Store className="h-8 w-8 text-indigo-500 animate-pulse" />
-            Gestión Multi-Sucursal
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Administre inventarios sucursalizados, configure puntos de venta y transfiera existencias.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Gestión Multi-Sucursal"
+        description="Administre inventarios sucursalizados, configure puntos de venta y transfiera existencias."
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end gap-2">
           <Button
             onClick={() => router.push('/')}
             variant="outline"
@@ -524,7 +517,6 @@ export default function SucursalesPage() {
             <span>Crear Sucursal</span>
           </Button>
         </div>
-      </div>
 
       {/* 2. Tabs del panel */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col space-y-4">
@@ -1351,6 +1343,7 @@ export default function SucursalesPage() {
         </DialogContent>
       </Dialog>
 
+    </div>
     </div>
   );
 }

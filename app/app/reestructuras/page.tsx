@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { Plus, Search, Filter, RefreshCw, Calendar, User, DollarSign, CheckCircle, AlertCircle, Eye, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -323,12 +324,13 @@ export default function ReestructurasPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Reestructuras de Crédito</h1>
-          <p className="text-gray-500 mt-2">Gestión de reestructuras de crédito para clientes</p>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Reestructuras de Crédito"
+        description="Gestión de reestructuras de crédito para clientes"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end">
 
         <Dialog open={dialogAbierto} onOpenChange={setDialogAbierto}>
           <DialogTrigger asChild>
@@ -733,6 +735,7 @@ export default function ReestructurasPage() {
           ))
         )}
       </div>
+    </div>
     </div>
   );
 }

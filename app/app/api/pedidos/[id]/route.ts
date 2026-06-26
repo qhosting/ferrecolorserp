@@ -18,6 +18,13 @@ const updatePedidoSchema = z.object({
   observaciones: z.string().optional(),
   motivoCancelacion: z.string().optional(),
   fechaEntregaEstimada: z.string().optional(),
+  clienteId: z.string().optional(),
+  detalles: z.array(z.object({
+    productoId: z.string(),
+    cantidad: z.number().positive(),
+    precioUnitario: z.number().nonnegative(),
+    descuento: z.number().default(0),
+  })).optional()
 })
 
 // GET - Obtener pedido por ID
@@ -170,39 +177,87 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
-    const pedidoActualizado = await prisma.pedido.update({
-      where: { id: params.id },
-      data: {
-        ...validatedData,
-        fechaEntregaEstimada: validatedData.fechaEntregaEstimada ? 
-          new Date(validatedData.fechaEntregaEstimada) : undefined,
-      },
-      include: {
-        cliente: {
-          select: {
-            id: true,
-            codigoCliente: true,
-            nombre: true
+    // Separar campos de detalles del objeto principal para evitar errores de actualización directa en prisma
+    const { detalles, ...baseData } = validatedData
+
+    // Si se enviaron detalles, realizamos la actualización transaccional que recalcula totales y actualiza las partidas
+    const pedidoActualizado = await prisma.$transaction(async (tx) => {
+      let subtotal = undefined
+      let iva = undefined
+      let total = undefined
+
+      if (detalles) {
+        // Eliminar partidas anteriores
+        await tx.detallePedido.deleteMany({
+          where: { pedidoId: params.id }
+        })
+
+        // Calcular nuevos totales
+        let calculatedSubtotal = 0
+        const detallesCalculados = detalles.map(detalle => {
+          const subtotalDetalle = (detalle.cantidad * detalle.precioUnitario) - detalle.descuento
+          calculatedSubtotal += subtotalDetalle
+          return {
+            ...detalle,
+            subtotal: subtotalDetalle
           }
+        })
+
+        subtotal = calculatedSubtotal
+        iva = calculatedSubtotal * 0.16
+        total = calculatedSubtotal + iva
+
+        // Crear nuevas partidas vinculadas
+        await tx.detallePedido.createMany({
+          data: detallesCalculados.map(d => ({
+            pedidoId: params.id,
+            productoId: d.productoId,
+            cantidad: d.cantidad,
+            precioUnitario: d.precioUnitario,
+            descuento: d.descuento,
+            subtotal: d.subtotal
+          }))
+        })
+      }
+
+      // Actualizar los datos del pedido principal
+      return await tx.pedido.update({
+        where: { id: params.id },
+        data: {
+          ...baseData,
+          subtotal,
+          iva,
+          total,
+          fechaEntregaEstimada: baseData.fechaEntregaEstimada ? 
+            new Date(baseData.fechaEntregaEstimada) : undefined,
         },
-        vendedor: {
-          select: {
-            id: true,
-            name: true
-          }
-        },
-        detalles: {
-          include: {
-            producto: {
-              select: {
-                id: true,
-                codigo: true,
-                nombre: true
+        include: {
+          cliente: {
+            select: {
+              id: true,
+              codigoCliente: true,
+              nombre: true
+            }
+          },
+          vendedor: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          detalles: {
+            include: {
+              producto: {
+                select: {
+                  id: true,
+                  codigo: true,
+                  nombre: true
+                }
               }
             }
           }
         }
-      }
+      })
     })
 
     return NextResponse.json({

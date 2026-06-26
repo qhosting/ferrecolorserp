@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -336,16 +337,13 @@ export default function FacturacionElectronicaPage() {
   const creditosBajos = creditosTotales < 100;
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Facturación Electrónica</h1>
-          <p className="text-muted-foreground">
-            Gestión de CFDI, timbrado automático y integración con PACs certificados
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Facturación Electrónica"
+        description="Gestión de CFDI, timbrado automático y integración con PACs certificados"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end gap-2">
           <Button onClick={() => setDialogType('pac')} variant="outline">
             <Settings className="h-4 w-4 mr-2" />
             Configurar PAC
@@ -355,7 +353,6 @@ export default function FacturacionElectronicaPage() {
             Nueva Factura
           </Button>
         </div>
-      </div>
 
       {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -947,6 +944,7 @@ export default function FacturacionElectronicaPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -334,13 +335,12 @@ export default function ReportesPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sistema de Reportes</h1>
-          <p className="text-gray-500 mt-2">Generación y análisis de reportes detallados</p>
-        </div>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Sistema de Reportes"
+        description="Generación y análisis de reportes detallados"
+      />
+      <div className="p-6 space-y-6">
 
       <Tabs defaultValue="ventas" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
@@ -872,6 +872,7 @@ export default function ReportesPage() {
           )}
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

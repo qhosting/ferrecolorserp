@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -191,16 +192,13 @@ export default function BusinessIntelligencePage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Business Intelligence</h1>
-          <p className="text-muted-foreground">
-            Análisis avanzado de datos y predicciones basadas en IA
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Business Intelligence"
+        description="Análisis avanzado de datos y predicciones basadas en IA"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end gap-2">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-[120px]">
               <SelectValue />
@@ -222,7 +220,6 @@ export default function BusinessIntelligencePage() {
             Exportar
           </Button>
         </div>
-      </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -702,6 +699,7 @@ export default function BusinessIntelligencePage() {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

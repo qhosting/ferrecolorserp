@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Header } from '@/components/navigation/header'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -163,21 +164,21 @@ export default function VentasPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Ventas</h1>
-          <p className="text-gray-600">Gestión de ventas y sistema de pagarés</p>
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Ventas"
+        description="Gestión de ventas y sistema de pagarés"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end">
+          <Button 
+            onClick={() => router.push('/ventas/nueva')}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Nueva Venta
+          </Button>
         </div>
-        <Button 
-          onClick={() => router.push('/ventas/nueva')}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Nueva Venta
-        </Button>
-      </div>
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -495,6 +496,7 @@ export default function VentasPage() {
           </Button>
         </div>
       )}
+    </div>
     </div>
   )
 }

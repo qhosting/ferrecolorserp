@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Header } from '@/components/navigation/header'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -137,14 +138,13 @@ export default function PagaresPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pagarés</h1>
-          <p className="text-gray-600">Sistema de cobranza y gestión de pagarés</p>
-        </div>
-        <div className="flex space-x-2">
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Pagarés"
+        description="Sistema de cobranza y gestión de pagarés"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end">
           <Button 
             onClick={() => router.push('/cobranza-movil')}
             className="bg-green-600 hover:bg-green-700"
@@ -153,7 +153,6 @@ export default function PagaresPage() {
             Cobranza Móvil
           </Button>
         </div>
-      </div>
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -416,6 +415,7 @@ export default function PagaresPage() {
           </Button>
         </div>
       )}
+    </div>
     </div>
   )
 }

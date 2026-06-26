@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { Plus, Search, Filter, FileText, Calendar, User, DollarSign, Check, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -347,12 +348,13 @@ export default function NotasCreditoPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Notas de Crédito</h1>
-          <p className="text-gray-500 mt-2">Gestión de notas de crédito para clientes</p>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Notas de Crédito"
+        description="Gestión de notas de crédito para clientes"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end">
 
         <Dialog open={dialogAbierto} onOpenChange={setDialogAbierto}>
           <DialogTrigger asChild>
@@ -791,6 +793,7 @@ export default function NotasCreditoPage() {
           ))
         )}
       </div>
+    </div>
     </div>
   );
 }

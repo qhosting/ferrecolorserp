@@ -1,0 +1,1757 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VertexERP - Ferreterias — Propuesta Comercial</title>
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* CSS DESIGN TOKENS */
+    :root {
+      --primary: #c1272d;
+      --primary-light: #ff5f5f;
+      --primary-dark: #8e141a;
+      --primary-gradient: linear-gradient(135deg, #c1272d 0%, #e35d5b 100%);
+      --accent: #2e7d32;
+      --accent-light: #ebf5eb;
+      --secondary: #1e293b;
+      --text-main: #334155;
+      --text-muted: #64748b;
+      --text-light: #f8fafc;
+      --bg-main: #f1f5f9;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.05);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* GENERAL STYLING */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text-main);
+      background-color: var(--bg-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Outfit', sans-serif;
+      color: var(--secondary);
+      font-weight: 700;
+    }
+
+    /* LAYOUT: APP VIEWER */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR NAVIGATION (NO-PRINT) */
+    .sidebar {
+      width: 320px;
+      background: var(--secondary);
+      color: var(--text-light);
+      padding: 2.5rem 1.5rem;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    }
+
+    .brand-logo-container {
+      margin-bottom: 2.5rem;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .brand-logo i {
+      color: var(--primary-light);
+      font-size: 1.8rem;
+    }
+
+    .brand-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .nav-menu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      color: #cbd5e1;
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+
+    .nav-item a:hover, .nav-item.active a {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-item.active a {
+      background: var(--primary);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .print-banner-btn {
+      width: 100%;
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      padding: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(193, 39, 45, 0.3);
+      transition: var(--transition);
+    }
+
+    .print-banner-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(193, 39, 45, 0.5);
+    }
+
+    /* MAIN CONTENT WRAPPER */
+    .main-content {
+      margin-left: 320px;
+      flex: 1;
+      padding: 3rem;
+      max-width: 1200px;
+    }
+
+    /* PAGE STYLING FOR DOCK */
+    .proposal-page {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 4.5rem;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    /* COVER PAGE SPECIFIC */
+    .cover-page {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: calc(100vh - 6rem);
+      padding: 6rem 4.5rem;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      border: none;
+    }
+
+    .cover-decor {
+      position: absolute;
+      top: -150px;
+      right: -150px;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      filter: blur(80px);
+      opacity: 0.35;
+    }
+
+    .cover-header {
+      z-index: 10;
+    }
+
+    .cover-tagline {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(193, 39, 45, 0.15);
+      border: 1px solid rgba(193, 39, 45, 0.3);
+      color: var(--primary-light);
+      border-radius: 30px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+
+    .cover-title {
+      font-size: 4rem;
+      line-height: 1.1;
+      color: white;
+      margin-bottom: 1rem;
+      font-weight: 800;
+    }
+
+    .cover-subtitle {
+      font-size: 1.5rem;
+      color: #cbd5e1;
+      font-weight: 300;
+      max-width: 600px;
+    }
+
+    .cover-footer {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 10;
+    }
+
+    .cover-author {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .cover-author-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .cover-author-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .cover-author-logo {
+      color: var(--primary-light);
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .cover-date {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* DOCUMENT DECORATIONS */
+    .section-header {
+      margin-bottom: 2.5rem;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 1rem;
+      position: relative;
+    }
+
+    .section-header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 80px;
+      height: 2px;
+      background: var(--primary);
+    }
+
+    .section-title {
+      font-size: 2.2rem;
+      color: var(--secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      font-weight: 400;
+    }
+
+    /* TYPOGRAPHY UTILITIES */
+    p {
+      margin-bottom: 1.5rem;
+      font-size: 1.05rem;
+      color: var(--text-main);
+    }
+
+    strong {
+      color: var(--secondary);
+      font-weight: 600;
+    }
+
+    /* CARD GRID */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.8rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 1.2rem;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      margin-bottom: 0.8rem;
+      color: var(--secondary);
+    }
+
+    .card-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    /* TABLE DESIGN */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 2rem 0;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    th {
+      background-color: #f8fafc;
+      color: var(--secondary);
+      font-weight: 600;
+      padding: 14px 18px;
+      border-bottom: 2px solid var(--border-color);
+      font-family: 'Outfit', sans-serif;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: #f8fafc;
+    }
+
+    /* NUMBERS IN TABLES */
+    .num-col {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+
+    /* ALERTS / CALLOUTS */
+    .alert-box {
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      margin: 2rem 0;
+      display: flex;
+      gap: 16px;
+      font-size: 1rem;
+    }
+
+    .alert-box i {
+      font-size: 1.5rem;
+      margin-top: 3px;
+    }
+
+    .alert-box.important {
+      background-color: rgba(193, 39, 45, 0.04);
+      border-left: 5px solid var(--primary);
+      color: var(--secondary);
+    }
+
+    .alert-box.important i {
+      color: var(--primary);
+    }
+
+    .alert-box.note {
+      background-color: rgba(30, 41, 59, 0.03);
+      border-left: 5px solid var(--secondary);
+      color: var(--text-main);
+    }
+
+    .alert-box.note i {
+      color: var(--secondary);
+    }
+
+    /* DIAGRAM STYLING */
+    .diagram-container {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 2.5rem;
+      margin: 2rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .diagram-node {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 1.2rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .diagram-node.primary-server {
+      border-top: 4px solid var(--primary);
+    }
+
+    .diagram-node.secondary-server {
+      border-top: 4px solid var(--secondary);
+    }
+
+    .node-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .node-subtext {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .node-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .node-pill {
+      background: var(--bg-main);
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-radius: 20px;
+      color: var(--secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .diagram-connector {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      gap: 8px;
+    }
+
+    .diagram-connector::before, .diagram-connector::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      border-top: 2px dashed #cbd5e1;
+    }
+
+    /* VALUE PROPOSITION SUMMARY BANNER */
+    .deal-highlight-box {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 3rem;
+      margin: 3rem 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .deal-highlight-box .cover-decor {
+      opacity: 0.2;
+    }
+
+    .deal-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .deal-side {
+      padding: 1rem;
+    }
+
+    .deal-side.original {
+      text-decoration: line-through;
+      color: #94a3b8;
+      font-size: 1.8rem;
+      font-weight: 500;
+    }
+
+    .deal-divider {
+      font-size: 2.5rem;
+      color: var(--primary-light);
+    }
+
+    .deal-side.promo {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      text-shadow: 0 2px 10px rgba(193, 39, 45, 0.4);
+    }
+
+    .deal-savings {
+      display: inline-block;
+      background: var(--primary);
+      padding: 6px 16px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-top: 1rem;
+    }
+
+    /* TAB SYSTEM FOR MODALITIES */
+    .tabs-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+
+    .tab-btn:hover {
+      color: var(--secondary);
+      background: #f1f5f9;
+    }
+
+    .tab-btn.active {
+      color: white;
+      background: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* INTERACTIVE CALCULATOR */
+    .calculator-container {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 2rem;
+      margin: 3rem 0;
+    }
+
+    .calc-title {
+      font-size: 1.3rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .calc-controls {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--secondary);
+    }
+
+    select, input[type="range"] {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 1rem;
+      width: 100%;
+      background: white;
+    }
+
+    .calc-results {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .result-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .result-lbl {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .result-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--secondary);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .result-val.highlight {
+      color: var(--primary);
+    }
+
+    .result-val.savings {
+      color: var(--accent);
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge.included {
+      background-color: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .badge.special {
+      background-color: rgba(193, 39, 45, 0.1);
+      color: var(--primary);
+    }
+
+    /* Dark card styles (screen mode) */
+    .deal-highlight-box.dark-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+    }
+    .deal-highlight-box.dark-card h3 {
+      color: white;
+    }
+    .deal-highlight-box.dark-card p,
+    .deal-highlight-box.dark-card .label-text {
+      color: #94a3b8;
+    }
+    .deal-highlight-box.dark-card .label-text.promo-label {
+      color: var(--primary-light);
+    }
+    .deal-highlight-box.dark-card .label-text.savings-label {
+      color: #4ade80;
+    }
+    .deal-highlight-box.dark-card strong {
+      color: #f8fafc;
+    }
+    .deal-highlight-box.dark-card strong.savings-amount {
+      color: #4ade80;
+    }
+    .deal-highlight-box.dark-card .footnote {
+      color: #94a3b8;
+    }
+
+    /* PRINT AND PDF GENERATOR GUIDE BANNER */
+    .pdf-guide-toast {
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      border-radius: var(--radius-md);
+      padding: 1.2rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      color: #0369a1;
+      font-size: 0.95rem;
+    }
+
+    .pdf-guide-toast i {
+      font-size: 1.3rem;
+      margin-top: 2px;
+    }
+
+    /* PRINT SPECIFIC STYLES */
+    @media print {
+      body {
+        background-color: white !important;
+        color: #000 !important;
+      }
+
+      .sidebar {
+        display: none !important;
+      }
+
+      .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+
+      .proposal-page {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin-bottom: 0 !important;
+        page-break-after: always !important;
+        page-break-inside: avoid !important;
+      }
+
+      .cover-page {
+        min-height: 100vh !important;
+        padding: 4cm 2cm !important;
+        background: #0f172a !important; /* Keep nice cover background in print if printable, or adjust */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .cover-decor {
+        display: none !important;
+      }
+
+      /* Dark card overrides for printing */
+      .deal-highlight-box.dark-card {
+        background: #f8fafc !important;
+        border: 2px solid #0f172a !important;
+        color: #0f172a !important;
+        box-shadow: none !important;
+      }
+      .deal-highlight-box.dark-card h3 {
+        color: #0f172a !important;
+      }
+      .deal-highlight-box.dark-card p,
+      .deal-highlight-box.dark-card .label-text {
+        color: #475569 !important;
+      }
+      .deal-highlight-box.dark-card .label-text.promo-label {
+        color: var(--primary) !important;
+      }
+      .deal-highlight-box.dark-card .label-text.savings-label {
+        color: #15803d !important;
+      }
+      .deal-highlight-box.dark-card strong {
+        color: #0f172a !important;
+      }
+      .deal-highlight-box.dark-card strong.savings-amount {
+        color: #15803d !important;
+      }
+      .deal-highlight-box.dark-card .footnote {
+        color: #64748b !important;
+      }
+      .deal-highlight-box.dark-card .deal-side.original {
+        color: #64748b !important;
+      }
+      .deal-highlight-box.dark-card .deal-side.promo {
+        color: var(--primary) !important;
+      }
+      .deal-highlight-box.dark-card .deal-savings {
+        background-color: #ebf5eb !important;
+        color: #15803d !important;
+        border: 1px solid #bbf7d0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .deal-highlight-box {
+        background: #f1f5f9 !important;
+        border: 2px solid #0f172a !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .deal-side.original {
+        color: #64748b !important;
+      }
+
+      .deal-side.promo {
+        color: var(--primary) !important;
+      }
+
+      .pdf-guide-toast, .calculator-container, .tabs-nav, .print-banner-btn {
+        display: none !important;
+      }
+
+      .tab-content {
+        display: block !important;
+        margin-bottom: 2rem;
+        page-break-inside: avoid;
+      }
+
+      .tab-content h3 {
+        margin-top: 2rem;
+        border-top: 1px solid var(--border-color);
+        padding-top: 1.5rem;
+      }
+
+      tr {
+        page-break-inside: avoid !important;
+      }
+
+      thead {
+        display: table-header-group !important;
+      }
+
+      /* Adjust font sizes for paper printing */
+      p, td, li {
+        font-size: 10pt !important;
+      }
+
+      h1 { font-size: 28pt !important; }
+      h2 { font-size: 18pt !important; }
+      h3 { font-size: 14pt !important; }
+      th { font-size: 9pt !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- SIDEBAR (NAV & CONTROLS) -->
+    <aside class="sidebar no-print">
+      <div class="sidebar-top">
+        <div class="brand-logo-container">
+          <div class="brand-logo">
+            <i class="fa-solid fa-palette"></i>
+            <span>VertexERP - Ferreterias</span>
+          </div>
+          <div class="brand-subtitle">Propuesta Comercial</div>
+        </div>
+
+        <nav>
+          <ul class="nav-menu">
+            <li class="nav-item active"><a href="#cover"><i class="fa-solid fa-file-contract"></i> Portada</a></li>
+            <li class="nav-item"><a href="#que-es"><i class="fa-solid fa-circle-question"></i> ¿Qué es ERP?</a></li>
+            <li class="nav-item"><a href="#ahorro"><i class="fa-solid fa-piggy-bank"></i> Ahorros Clave</a></li>
+            <li class="nav-item"><a href="#modulos"><i class="fa-solid fa-cubes"></i> Módulos del ERP</a></li>
+            <li class="nav-item"><a href="#infraestructura"><i class="fa-solid fa-server"></i> Infraestructura</a></li>
+            <li class="nav-item"><a href="#modalidades"><i class="fa-solid fa-tags"></i> Modalidades</a></li>
+            <li class="nav-item"><a href="#condiciones"><i class="fa-solid fa-handshake"></i> Condiciones y Pagos</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="print-banner-btn" onclick="window.print()">
+          <i class="fa-solid fa-file-pdf"></i>
+          Imprimir / Guardar PDF
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN PROPONENT CONTENT -->
+    <main class="main-content">
+
+      <!-- PDF GUIDE BANNER IN SCREEN MODE -->
+      <div class="pdf-guide-toast no-print">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>
+          <strong>¿Cómo generar el PDF comercial?</strong><br>
+          Haz clic en el botón <strong>"Imprimir / Guardar PDF"</strong> del menú lateral. En el cuadro de diálogo de tu navegador, selecciona <strong>"Guardar como PDF"</strong> como destino. Para el mejor acabado visual, asegúrate de activar la casilla <strong>"Gráficos de fondo"</strong> en la configuración avanzada de impresión.
+        </div>
+      </div>
+
+      <!-- PAGE 1: COVER -->
+      <section id="cover" class="proposal-page cover-page">
+        <div class="cover-decor"></div>
+        <div class="cover-header">
+          <span class="cover-tagline">Propuesta Premium</span>
+          <h1 class="cover-title">VertexERP - Ferreterias</h1>
+          <p class="cover-subtitle">Sistema de Gestión Empresarial Integral para Ferreterías y Distribuidoras de Materiales.</p>
+        </div>
+        <div class="cover-footer">
+          <div class="cover-author">
+            <div class="cover-author-title">Desarrollado y Administrado por</div>
+            <div class="cover-author-name">
+              <span class="cover-author-logo">Vertex<span style="color:var(--primary-light);">ERP</span></span>
+            </div>
+          </div>
+          <div class="cover-date">Junio 2026</div>
+        </div>
+      </section>
+
+      <!-- PAGE 2: INTRODUCCIÓN Y BENEFICIOS -->
+      <section id="que-es" class="proposal-page">
+        <div class="section-header">
+          <h2 class="section-title">¿Qué es VertexERP - Ferreterias?</h2>
+          <span class="section-subtitle">Gestión inteligente adaptada 100% al sector ferretero</span>
+        </div>
+        
+        <p><strong>VertexERP - Ferreterias</strong> es un sistema de gestión empresarial desarrollado a la medida para ferreterías, tlapalerías y distribuidoras de materiales de construcción y pintura en México. Funciona en la nube, permitiendo la operación remota desde cualquier navegador web sin instalar software local en los equipos, y se conecta directamente con la base de datos de <strong>CONTPAQi Comercial Premium</strong> para timbrar facturas CFDI 4.0 al instante, eliminando dobles capturas y automatizando la contabilidad.</p>
+        
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Característica del ERP</th>
+                <th style="text-align: center;">VertexERP - Ferreterias</th>
+                <th style="text-align: center;">ERP Genérico</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Diseñado específicamente para ferreterías (unidades, múltiplos)</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+              <tr>
+                <td>Operación en navegador (sin necesidad de instalaciones complejas)</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+              <tr>
+                <td>Integración bidireccional nativa con CONTPAQi Comercial Premium</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+              <tr>
+                <td>API de Integración CONTPAQi sin costo adicional al renovar licencias¹</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+              <tr>
+                <td>Punto de Venta (TPV / POS) para mostrador optimizado</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: #e67e22;"><i class="fa-solid fa-triangle-exclamation"></i> Adicional de pago</td>
+              </tr>
+              <tr>
+                <td>Pedidos en Línea (Click & Collect) con alertas en caja</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+              <tr>
+                <td>Notificaciones automáticas por WhatsApp (sin costo mensual de API)</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+              <tr>
+                <td>Multi-sucursal real con inventarios unificados en la nube</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: #e67e22;"><i class="fa-solid fa-triangle-exclamation"></i> Costo por sucursal</td>
+              </tr>
+              <tr>
+                <td>Scoring crediticio automatizado y control de pagarés de clientes</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+              <tr>
+                <td>Cobranza en campo mediante app móvil para gestores</td>
+                <td style="text-align: center; color: var(--accent);"><i class="fa-solid fa-circle-check"></i></td>
+                <td style="text-align: center; color: var(--primary);"><i class="fa-solid fa-circle-xmark"></i></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert-box note">
+          <i class="fa-solid fa-circle-info"></i>
+          <div>
+            ¹ La **API de Integración CONTPAQi** (middleware conector de base de datos) se provee sin costo adicional al renovar tus licencias anuales de CONTPAQi con VertexERP. Las **licencias de los sistemas de escritorio CONTPAQi** (Comercial Premium, Contabilidad, Bancos, etc.) son independientes y se cotizan conforme a las tarifas vigentes del fabricante.
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 3: ANÁLISIS DE AHORRO -->
+      <section id="ahorro" class="proposal-page">
+        <div class="section-header">
+          <h2 class="section-title">Análisis Financiero de Ahorro Neto</h2>
+          <span class="section-subtitle">Lo que dejas de pagar al centralizar tu operación con VertexERP - Ferreterias</span>
+        </div>
+
+        <p>Una ferretería típica incurre en costos redundantes al pagar licencias individuales, contratar soporte con múltiples proveedores y gastar horas operativas en dobles capturas. Con VertexERP - Ferreterias, el ahorro en costos fijos y eficiencia de personal se desglosa así:</p>
+
+        <h3 style="margin-top: 1.5rem; margin-bottom: 0.8rem;">1. Costos de TI y Software que se Eliminan</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Herramienta Reemplazada</th>
+                <th>Solución Equivalente Típica</th>
+                <th class="num-col">Costo Mensual Estimado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Punto de Venta de Caja</td>
+                <td>Aspel Caja o similar</td>
+                <td class="num-col">$700 – $1,200</td>
+              </tr>
+              <tr>
+                <td>ERP e Inventarios Separados</td>
+                <td>Aspel SAE o conector estándar</td>
+                <td class="num-col">$800 – $1,500</td>
+              </tr>
+              <tr>
+                <td>CRM y WhatsApp Link</td>
+                <td>Zoho CRM o similar</td>
+                <td class="num-col">$500 – $1,800</td>
+              </tr>
+              <tr>
+                <td>Plataforma WhatsApp API</td>
+                <td>Twilio / WABA comercial</td>
+                <td class="num-col">$1,500 – $4,000</td>
+              </tr>
+              <tr>
+                <td>Plataforma eCommerce</td>
+                <td>Shopify / WooCommerce (mantenimiento)</td>
+                <td class="num-col">$1,200 – $3,500</td>
+              </tr>
+              <tr>
+                <td>Reportes y BI</td>
+                <td>Power BI Pro</td>
+                <td class="num-col">$1,000 – $2,500</td>
+              </tr>
+              <tr>
+                <td>Middleware CONTPAQi API</td>
+                <td>Desarrollos a medida</td>
+                <td class="num-col">$1,500 – $4,000</td>
+              </tr>
+              <tr>
+                <td>Administración de Servidores</td>
+                <td>Sysadmin externo</td>
+                <td class="num-col">$3,000 – $8,000</td>
+              </tr>
+              <tr>
+                <td>Soporte multimarca</td>
+                <td>Pólizas de soporte técnico</td>
+                <td class="num-col">$2,000 – $5,000</td>
+              </tr>
+              <tr style="font-weight: 700; background: #f8fafc;">
+                <td colspan="2">TOTAL MENSUAL EN SISTEMAS INDEPENDIENTES</td>
+                <td class="num-col" style="color: var(--primary);">$13,500 – $35,000 MXN</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 0.8rem;">2. Tiempo Recuperado (Automatizaciones de Procesos)</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Proceso Integrado</th>
+                <th>Operación Manual Anterior</th>
+                <th class="num-col">Equivalente Económico Mensual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Integración Directa SAT</strong></td>
+                <td>Evita doble captura en CONTPAQi (1–2 hrs diarias)</td>
+                <td class="num-col">$3,000 – $6,000</td>
+              </tr>
+              <tr>
+                <td><strong>Conciliación de Inventario</strong></td>
+                <td>Stocks y almacenes unificados en tiempo real</td>
+                <td class="num-col">$1,500 – $2,500</td>
+              </tr>
+              <tr>
+                <td><strong>Cobranza Automatizada</strong></td>
+                <td>Recordatorios de pagarés vía WhatsApp automatizados</td>
+                <td class="num-col">$4,000 – $8,000</td>
+              </tr>
+              <tr>
+                <td><strong>Reportes en 1 Click</strong></td>
+                <td>Reportes de venta y cartera para contador / dueño</td>
+                <td class="num-col">$2,000 – $4,000</td>
+              </tr>
+              <tr style="font-weight: 700; background: #f8fafc;">
+                <td colspan="2">VALOR OPERATIVO MENSUAL RECUPERADO</td>
+                <td class="num-col" style="color: var(--accent);">$12,500 – $24,500 MXN</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="deal-highlight-box dark-card" style="margin-top: 2.5rem; margin-bottom: 1.5rem; padding: 2rem 3rem;">
+          <h3 style="color: white; font-size: 1.4rem; margin-bottom: 1rem;">Comparativa de Costo Total en 1 Año</h3>
+          <p style="color: #94a3b8; font-size: 0.95rem; max-width: 800px; margin: 0 auto 1.5rem;">Costo de operación fragmentada y manual vs Renta de VertexERP - Ferreterias Plan Enterprise</p>
+          <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px;">
+            <div style="text-align: center;">
+              <span class="label-text" style="display: block; font-size: 0.85rem; text-transform: uppercase;">Sin VertexERP - Ferreterias</span>
+              <strong style="font-size: 1.8rem; color: #f8fafc; font-family: 'Outfit';">$312,000 - $714,000 <span style="font-size: 1rem;">MXN/año</span></strong>
+            </div>
+            <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
+              <span class="label-text promo-label" style="display: block; font-size: 0.85rem; text-transform: uppercase; font-weight:600;">Con VertexERP - Ferreterias</span>
+              <strong style="font-size: 2rem; color: #fff; font-family: 'Outfit';">$133,200 <span style="font-size: 1rem;">MXN/año</span></strong>
+            </div>
+            <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
+              <span class="label-text savings-label" style="display: block; font-size: 0.85rem; text-transform: uppercase; font-weight:600;">Ahorro del Cliente</span>
+              <strong style="font-size: 2rem; color: #4ade80; font-family: 'Outfit';">Hasta $580,800 <span style="font-size: 1rem;">MXN/año</span></strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 4: DETALLE DE MÓDULOS -->
+      <section id="modulos" class="proposal-page">
+        <div class="section-header">
+          <h2 class="section-title">Mapa de Módulos del Sistema</h2>
+          <span class="section-subtitle">20 módulos integrados listos para operar desde el primer día</span>
+        </div>
+
+        <p style="margin-bottom: 2rem;">El ERP cuenta con una arquitectura modular robusta que abarca la totalidad del flujo de negocio ferretero:</p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <h4 class="card-title">1. Seguridad y Acceso</h4>
+            <p class="card-desc">Control de accesos granular con 6 roles de usuario configurables (Superadmin, Admin, Vendedor, Gestor, Contador, Cliente) y auditorías de actividad completas.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-chart-line"></i></div>
+            <h4 class="card-title">2. Dashboard en Tiempo Real</h4>
+            <p class="card-desc">Gráficos de ventas, cobros del día, indicadores de stock crítico, cuentas por cobrar y alertas de pagarés por vencer desde un panel centralizado.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-user-group"></i></div>
+            <h4 class="card-title">3. Gestión de Clientes</h4>
+            <p class="card-desc">Catálogo unificado con datos fiscales actualizados para SAT, límites y plazos de crédito, histórico de comportamiento de compra y cobranza.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-box-open"></i></div>
+            <h4 class="card-title">4. Catálogo de Productos</h4>
+            <p class="card-desc">Configuración de hasta 5 niveles de precios por producto, soporte de códigos de barras, búsqueda predictiva y asignación rápida de claves SAT.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-cash-register"></i></div>
+            <h4 class="card-title">5. Punto de Venta (TPV/POS)</h4>
+            <p class="card-desc">Caja rápida para mostrador con arqueo diario (Corte Z), cobro mixto, registro de egresos manuales de caja e impresión de tickets térmicos.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-truck-ramp-box"></i></div>
+            <h4 class="card-title">6. Click & Collect (Pedidos Online)</h4>
+            <p class="card-desc">Portal para que clientes coloquen pedidos remotos, reservando existencias de forma inmediata y alertando visual/sonoramente en la pantalla del cajero.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <h4 class="card-title">7. Facturación SAT CFDI 4.0</h4>
+            <p class="card-desc">Timbrado directo desde el ticket de venta a través de la integración de CONTPAQi. Descarga directa de archivos XML y PDF oficiales para el cliente.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-link"></i></div>
+            <h4 class="card-title">8. Interfaz CONTPAQi Comercial</h4>
+            <p class="card-desc">Sincronización automatizada de clientes, productos y agentes de venta. Registro automático de los movimientos del ERP en la base de datos de CONTPAQi.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-credit-card"></i></div>
+            <h4 class="card-title">9. Crédito y Cobranza Móvil</h4>
+            <p class="card-desc">Generación automática de pagarés a la firma del ticket de crédito, cobro móvil para gestores de campo y cálculo de intereses moratorios automáticos.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-message"></i></div>
+            <h4 class="card-title">10. WhatsApp API Integrada</h4>
+            <p class="card-desc">Envío de alertas de pedidos y recordatorios de pago de pagarés por WhatsApp sin costo mensual de API externa. (SMS opcional a $0.40 MXN/msg).</p>
+          </div>
+        </div>
+
+        <p style="margin-top: 1rem; font-size: 0.95rem; color: var(--text-muted);">
+          *El sistema incluye además otros 10 módulos operativos: Administración de Inventarios y Almacenes (Kardex), Transferencias entre Sucursales, Compras y Cuentas por Pagar, Gestión de Garantías, Notas de Cargo y Crédito, Generación de Reportes Financieros en Excel/PDF, Programador de Backups Automáticos y Panel General de Configuración del ERP.
+        </p>
+      </section>
+
+      <!-- PAGE 5: INFRAESTRUCTURA Y SOPORTE -->
+      <section id="infraestructura" class="proposal-page">
+        <div class="section-header">
+          <h2 class="section-title">Infraestructura del Servidor</h2>
+          <span class="section-subtitle">Arquitectura segura en la nube administrada por VertexERP</span>
+        </div>
+
+        <p>Toda la gestión técnica del servidor corre por nuestra cuenta. Olvídate de comprar servidores locales costosos que requieren aire acondicionado, respaldos manuales y técnicos de planta. Usamos servidores de alto rendimiento dedicados en la nube con redundancia e integración:</p>
+
+        <div class="diagram-container">
+          <div class="diagram-node primary-server">
+            <div class="node-title">
+              <i class="fa-solid fa-server" style="color: var(--primary);"></i>
+              Servidor Principal — Dedicado Windows Server
+            </div>
+            <div class="node-subtext">Hospeda la base de datos principal, el motor de la aplicación y la conexión directa con CONTPAQi.</div>
+            <div class="node-pills">
+              <span class="node-pill">VertexERP - Ferreterias App</span>
+              <span class="node-pill">PostgreSQL Engine</span>
+              <span class="node-pill">CONTPAQi Suite local</span>
+              <span class="node-pill">Firewall Perimetral</span>
+            </div>
+          </div>
+
+          <div class="diagram-connector">
+            <i class="fa-solid fa-arrow-down-up-lock"></i>
+            API Conector / Webhook Encriptado SSL
+          </div>
+
+          <div class="diagram-node secondary-server">
+            <div class="node-title">
+              <i class="fa-solid fa-server" style="color: var(--secondary);"></i>
+              Servidor WhatsApp API (WAHA) — Instancia Linux Docker
+            </div>
+            <div class="node-subtext">Encargado de procesar y enviar de forma automática los tickets, recordatorios y notificaciones.</div>
+            <div class="node-pills">
+              <span class="node-pill">WAHA Docker Container</span>
+              <span class="node-pill">Mensajería en tiempo real</span>
+              <span class="node-pill">Cero costo de API externa</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 2.5rem; margin-bottom: 1rem;">Especificaciones T&eacute;cnicas del Servidor Principal</h3>
+        <div class="grid-3" style="margin-bottom: 2rem;">
+          <div class="card" style="padding: 1.2rem; display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-microchip" style="font-size: 1.8rem; color: var(--primary);"></i>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">Procesador Dedicado</strong>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">AMD EPYC&trade; 9645 (12 n&uacute;cleos dedicados)</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.2rem; display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-memory" style="font-size: 1.8rem; color: var(--primary);"></i>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">Memoria RAM</strong>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">32 GB DDR5 RAM (ECC)</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.2rem; display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-hard-drive" style="font-size: 1.8rem; color: var(--primary);"></i>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">Almacenamiento</strong>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">1 TB NVMe de alta velocidad</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.2rem; display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-clone" style="font-size: 1.8rem; color: var(--primary);"></i>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">Respaldos de Datos</strong>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">Snapshots (Copy-On-Write)</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.2rem; display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-shield-halved" style="font-size: 1.8rem; color: var(--primary);"></i>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">Seguridad Activa</strong>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">Firewall & Antivirus integrado</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.2rem; display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-cloud" style="font-size: 1.8rem; color: var(--primary);"></i>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">Arquitectura Nube</strong>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">Servidor Dedicado Administrado</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert-box note" style="margin-top: 2rem;">
+          <i class="fa-solid fa-headset"></i>
+          <div>
+            <strong>Soporte Técnico Integrado:</strong> Al contratar el hosting en la nube con VertexERP, el soporte técnico remoto para solucionar cualquier incidente o duda de la base de datos e infraestructura está incluido en el mismo costo del servidor. No cobramos pólizas adicionales.
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 6: MODALIDADES DE INVERSIÓN -->
+      <section id="modalidades" class="proposal-page">
+        <div class="section-header">
+          <h2 class="section-title">Modalidades de Contratación</h2>
+          <span class="section-subtitle">Elige el esquema que mejor se adapte a tu plan de negocio y presupuesto</span>
+        </div>
+
+        <!-- Dynamic calculator for screen viewing -->
+        <div class="calculator-container no-print">
+          <h4 class="calc-title">
+            <i class="fa-solid fa-calculator" style="color: var(--primary);"></i>
+            Simulador de Inversión y Retorno (Ahorro)
+          </h4>
+          <div class="calc-controls">
+            <div class="control-group">
+              <label class="control-label" for="time-select">Plazo de análisis operativo:</label>
+              <select id="time-select" onchange="calculateSavings()">
+                <option value="12">12 Meses (1er Año)</option>
+                <option value="24">24 Meses (2 Años)</option>
+                <option value="36">36 Meses (3 Años)</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label class="control-label" for="cost-slider">Costo estimado mensual sin ERP (Sistemas + Capturistas):</label>
+              <input type="range" id="cost-slider" min="15000" max="60000" step="5000" value="30000" oninput="updateSliderVal(this.value)">
+              <span style="font-size: 0.85rem; font-weight:600; color: var(--primary);" id="slider-val">$30,000 MXN / mes</span>
+            </div>
+          </div>
+          <div class="calc-results">
+            <div class="result-item">
+              <span class="result-lbl">Operación Manual Tradicional</span>
+              <span class="result-val" id="calc-traditional">$360,000</span>
+            </div>
+            <div class="result-item">
+              <span class="result-lbl">Con Paquete Llave en Mano</span>
+              <span class="result-val highlight" id="calc-package">$91,600</span>
+            </div>
+            <div class="result-item">
+              <span class="result-lbl">Ahorro Real Obtenido</span>
+              <span class="result-val savings" id="calc-savings">$268,400</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABS FOR THE 3 SCHEMES -->
+        <div class="tabs-nav no-print">
+          <button class="tab-btn active" onclick="switchTab(event, 'tab-renta')">1. Renta Anual</button>
+          <button class="tab-btn" onclick="switchTab(event, 'tab-fuente')">2. Código Fuente Solo</button>
+          <button class="tab-btn" onclick="switchTab(event, 'tab-llave')">3. Paquete Llave en Mano ✨</button>
+        </div>
+
+        <!-- TAB CONTENT 1: RENTA -->
+        <div id="tab-renta" class="tab-content active">
+          <h3>📅 MODALIDAD 1: Servicio en Renta (Contrato Anual)</h3>
+          <p style="margin-top:0.5rem; color:var(--text-muted);">Esquema de software como servicio (SaaS). Nosotros administramos todo.</p>
+          
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Concepto de Renta</th>
+                  <th class="num-col">Inversión Mensual</th>
+                  <th class="num-col">Inversión Anual (12 meses)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Licencia VertexERP - Ferreterias Enterprise (20 módulos unificados)</td>
+                  <td class="num-col">$10,000</td>
+                  <td class="num-col">$120,000</td>
+                </tr>
+                <tr>
+                  <td>Servidor Dedicado en Nube Administrado (IIS + PostgreSQL + Backup)</td>
+                  <td class="num-col">$1,100</td>
+                  <td class="num-col">$13,200</td>
+                </tr>
+                <tr>
+                  <td>Soporte Técnico Remoto y Mantenimiento de Servidor</td>
+                  <td class="num-col"><span class="badge included">Incluido</span></td>
+                  <td class="num-col"><span class="badge included">Incluido</span></td>
+                </tr>
+                <tr>
+                  <td>API de WhatsApp y API de CONTPAQi Middleware</td>
+                  <td class="num-col"><span class="badge included">Incluido</span></td>
+                  <td class="num-col"><span class="badge included">Incluido</span></td>
+                </tr>
+                <tr style="font-weight: 700; font-size: 1.05rem; background-color: #f8fafc;">
+                  <td>TOTAL DE CONTRATO</td>
+                  <td class="num-col" style="color: var(--primary);">$11,100 MXN / mes</td>
+                  <td class="num-col" style="color: var(--primary);">$133,200 MXN / año</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            *Contrato mínimo de 12 meses. Los módulos o integraciones especiales fuera de catálogo se cotizan por separado. Las licencias de CONTPAQi no están incluidas.
+          </p>
+        </div>
+
+        <!-- TAB CONTENT 2: CODIGO FUENTE -->
+        <div id="tab-fuente" class="tab-content">
+          <h3>📦 MODALIDAD 2: Adquisición de Código Fuente (Compra Única)</h3>
+          <p style="margin-top:0.5rem; color:var(--text-muted);">Para empresas con departamento de TI que desean control y propiedad absoluta del código.</p>
+          
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Concepto de Entrega</th>
+                  <th>Detalle del Entregable</th>
+                  <th class="num-col">Precio Único</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Licencia de Código Fuente Completo</strong></td>
+                  <td>Código 100% editable en Next.js (TypeScript) + Prisma ORM + PostgreSQL Schema. Módulos API WAHA y CONTPAQi Middleware incluidos.</td>
+                  <td class="num-col" style="font-weight: 700; font-size:1.1rem;">$80,000 MXN</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="alert-box note" style="margin-top: 1rem;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <div>
+              <strong>Importante:</strong> Bajo esta modalidad de compra del código fuente, **la instalación, configuración del servidor, migración de datos, interfaces y soporte quedan por cuenta del cliente**. Si requiere que nosotros lo entreguemos listo para operar, la opción ideal es el **Paquete Llave en Mano**.
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT 3: LLAVE EN MANO -->
+        <div id="tab-llave" class="tab-content">
+          <h3>🌟 MODALIDAD 3: Paquete Llave en Mano — Edición Especial</h3>
+          <p style="margin-top:0.5rem; color:var(--text-muted);">La opción definitiva: Obtienes la propiedad del código fuente y nosotros nos encargamos de configurarlo e instalarlo todo.</p>
+          
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Servicio / Concepto Incluido en el Paquete</th>
+                  <th class="num-col">Valor en Mercado Individual</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>💻 Licencia de Código Fuente VertexERP - Ferreterias (todos los módulos sin candados)</td>
+                  <td class="num-col">$80,000</td>
+                </tr>
+                <tr>
+                  <td>🖥️ <strong>Configuración de Windows Server</strong> (IIS, .NET, roles, SO y configuraci&oacute;nes iniciales)</td>
+                  <td class="num-col">$8,000</td>
+                </tr>
+                <tr>
+                  <td>🔒 <strong>Hardening de Seguridad</strong> (firewall, antivirus, cierre de puertos vulnerables, SSL/HTTPS)</td>
+                  <td class="num-col">$5,000</td>
+                </tr>
+                <tr>
+                  <td>🔗 <strong>Configuración e interfaz CONTPAQi</strong> (empresa, catálogos bases, timbrado de prueba)</td>
+                  <td class="num-col">$12,000</td>
+                </tr>
+                <tr>
+                  <td>⚙️ <strong>Despliegue y publicación del ERP</strong> en la nube (Base de datos PostgreSQL instalada y enlazada)</td>
+                  <td class="num-col">$10,000</td>
+                </tr>
+                <tr>
+                  <td>📦 <strong>Migración de Catálogos</strong> (traspaso de clientes, productos y proveedores anteriores al ERP)</td>
+                  <td class="num-col">$8,000</td>
+                </tr>
+                <tr>
+                  <td>📊 <strong>Carga de catálogos SAT</strong> (claves de productos/servicios y unidades para CFDI 4.0)</td>
+                  <td class="num-col">$3,500</td>
+                </tr>
+                <tr>
+                  <td>🎨 <strong>Personalización de Marca</strong> (logotipos, RFC y colores corporativos cargados en el ERP)</td>
+                  <td class="num-col">$3,500</td>
+                </tr>
+                <tr>
+                  <td>📱 <strong>Capacitación al equipo de trabajo</strong> (administradores, cajeros y gestores de cobranza)</td>
+                  <td class="num-col">$5,000</td>
+                </tr>
+                <tr>
+                  <td>☁️ <strong>6 Meses de Servidor en la Nube</strong> (servidor totalmente administrado sin costo adicional)</td>
+                  <td class="num-col">$6,600</td>
+                </tr>
+                <tr>
+                  <td>🛡️ <strong>3 Meses de Soporte Técnico</strong> (atención de fallas o dudas tras la liberación del sistema)</td>
+                  <td class="num-col">$4,500</td>
+                </tr>
+                <tr style="font-weight: 700; background-color: #f8fafc;">
+                  <td>VALOR INDIVIDUAL TOTAL DE LOS SERVICIOS</td>
+                  <td class="num-col" style="color: var(--secondary); text-decoration: line-through;">$146,100 MXN</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="deal-highlight-box dark-card" style="margin-top: 1.5rem;">
+            <div class="cover-decor"></div>
+            <h3 style="color: white; font-size: 1.5rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Precio del Paquete de Edición Especial</h3>
+            <p style="font-size: 1rem; max-width: 600px; margin: 0 auto 1.5rem;">Todo el desglose de arriba valorado en $146,100 MXN, entregado funcionando al 100% por:</p>
+            
+            <div class="deal-grid">
+              <div class="deal-side original">$146,100</div>
+              <div class="deal-divider"><i class="fa-solid fa-circle-arrow-right"></i></div>
+              <div class="deal-side promo">$85,000 MXN</div>
+            </div>
+
+            <div class="deal-savings">
+              Ahorro Neto Directo: $61,100 MXN (42% de descuento)
+            </div>
+            
+            <p class="footnote" style="font-size: 0.85rem; margin-top: 1.5rem; margin-bottom:0;">
+              *El cliente obtiene el código fuente del ERP y recibe el sistema totalmente configurado y enlazado con CONTPAQi listo para capturar ventas.
+            </p>
+          </div>
+
+          <h4 style="margin-top: 2rem; margin-bottom: 1rem;">🗓️ Esquema de Continuidad del Servidor (Después del Paquete)</h4>
+          <p>Los primeros 6 meses de servidor ya están incluidos en el costo del paquete. Posteriormente, el cliente solo paga el servidor dedicado bajo la siguiente escala anual flexible:</p>
+          
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Periodo Operativo</th>
+                  <th>Concepto de Pago</th>
+                  <th class="num-col">Costo del Servidor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Meses 1 al 6</strong></td>
+                  <td>Servidor dedicado en la nube administrado</td>
+                  <td class="num-col" style="color: var(--accent); font-weight:600;">$0 MXN (Incluido)</td>
+                </tr>
+                <tr>
+                  <td><strong>Meses 7 al 12</strong></td>
+                  <td>Liquidación de la segunda mitad de año (pago único)</td>
+                  <td class="num-col" style="font-weight: 600;">$6,600 MXN</td>
+                </tr>
+                <tr>
+                  <td><strong>Año 2 en adelante</strong></td>
+                  <td>Contrato anual del servidor administrado (renovación)</td>
+                  <td class="num-col" style="font-weight: 600;">$13,200 MXN / año <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted);">(≈ $1,100/mes)</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 7: CONDICIONES COMERCIALES Y CIERRE -->
+      <section id="condiciones" class="proposal-page">
+        <div class="section-header">
+          <h2 class="section-title">Esquema de Pagos y Garantías</h2>
+          <span class="section-subtitle">Términos contractuales y de soporte comercial</span>
+        </div>
+
+        <h3 style="margin-top: 1.5rem; margin-bottom: 0.8rem;">Esquema de Pagos de Implementación (Código Fuente o Paquete)</h3>
+        <p>Para formalizar los trabajos y asegurar la fecha de implementación, manejamos el siguiente esquema de anticipos y liquidación:</p>
+
+        <div style="display: flex; gap: 2rem; margin: 2rem 0; flex-wrap: wrap;">
+          <div class="card" style="flex: 1; border-top: 5px solid var(--primary);">
+            <h4 style="font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+              <span>50% Anticipo</span>
+              <span style="color: var(--primary);">Firma del Contrato</span>
+            </h4>
+            <p style="font-size: 0.95rem; margin-bottom: 0; color: var(--text-muted);">
+              Pago inicial requerido para programar el desarrollo, aprovisionar el servidor dedicado en la nube y comenzar con la migración y carga de catálogos base.
+            </p>
+          </div>
+          <div class="card" style="flex: 1; border-top: 5px solid var(--secondary);">
+            <h4 style="font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+              <span>50% Finiquito</span>
+              <span style="color: var(--secondary);">1 Semana Antes de Entrega</span>
+            </h4>
+            <p style="font-size: 0.95rem; margin-bottom: 0; color: var(--text-muted);">
+              Pago de liquidación para liberar las credenciales definitivas de administración, transferir el repositorio de código fuente y programar las capacitaciones.
+            </p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 0.8rem;">Garantías de Nivel de Servicio (SLA)</h3>
+        <ul>
+          <li style="margin-bottom: 0.8rem; margin-left: 1.5rem;"><strong>Disponibilidad de Servidor (Uptime):</strong> Garantizamos un Uptime anual del 99% para el hosting de la aplicación en la nube.</li>
+          <li style="margin-bottom: 0.8rem; margin-left: 1.5rem;"><strong>Copias de Seguridad (Backups):</strong> Respaldos automatizados diarios de la base de datos PostgreSQL y CONTPAQi con retención de 30 días en almacén aislado de seguridad.</li>
+          <li style="margin-bottom: 0.8rem; margin-left: 1.5rem;"><strong>Soporte Técnico Directo:</strong> Mesa de ayuda en español a través de WhatsApp y conexión remota AnyDesk/TeamViewer en horario hábil comercial.</li>
+          <li style="margin-bottom: 0.8rem; margin-left: 1.5rem;"><strong>Privacidad del Código y Datos:</strong> Transferencia única y confidencial. VertexERP no se reserva accesos permanentes no autorizados tras la entrega final.</li>
+        </ul>
+
+        <div style="border-top: 1px solid var(--border-color); margin-top: 4rem; padding-top: 2rem; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 0.9rem;">
+          <div>VertexERP México — Propuesta Comercial V2.6</div>
+          <div style="font-weight: 700; color: var(--secondary);">Propuesta elaborada en Junio 2026</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Tab switching logic for Modalities
+    function switchTab(evt, tabId) {
+      // Hide all tabs
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(content => content.classList.remove('active'));
+
+      // Remove active class from buttons
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+
+      // Show current tab and set button active
+      document.getElementById(tabId).classList.add('active');
+      evt.currentTarget.classList.add('active');
+    }
+
+    // Dynamic calculator logic
+    function calculateTraditional(months, costPerMonth) {
+      return months * costPerMonth;
+    }
+
+    function calculatePackageCost(months) {
+      // Package is $85,000 (includes 6 months server)
+      if (months <= 6) {
+        return 85000;
+      } else if (months <= 12) {
+        // Months 7 to 12 is $6,600 total
+        return 85000 + 6600;
+      } else {
+        // Year 2 onwards is $13,200/year (or 1100 per month for leftover months)
+        const leftoverMonths = months - 12;
+        return 85000 + 6600 + (leftoverMonths * 1100);
+      }
+    }
+
+    function updateSliderVal(val) {
+      document.getElementById('slider-val').innerText = '$' + Number(val).toLocaleString() + ' MXN / mes';
+      calculateSavings();
+    }
+
+    function calculateSavings() {
+      const months = parseInt(document.getElementById('time-select').value);
+      const monthlyCost = parseInt(document.getElementById('cost-slider').value);
+
+      const traditional = calculateTraditional(months, monthlyCost);
+      const packageCost = calculatePackageCost(months);
+      const savings = traditional - packageCost;
+
+      document.getElementById('calc-traditional').innerText = '$' + traditional.toLocaleString();
+      document.getElementById('calc-package').innerText = '$' + packageCost.toLocaleString();
+      document.getElementById('calc-savings').innerText = '$' + savings.toLocaleString();
+    }
+
+    // Run initial calculation
+    calculateSavings();
+
+    // Scroll spy for sidebar links active states
+    window.addEventListener('DOMContentLoaded', () => {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const id = entry.target.getAttribute('id');
+          if (entry.intersectionRatio > 0.5) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const link = document.querySelector(`.nav-item a[href="#${id}"]`);
+            if (link) {
+              link.parentElement.classList.add('active');
+            }
+          }
+        });
+      }, { threshold: 0.5 });
+
+      // Track all sections
+      document.querySelectorAll('section[id]').forEach(section => {
+        observer.observe(section);
+      });
+    });
+  </script>
+</body>
+</html>

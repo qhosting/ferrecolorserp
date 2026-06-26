@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Header } from '@/components/navigation/header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,16 +262,13 @@ export default function AuditoriaPage() {
   });
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Auditoría y Seguridad</h1>
-          <p className="text-muted-foreground">
-            Registro completo de actividades, cambios de datos y eventos de seguridad
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className="flex flex-col min-h-screen">
+      <Header 
+        title="Auditoría y Seguridad"
+        description="Registro completo de actividades, cambios de datos y eventos de seguridad"
+      />
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end gap-2">
           <Button onClick={exportAuditReport} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Exportar Reporte
@@ -280,7 +278,6 @@ export default function AuditoriaPage() {
             Configurar
           </Button>
         </div>
-      </div>
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -679,6 +676,7 @@ export default function AuditoriaPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }
