@@ -123,6 +123,13 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
   // Reloj en tiempo real
   const [currentTime, setCurrentTime] = useState<string>('');
 
+  // Estados para Registro Rápido de Producto Escaneado (Integración de Barcode)
+  const [showQuickRegisterModal, setShowQuickRegisterModal] = useState(false);
+  const [externalProductData, setExternalProductData] = useState<any>(null);
+  const [quickPrice, setQuickPrice] = useState('');
+  const [quickStock, setQuickStock] = useState('0');
+  const [savingQuickProduct, setSavingQuickProduct] = useState(false);
+
   useEffect(() => {
     // Reloj
     const timer = setInterval(() => {
@@ -262,7 +269,16 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
         const data = await res.json();
         if (data.productos && data.productos.length > 0) {
           const product = data.productos[0];
-          addToCart(product);
+          if (product.isExternal) {
+            // Es un producto detectado por la API externa, abrir modal de registro rápido
+            setExternalProductData(product);
+            setQuickPrice('');
+            setQuickStock('5'); // Sugerir stock por defecto
+            setShowQuickRegisterModal(true);
+            toast.info(`Producto externo detectado: ${product.nombre}`);
+          } else {
+            addToCart(product);
+          }
         } else {
           toast.warning(`Código de barras "${barcode}" no encontrado.`);
         }
@@ -270,6 +286,61 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     } catch (err) {
       console.error(err);
       toast.error('Error de red al buscar código de barras');
+    }
+  };
+
+  // Enviar el registro rápido de un producto externo al servidor
+  const handleQuickRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!externalProductData) return;
+
+    const priceVal = parseFloat(quickPrice);
+    const stockVal = parseInt(quickStock);
+
+    if (isNaN(priceVal) || priceVal <= 0) {
+      toast.error('El precio debe ser un número mayor a cero');
+      return;
+    }
+
+    if (isNaN(stockVal) || stockVal < 0) {
+      toast.error('El stock debe ser un número igual o mayor a cero');
+      return;
+    }
+
+    try {
+      setSavingQuickProduct(true);
+      const res = await fetch('/api/pos/productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo: externalProductData.codigo,
+          nombre: externalProductData.nombre,
+          codigoBarras: externalProductData.codigoBarras,
+          categoria: externalProductData.categoria,
+          unidadMedida: externalProductData.unidadMedida,
+          precio1: priceVal,
+          stock: stockVal,
+          sucursalId: sesion.sucursalId
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Producto "${data.producto.nombre}" registrado exitosamente`);
+        setShowQuickRegisterModal(false);
+        setExternalProductData(null);
+        
+        // Agregar al carrito y refrescar catálogo
+        addToCart(data.producto);
+        fetchProducts();
+      } else {
+        toast.error(data.error || 'Error al registrar producto');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error de conexión al registrar producto');
+    } finally {
+      setSavingQuickProduct(false);
     }
   };
 
@@ -1535,6 +1606,112 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               Imprimir PDF
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 6: REGISTRO RÁPIDO DE PRODUCTO EXTERNO (CODEBAR) */}
+      <Dialog open={showQuickRegisterModal} onOpenChange={setShowQuickRegisterModal}>
+        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Tag className="h-6 w-6 text-emerald-400 animate-pulse" />
+              Registro Rápido de Producto
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Este producto no está registrado en la base de datos de FerreColors.
+            </DialogDescription>
+          </DialogHeader>
+
+          {externalProductData && (
+            <form onSubmit={handleQuickRegisterSubmit} className="space-y-4 py-2">
+              <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl text-xs space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Código de Barras:</span>
+                  <span className="font-mono text-white font-bold">{externalProductData.codigoBarras}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Nombre:</span>
+                  <span className="font-bold text-white max-w-[200px] text-right truncate" title={externalProductData.nombre}>
+                    {externalProductData.nombre}
+                  </span>
+                </div>
+                {externalProductData.marca && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Marca:</span>
+                    <span className="text-white font-medium">{externalProductData.marca}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Categoría sugerida:</span>
+                  <span className="text-white font-medium">{externalProductData.categoria}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Unidad:</span>
+                  <span className="text-white font-medium">{externalProductData.unidadMedida}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="quick-price" className="text-xs font-semibold text-slate-300">Precio Público ($) *</Label>
+                  <Input
+                    id="quick-price"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0.00"
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    className="bg-slate-950 border-slate-800 text-white placeholder-slate-700 rounded-xl focus-visible:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="quick-stock" className="text-xs font-semibold text-slate-300">Stock Inicial (Pzas) *</Label>
+                  <Input
+                    id="quick-stock"
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="0"
+                    value={quickStock}
+                    onChange={(e) => setQuickStock(e.target.value)}
+                    className="bg-slate-950 border-slate-800 text-white placeholder-slate-700 rounded-xl focus-visible:ring-indigo-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="pt-4 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowQuickRegisterModal(false);
+                    setExternalProductData(null);
+                  }}
+                  className="flex-1 h-11 border-slate-800 bg-transparent text-slate-400 hover:text-white rounded-xl"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={savingQuickProduct}
+                  className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-600/10 active:scale-[0.98]"
+                >
+                  {savingQuickProduct ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registrando...
+                    </>
+                  ) : (
+                    'Registrar y Agregar'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
