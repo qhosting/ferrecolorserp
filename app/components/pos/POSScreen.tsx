@@ -130,6 +130,108 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
   const [quickStock, setQuickStock] = useState('0');
   const [savingQuickProduct, setSavingQuickProduct] = useState(false);
 
+  // Estados Click & Collect
+  const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
+  const [onlinePedidos, setOnlinePedidos] = useState<any[]>([]);
+  const [loadingOnlinePedidos, setLoadingOnlinePedidos] = useState(false);
+  const [showOnlinePedidosModal, setShowOnlinePedidosModal] = useState(false);
+
+  // Sonido de alerta para pedidos online (Web Audio API)
+  const playBeep = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.3); // 300ms
+    } catch (e) {
+      console.warn('Web Audio Context block:', e);
+    }
+  };
+
+  const fetchOnlinePedidos = async () => {
+    try {
+      setLoadingOnlinePedidos(true);
+      const res = await fetch(`/api/pedidos/online?sucursalId=${sesion.sucursalId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOnlinePedidos(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error al obtener pedidos online:', err);
+    } finally {
+      setLoadingOnlinePedidos(false);
+    }
+  };
+
+  const handleUpdatePedidoEstatus = async (pedidoId: string, estatus: string, motivo?: string) => {
+    try {
+      const res = await fetch(`/api/pedidos/online/${pedidoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estatus, motivoCancelacion: motivo })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Pedido actualizado');
+        fetchOnlinePedidos();
+      } else {
+        toast.error(data.error || 'Error al actualizar pedido');
+      }
+    } catch (err) {
+      console.error('Error al actualizar pedido:', err);
+      toast.error('Error de red al actualizar pedido');
+    }
+  };
+
+  const lastPedidosCountRef = useRef<number>(0);
+
+  useEffect(() => {
+    fetchOnlinePedidos();
+    
+    // Polling cada 45 segundos
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/pedidos/online?sucursalId=${sesion.sucursalId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const newList = data.data || [];
+          const currentPendientes = newList.filter((p: any) => p.estatus === 'PENDIENTE');
+          const previousCount = lastPedidosCountRef.current;
+          
+          if (currentPendientes.length > previousCount) {
+            playBeep();
+            toast.info(`¡Nuevo pedido Click & Collect recibido! Folio: ${currentPendientes[0].folio}`, {
+              duration: 10000,
+              action: {
+                label: 'Ver Pedidos',
+                onClick: () => {
+                  fetchOnlinePedidos();
+                  setShowOnlinePedidosModal(true);
+                }
+              }
+            });
+          }
+          
+          setOnlinePedidos(newList);
+          lastPedidosCountRef.current = currentPendientes.length;
+        }
+      } catch (err) {
+        console.error('Error en polling de pedidos online:', err);
+      }
+    }, 45000);
+
+    return () => clearInterval(interval);
+  }, [sesion.sucursalId]);
+
   useEffect(() => {
     // Reloj
     const timer = setInterval(() => {
@@ -427,6 +529,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
   const clearCart = () => {
     setCart([]);
     setObservaciones('');
+    setSelectedPedidoId(null);
     toast.info('Carrito vaciado');
   };
 
@@ -561,7 +664,8 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
           referenciaTerminal: refTerminal,
           cambio: cambioVal,
           listaPrecioUsada: selectedPriceList,
-          observaciones
+          observaciones,
+          pedidoId: selectedPedidoId || undefined
         })
       });
 
@@ -574,6 +678,8 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
         // Vaciamos el carrito
         setCart([]);
         setObservaciones('');
+        setSelectedPedidoId(null);
+        fetchOnlinePedidos();
         setShowPaymentModal(false);
 
         // Desencadenar hardware
@@ -809,6 +915,26 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
             <span>Mov. Manual</span>
           </Button>
 
+          {/* Pedidos en Línea (Click & Collect) */}
+          <Button
+            onClick={() => {
+              fetchOnlinePedidos();
+              setShowOnlinePedidosModal(true);
+            }}
+            variant="outline"
+            size="sm"
+            className="h-9 bg-indigo-950/40 border-indigo-500/30 hover:bg-indigo-950 text-indigo-300 hover:text-indigo-100 rounded-xl text-xs gap-1.5 relative"
+          >
+            <Clock className="h-4 w-4" />
+            <span>Pedidos en Línea</span>
+            {onlinePedidos.filter(p => p.estatus === 'PENDIENTE').length > 0 && (
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              </span>
+            )}
+          </Button>
+
           {/* Cerrar caja */}
           <Button
             onClick={() => {
@@ -941,6 +1067,32 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
                 </button>
               )}
             </div>
+
+            {/* Indicador de Pedido Click & Collect Vinculado */}
+            {selectedPedidoId && (
+              <div className="p-2.5 bg-indigo-950/40 border border-indigo-500/20 rounded-2xl flex items-center justify-between text-indigo-300 shrink-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Clock className="h-4 w-4 animate-pulse shrink-0 text-indigo-400" />
+                  <div className="truncate text-left">
+                    <span className="text-[9px] block font-mono text-indigo-400 font-bold leading-none">PEDIDO ONLINE</span>
+                    <span className="text-xs font-bold font-mono">
+                      {onlinePedidos.find(p => p.id === selectedPedidoId)?.folio || 'Vinculado'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedPedidoId(null);
+                    setCart([]);
+                    setSelectedCliente(null);
+                    toast.info('Vínculo de pedido removido y carrito vaciado');
+                  }}
+                  className="text-[10px] bg-indigo-500/10 hover:bg-rose-500/15 border border-indigo-500/20 hover:border-rose-500/30 text-indigo-300 hover:text-rose-400 px-2 py-1 rounded-xl transition-all font-semibold shrink-0"
+                >
+                  Desvincular
+                </button>
+              </div>
+            )}
 
             {/* Listado de carrito */}
             <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-2.5">
@@ -1712,6 +1864,151 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 7: PEDIDOS EN LÍNEA (CLICK & COLLECT) */}
+      <Dialog open={showOnlinePedidosModal} onOpenChange={setShowOnlinePedidosModal}>
+        <DialogContent className="max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-6 max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
+              <Clock className="h-7 w-7 text-indigo-400 animate-pulse" />
+              Pedidos Click & Collect (Recogida en Sucursal)
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 text-sm">
+              Gestione y prepare los pedidos realizados en línea por los clientes para esta sucursal.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            {loadingOnlinePedidos ? (
+              <div className="flex flex-col items-center justify-center py-10 space-y-2 text-slate-400">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+                <p className="text-xs">Cargando pedidos online...</p>
+              </div>
+            ) : onlinePedidos.length === 0 ? (
+              <div className="text-center py-10 text-slate-500 text-xs">
+                No hay pedidos en línea activos para esta sucursal.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {onlinePedidos.map((pedido) => {
+                  const isPendiente = pedido.estatus === 'PENDIENTE';
+                  const isAprobado = pedido.estatus === 'APROBADO';
+                  return (
+                    <div 
+                      key={pedido.id} 
+                      className="p-4 bg-slate-950 border border-slate-850 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-slate-800"
+                    >
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                            {pedido.folio}
+                          </span>
+                          <Badge className={
+                            isPendiente 
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] px-2 py-0.5' 
+                              : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-[10px] px-2 py-0.5'
+                          }>
+                            {isPendiente ? 'Por Preparar' : 'Listo para Recoger'}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                          <div className="text-left">
+                            <span className="text-slate-500 font-semibold">Cliente:</span>{' '}
+                            <span className="text-slate-200 font-bold">{pedido.cliente?.nombre}</span>
+                          </div>
+                          <div className="text-left font-mono">
+                            <span className="text-slate-500">Contacto:</span>{' '}
+                            <span className="text-slate-200">{pedido.cliente?.telefono1 || 'Sin teléfono'}</span>
+                          </div>
+                          <div className="text-left">
+                            <span className="text-slate-500">Fecha:</span>{' '}
+                            <span>{new Date(pedido.createdAt).toLocaleString()}</span>
+                          </div>
+                          <div className="text-left">
+                            <span className="text-slate-500">Total:</span>{' '}
+                            <span className="text-emerald-400 font-bold font-mono">${pedido.total?.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        {/* Detalle de productos */}
+                        <div className="pt-2 text-left">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Productos:</p>
+                          <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-950 space-y-1 text-xs font-mono">
+                            {pedido.detalles.map((d: any) => (
+                              <div key={d.id} className="flex justify-between text-slate-300">
+                                <span className="truncate max-w-[280px]">{d.producto.nombre}</span>
+                                <span>{d.cantidad} {d.producto.unidadMedida} x ${d.precioUnitario?.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex md:flex-col gap-2 shrink-0 justify-end md:w-44">
+                        {isPendiente && (
+                          <Button
+                            onClick={() => handleUpdatePedidoEstatus(pedido.id, 'APROBADO')}
+                            className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl text-xs py-2 h-9"
+                          >
+                            Marcar Preparado
+                          </Button>
+                        )}
+                        
+                        <Button
+                          onClick={() => {
+                            const mappedItems = pedido.detalles.map((d: any) => ({
+                              productoId: d.productoId,
+                              codigo: d.producto.codigo,
+                              nombre: d.producto.nombre,
+                              cantidad: d.cantidad,
+                              precioUnitario: d.precioUnitario,
+                              descuento: d.descuento || 0,
+                              stock: 9999,
+                              unidadMedida: d.producto.unidadMedida || 'PZ'
+                            }));
+                            setCart(mappedItems);
+                            setSelectedCliente(pedido.cliente);
+                            setSelectedPedidoId(pedido.id);
+                            setShowOnlinePedidosModal(false);
+                            toast.success(`Pedido ${pedido.folio} cargado. Complete el cobro.`);
+                          }}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs py-2 h-9"
+                        >
+                          Cobrar en Caja
+                        </Button>
+
+                        <Button
+                          onClick={() => {
+                            const motivo = prompt('Ingrese el motivo de la cancelación:');
+                            if (motivo !== null) {
+                              handleUpdatePedidoEstatus(pedido.id, 'CANCELADO', motivo || 'Cancelación del operador');
+                            }
+                          }}
+                          variant="ghost"
+                          className="flex-1 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 rounded-xl text-xs py-2 h-9"
+                        >
+                          Cancelar Pedido
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowOnlinePedidosModal(false)}
+              className="w-full h-11 border-slate-800 bg-transparent text-slate-400 hover:text-white rounded-xl"
+            >
+              Cerrar Ventana
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

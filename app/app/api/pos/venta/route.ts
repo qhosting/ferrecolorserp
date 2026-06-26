@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
       referenciaTerminal,
       cambio,
       listaPrecioUsada,
-      observaciones
+      observaciones,
+      pedidoId
     } = body;
 
     // Validar sesión de caja activa
@@ -66,30 +67,32 @@ export async function POST(request: NextRequest) {
 
     const activeSucursalId = sesion.sucursalId;
 
-    // Validar stock antes de empezar transacción
-    for (const detalle of detalles) {
-      const stockSucursal = await prisma.stockSucursal.findUnique({
-        where: {
-          sucursalId_productoId: {
-            sucursalId: activeSucursalId,
-            productoId: detalle.productoId
+    // Validar stock antes de empezar transacción (solo si no viene de un pedido previamente reservado)
+    if (!pedidoId) {
+      for (const detalle of detalles) {
+        const stockSucursal = await prisma.stockSucursal.findUnique({
+          where: {
+            sucursalId_productoId: {
+              sucursalId: activeSucursalId,
+              productoId: detalle.productoId
+            }
+          },
+          include: {
+            producto: true
           }
-        },
-        include: {
-          producto: true
+        });
+
+        if (!stockSucursal) {
+          return NextResponse.json({
+            error: `El producto con ID ${detalle.productoId} no está inicializado en la sucursal`
+          }, { status: 400 });
         }
-      });
 
-      if (!stockSucursal) {
-        return NextResponse.json({
-          error: `El producto con ID ${detalle.productoId} no está inicializado en la sucursal`
-        }, { status: 400 });
-      }
-
-      if (stockSucursal.stock < detalle.cantidad) {
-        return NextResponse.json({
-          error: `Stock insuficiente para "${stockSucursal.producto.nombre}" en esta sucursal. Disponible: ${stockSucursal.stock}, solicitado: ${detalle.cantidad}`
-        }, { status: 400 });
+        if (stockSucursal.stock < detalle.cantidad) {
+          return NextResponse.json({
+            error: `Stock insuficiente para "${stockSucursal.producto.nombre}" en esta sucursal. Disponible: ${stockSucursal.stock}, solicitado: ${detalle.cantidad}`
+          }, { status: 400 });
+        }
       }
     }
 
@@ -146,7 +149,8 @@ export async function POST(request: NextRequest) {
           saldoPendiente: 0,
           inventarioAfectado: true,
           fechaAfectacionInventario: new Date(),
-          observaciones: observaciones || 'Venta POS',
+          observaciones: observaciones || (pedidoId ? 'Pago Pedido Click & Collect' : 'Venta POS'),
+          pedidoId: pedidoId || undefined,
           detalles: {
             create: detallesCalculados.map((d: any) => ({
               productoId: d.productoId,
@@ -159,40 +163,58 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // 3. Decrementar stock en Sucursal y registrar movimientos de inventario
-      for (const d of detallesCalculados) {
-        const stockSucursal = await tx.stockSucursal.findUnique({
-          where: {
-            sucursalId_productoId: {
-              sucursalId: activeSucursalId,
-              productoId: d.productoId
-            }
+      // 3. Decrementar stock en Sucursal y registrar movimientos de inventario con bloqueo FOR UPDATE (SOLO SI NO ES PEDIDO ONLINE YA RESERVADO)
+      if (!pedidoId) {
+        for (const d of detallesCalculados) {
+          const stockRows = await tx.$queryRaw<Array<{ id: string; stock: number; productoNombre?: string }>>`
+            SELECT s.id, s.stock, p.nombre as "productoNombre"
+            FROM stock_sucursales s
+            JOIN productos p ON s."productoId" = p.id
+            WHERE s."sucursalId" = ${activeSucursalId} AND s."productoId" = ${d.productoId}
+            LIMIT 1
+            FOR UPDATE
+          `;
+
+          const stockSucursal = stockRows[0];
+
+          if (!stockSucursal) {
+            throw new Error(`Stock no encontrado para el producto ID ${d.productoId}`);
           }
-        });
 
-        if (!stockSucursal) {
-          throw new Error(`Stock no encontrado para el producto ID ${d.productoId}`);
+          if (stockSucursal.stock < d.cantidad) {
+            throw new Error(`Stock insuficiente para "${stockSucursal.productoNombre || d.productoId}". Disponible: ${stockSucursal.stock}, solicitado: ${d.cantidad}`);
+          }
+
+          const cantidadAnterior = stockSucursal.stock;
+          const cantidadNueva = cantidadAnterior - d.cantidad;
+
+          await tx.stockSucursal.update({
+            where: { id: stockSucursal.id },
+            data: { stock: cantidadNueva }
+          });
+
+          await tx.movimientoInventario.create({
+            data: {
+              productoId: d.productoId,
+              sucursalId: activeSucursalId,
+              tipo: 'SALIDA',
+              cantidad: d.cantidad,
+              cantidadAnterior,
+              cantidadNueva,
+              motivo: `Venta POS Ticket ${numeroTicket}`,
+              referencia: numeroTicket,
+              userId: user.id
+            }
+          });
         }
-
-        const cantidadAnterior = stockSucursal.stock;
-        const cantidadNueva = cantidadAnterior - d.cantidad;
-
-        await tx.stockSucursal.update({
-          where: { id: stockSucursal.id },
-          data: { stock: cantidadNueva }
-        });
-
-        await tx.movimientoInventario.create({
+      } else {
+        // Si viene de un pedido online, actualizamos el estado del pedido y asociamos la venta
+        await tx.pedido.update({
+          where: { id: pedidoId },
           data: {
-            productoId: d.productoId,
-            sucursalId: activeSucursalId,
-            tipo: 'SALIDA',
-            cantidad: d.cantidad,
-            cantidadAnterior,
-            cantidadNueva,
-            motivo: `Venta POS Ticket ${numeroTicket}`,
-            referencia: numeroTicket,
-            userId: user.id
+            estatus: 'CONVERTIDO_VENTA',
+            convertidoAVenta: true,
+            ventaId: venta.id
           }
         });
       }

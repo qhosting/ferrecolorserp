@@ -381,6 +381,8 @@ model Pedido {
   vendedor        User            @relation("PedidoVendedor", fields: [vendedorId], references: [id])
   detalles        DetallePedido[]
   venta           Venta?          @relation("PedidoToVenta", fields: [ventaId], references: [id])
+  sucursalId      String?
+  sucursal        Sucursal?       @relation(fields: [sucursalId], references: [id])
   
   @@map("pedidos")
 }
@@ -960,6 +962,7 @@ model Sucursal {
   transferenciasOrigen       TransferenciaInventario[] @relation("TransferenciaOrigen")
   transferenciasDestino      TransferenciaInventario[] @relation("TransferenciaDestino")
   usuariosDefault            User[]                    @relation("UserSucursalDefault")
+  pedidos                    Pedido[]
   
   @@map("sucursales")
 }
