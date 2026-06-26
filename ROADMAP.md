@@ -1,5 +1,5 @@
 # 🗺️ ROADMAP — FerreColors ERP
-*Análisis y plan de mejora · 17 de junio, 2026*
+*Actualizado: 26 de junio, 2026*
 
 ## 📌 Resumen del análisis
 
@@ -7,84 +7,114 @@ ERP **Next.js 14 + TypeScript + Prisma/PostgreSQL** con integración real a **CO
 
 | Métrica | Valor |
 |---------|-------|
-| Páginas | 32 |
-| Rutas API | 81 |
+| Páginas | 35+ |
+| Rutas API | 85+ |
 | Modelos Prisma | 30 |
 | Librerías `lib/` | 15 módulos |
-| **Typecheck (`tsc --noEmit`)** | ✅ **Pasa limpio (exit 0)** |
+| **Typecheck (`tsc --noEmit`)** | ✅ **Pasa limpio** |
 | Pruebas automatizadas | ❌ **0** |
 | CI/CD | ❌ Ninguno |
 | Migraciones Prisma | ❌ Solo `db push` (sin historial) |
 
-**Veredicto:** base sólida y funcional (~90% de módulos operativos), pero le faltan los **cimientos de calidad y operación** (pruebas, CI, migraciones) y quedan **5 módulos con placeholders** y **1 funcionalidad simulada** (scheduler de automatización).
+**Veredicto:** base sólida y funcional (~92% de módulos operativos), con UI premium dark mode. Quedan pendientes pruebas automatizadas, CI/CD, módulos parciales y algunos módulos de catálogos.
 
 ---
 
-## 🔴 LO QUE FALTA POR COMPLETAR
+## ✅ COMPLETADO
 
-### Placeholders / "Próximamente" en UI (funcionalidad incompleta)
-| Módulo | Archivo | Detalle |
-|--------|---------|---------|
-| Business Intelligence | `app/business-intelligence/page.tsx:407,427` | Pestañas "Predicción" y "Segmentación avanzada" vacías |
-| Compras | `app/compras/page.tsx:576,585` | 2 secciones "Funcionalidad en desarrollo" |
-| Automatización | `app/automatizacion/page.tsx:620` | Pestaña "disponible próximamente" |
-| Facturación electrónica | `app/facturacion-electronica/page.tsx:694` | Pestaña "disponible próximamente" |
+### Sprint 1 — Seguridad *(17 jun 2026)*
+- [x] Credenciales quitadas de `ESTADO_DEL_PROYECTO.md`
+- [x] Webhook CONTPAQi: exige `CONTPAQI_WEBHOOK_SECRET`, rechaza sin firma, usa `timingSafeEqual`
+- [x] `/api/clientes/import` protegido con `getServerSession` + rol ADMIN/SUPERADMIN
+- [x] Rate limiting in-memory en `signup`, `sms/send`, `sms/bulk`, `whatsapp/send`
+- [x] Eliminado filtrado de `error.message` al cliente en ~45 respuestas de API
 
-### Funcionalidad simulada / a medias
-- **Scheduler de automatización NO ejecuta.** `api/automatizacion/tasks` guarda definiciones en `configuracion.configJson`, pero **ningún cron las dispara**. Son solo registros sin ejecución real.
-- **PAC / Certificados con valores de ejemplo.** `api/facturacion/pac` y `.../certificados` devuelven datos hardcodeados cuando no hay config. Además hay **dos caminos de facturación** (`/api/facturacion/*` y `/api/contpaqi/facturar`) → conviene unificar o documentar cuál es el canónico.
-- **Cobranza móvil offline (Fase 17, "pospuesta").** El doc de estado y el git log se contradicen: faltan validar IndexedDB persistente + rutas GPS reales.
+### Sprint 2 — Módulos de alto valor *(17 jun 2026)*
+- [x] **Compras**: backend real, alta de proveedor, órdenes con líneas, recepciones, CxP, KPIs reales
+- [x] **Facturación electrónica**: CFDI real, modal PAC, Ver/Descargar XML/PDF, cancelar, reporte SAT CSV
+- [x] **Automatización**: scheduler real (`lib/scheduler.ts`), `POST /api/cron/run`, toggles y eliminación funcionales, tab Monitoreo real
 
-### Cimientos ausentes (riesgo para un ERP financiero)
-- ❌ **Sin pruebas** (unitarias, integración ni e2e). Crítico para cálculos de pagarés, intereses moratorios e inventario.
+### Sprint 2.5 — Rutas y navegación *(25-26 jun 2026)*
+- [x] **Headers homologados** en todos los módulos: `/compras`, `/ventas`, `/pedidos`, `/pagares`, `/reestructuras`, `/reportes`, `/garantias`, `/notas-cargo`, `/notas-credito`, `/facturacion-electronica`, `/automatizacion`, `/auditoria`, `/business-intelligence`, `/sucursales`
+- [x] **Rutas de pedidos** creadas: `/pedidos/[id]` (detalle), `/pedidos/[id]/editar`, `/pedidos/nuevo`
+- [x] **API rutas de pedidos** completadas: `GET/PATCH/DELETE /api/pedidos/[id]`
+- [x] **Propuesta comercial** generada en `/docs/` (HTML, MD, PDF) con especificaciones del servidor AMD EPYC™ 9645
+
+### Sprint 3 — POS y UI/UX *(26 jun 2026)*
+- [x] **POS — Bug carga de clientes corregido**: `data.clientes || []` → `Array.isArray(data) ? data : []`
+- [x] **POS — Buscador de clientes**: reemplazado `<select>` estático por input con debounce (350ms) + dropdown de resultados usando `/api/clientes/search`
+- [x] **POS — Búsqueda por RFC**: agregado campo `rfc` al endpoint `/api/clientes/search` (OR clause + campo en respuesta)
+- [x] **Sidebar rediseñado (UI/UX Pro Max)**: colapsable mini/full, tooltips en modo mini, color tokens por grupo, active state con left-bar accent, shimmer hover, accordion limpio
+- [x] **Header rediseñado**: breadcrumb automático por ruta, role badge coloreado, notificaciones con preview dropdown, user dropdown con avatar gradient, slot `actions`
+- [x] **Dark mode consistente**: todos los layouts actualizados a `bg-slate-950`
+
+---
+
+## 🔴 PENDIENTE — POR COMPLETAR
+
+### Módulos parciales (11 → 8 restantes)
+| Módulo | Falta por implementar |
+|--------|-----------------------|
+| **proveedores** | Modal alta/edición, handlers Ver/Editar |
+| **agentes** | Modal alta/edición, handlers Ver/Editar |
+| **business-intelligence** | Tabs Análisis Ventas y Análisis Clientes |
+| **auditoria** | Tab Análisis con datos reales, handlers Ver/Configurar |
+| **credito** | "Ver Historial" → fetch real de pagos/movimientos |
+| **productos** | Import/Export, `ProductFilters` sin renderizar |
+| **pagares** | Input de búsqueda faltante, filtro vencidos (código muerto) |
+| **reestructuras** | Ver detalle sin implementar |
+
+### Cimientos ausentes (riesgo para ERP financiero)
+- ❌ **Sin pruebas** (unitarias, integración ni e2e). Crítico para pagarés, intereses moratorios e inventario.
 - ❌ **Sin migraciones Prisma** — `db push` no deja historial ni permite rollback en producción.
 - ❌ **Sin CI/CD** (no hay `.github/workflows`).
-- ❌ **Sin logging estructurado ni monitoreo de errores** (solo `console.error`).
-- ⚠️ **Credenciales de producción en texto plano** dentro de `ESTADO_DEL_PROYECTO.md`.
-- ⚠️ **Sin rate limiting visible** en endpoints sensibles (`signup`, `sms`, `whatsapp`).
+- ❌ **Sin logging estructurado** (solo `console.error`).
+- ⚠️ **Rate limiting in-memory** — migrar a Redis/Upstash para multi-instancia.
 
 ---
 
 ## 🚀 ROADMAP POR FASES
 
-### 🟥 FASE A — Estabilización y seguridad *(1–2 semanas · prioridad máxima)*
-- [ ] **Rotar y purgar credenciales** de `ESTADO_DEL_PROYECTO.md`; moverlas a gestor de secretos. Reescribir historial git si es necesario.
-- [ ] **Adoptar migraciones Prisma** (`prisma migrate dev/deploy`); baseline del esquema actual.
-- [ ] **Rate limiting** en `signup`, `sms/*`, `whatsapp/*`, `auth`.
-- [ ] **Logging estructurado** (pino/winston) + integración de errores (Sentry o similar).
-- [ ] Auditoría de autorización por rol en las 81 rutas (verificar `getServerSession` + chequeo de `role` en cada mutación).
+### 🟥 FASE A — Estabilización y seguridad *(completado parcialmente)*
+- [x] Seguridad básica (Sprint 1)
+- [ ] Migraciones Prisma (`prisma migrate dev/deploy`)
+- [ ] Logging estructurado (pino/winston) + Sentry
+- [ ] Auditoría de autorización por rol en las 85+ rutas
 
-### 🟧 FASE B — Pruebas y CI/CD *(2–3 semanas · prioridad alta)*
-- [ ] **Tests unitarios** de lógica financiera: intereses moratorios, FIFO de pagos, scoring, afectación de inventario (`FOR UPDATE`).
-- [ ] **Tests de integración** de las APIs críticas (ventas, pagarés, notas, facturación).
-- [ ] **E2E** (Playwright) del flujo: login → venta a crédito → pagaré → cobro → factura CFDI.
-- [ ] **CI** en GitHub Actions: `lint` + `tsc --noEmit` + `test` + `prisma migrate` en cada PR.
-- [ ] **CD** automatizado a EasyPanel/Docker.
+### 🟧 FASE B — Pruebas y CI/CD *(próximo)*
+- [ ] Tests unitarios: intereses moratorios, FIFO de pagos, scoring, inventario
+- [ ] Tests de integración: ventas, pagarés, notas, facturación
+- [ ] E2E (Playwright): login → venta a crédito → pagaré → cobro → CFDI
+- [ ] CI GitHub Actions: `lint` + `tsc` + `test` + `prisma migrate` en PR
+- [ ] CD automatizado a EasyPanel/Docker
 
-### 🟨 FASE C — Completar módulos con placeholders *(2–4 semanas)*
-- [ ] **Automatización real:** worker/cron (BullMQ o cron del sistema) que ejecute las tareas guardadas (backups, recordatorios de cobranza, recálculo de intereses).
-- [ ] **Business Intelligence:** implementar pestañas de predicción y segmentación (cohortes de cartera, proyección de morosidad).
-- [ ] **Compras:** completar las 2 secciones "en desarrollo" (recepciones/órdenes pendientes).
-- [ ] **Facturación electrónica:** cerrar la pestaña pendiente y **unificar** el camino de timbrado con CONTPAQi.
-- [ ] **Cobranza móvil offline:** validar IndexedDB persistente + GPS de rutas y reconciliación al reconectar.
+### 🟨 FASE C — Completar módulos parciales
+- [ ] **proveedores** y **agentes**: CRUD completo
+- [ ] **business-intelligence**: Análisis de Ventas y Clientes real
+- [ ] **auditoria**: Análisis real
+- [ ] **credito**: Historial real de pagos
+- [ ] **productos**: import/export, filtros
+- [ ] **pagares**: buscador + filtro vencidos
+- [ ] **reestructuras**: ver detalle
+- [ ] **comunicacion**: estado SMS y plantillas reales
 
 ### 🟩 FASE D — Optimización y producto *(continuo)*
-- [ ] Auditar queries N+1 restantes; añadir índices según patrones de uso real.
-- [ ] Caché (React Query ya presente) + revalidación en dashboards pesados.
-- [ ] Reportes exportables (PDF/Excel) en cartera, ventas e inventario.
-- [ ] PWA: revisar service worker e instalabilidad en campo.
-- [ ] Accesibilidad (a11y) y revisión responsive del nuevo tema glassmorphic.
+- [ ] Queries N+1 restantes + índices por uso real
+- [ ] Caché + revalidación en dashboards pesados
+- [ ] Reportes exportables PDF/Excel (cartera, ventas, inventario)
+- [ ] PWA: service worker + instalabilidad en campo
+- [ ] Sidebar colapsable: persistir estado en localStorage
 
 ### 🔵 FASE E — Documentación y operación
-- [ ] Runbook de despliegue y rollback.
-- [ ] Diagrama de arquitectura (ERP ↔ CONTPAQi ↔ SAT ↔ WAHA/SMS).
-- [ ] Política de backups verificada (restore probado, no solo `pg_dump`).
+- [ ] Runbook de despliegue y rollback
+- [ ] Diagrama de arquitectura (ERP ↔ CONTPAQi ↔ SAT ↔ WAHA/SMS)
+- [ ] Política de backups verificada con restore probado
 
 ---
 
-## 🎯 Top 5 acciones inmediatas (esta semana)
-1. **Rotar credenciales** expuestas en el repo.
-2. **Migrar a `prisma migrate`** (dejar de usar `db push` en prod).
-3. **Configurar CI** mínimo: `tsc` + `lint` en cada PR.
-4. **Implementar el scheduler** que ejecute las tareas de automatización (hoy no corren).
-5. **Primeros tests** sobre cálculo de intereses y FIFO de pagos (dinero = riesgo).
+## 🎯 Próximas acciones recomendadas
+1. **Completar módulos parciales** de alto impacto: proveedores, agentes, BI
+2. **Primeros tests** sobre cálculo de intereses y FIFO de pagos
+3. **Configurar CI mínimo**: `tsc` + `lint` en cada PR
+4. **Migrar a `prisma migrate`** antes de próximo deploy a producción
+5. **Rate limiting en Redis/Upstash** para soporte multi-instancia
