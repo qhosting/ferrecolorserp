@@ -24,7 +24,10 @@ interface Cliente {
   nombre: string
   telefono1?: string
   saldoActual: number
-  limiteCredito: number
+  limiteCredito: number   // mapped from limite_credito in API
+  limite_credito?: number // raw API field
+  rfc?: string
+  status?: string
 }
 
 interface Producto {
@@ -65,10 +68,11 @@ export default function NuevoPedidoPage() {
   const router = useRouter()
 
   // Form states
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientResults, setClientResults] = useState<Cliente[]>([])
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
   const [clientSearch, setClientSearch] = useState('')
   const [showClientDropdown, setShowClientDropdown] = useState(false)
+  const [searchingClients, setSearchingClients] = useState(false)
 
   const [prioridad, setPrioridad] = useState<'BAJA' | 'NORMAL' | 'ALTA' | 'URGENTE'>('NORMAL')
   const [fechaEntregaEstimada, setFechaEntregaEstimada] = useState('')
@@ -103,21 +107,38 @@ export default function NuevoPedidoPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Load clients on load
+  // Debounced client search using the real search endpoint
   useEffect(() => {
-    const fetchClientes = async () => {
-      try {
-        const response = await fetch('/api/clientes')
-        if (response.ok) {
-          const data = await response.json()
-          setClientes(data)
-        }
-      } catch (error) {
-        console.error('Error al cargar clientes:', error)
-      }
+    const q = clientSearch.trim()
+    if (q.length < 2) {
+      setClientResults([])
+      return
     }
-    fetchClientes()
-  }, [])
+    const timer = setTimeout(async () => {
+      try {
+        setSearchingClients(true)
+        const res = await fetch(`/api/clientes/search?q=${encodeURIComponent(q)}&limit=15`)
+        if (res.ok) {
+          const data: Cliente[] = await res.json()
+          // Normalize limiteCredito from possible snake_case field
+          const normalized = data.map(c => ({
+            ...c,
+            limiteCredito: c.limiteCredito ?? (c as any).limite_credito ?? 0,
+            saldoActual:   c.saldoActual   ?? (c as any).saldo_actualcli ?? 0,
+          }))
+          setClientResults(normalized)
+        } else {
+          setClientResults([])
+        }
+      } catch (err) {
+        console.error('Error buscando clientes:', err)
+        setClientResults([])
+      } finally {
+        setSearchingClients(false)
+      }
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [clientSearch])
 
   // Search products when query changes
   useEffect(() => {
@@ -147,11 +168,8 @@ export default function NuevoPedidoPage() {
     return () => clearTimeout(delayDebounce)
   }, [productSearch])
 
-  // Filter clients locally
-  const filteredClientes = clientes.filter(c => 
-    c.nombre.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    c.codigoCliente.toLowerCase().includes(clientSearch.toLowerCase())
-  )
+  // Client results come from search API — no local filter needed
+  const filteredClientes = clientResults
 
   // Handle adding a product
   const handleAddProduct = (producto: Producto) => {
@@ -344,26 +362,41 @@ export default function NuevoPedidoPage() {
                   </div>
                   
                   {/* Search dropdown */}
-                  {showClientDropdown && clientSearch && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      {filteredClientes.length === 0 ? (
-                        <div className="p-3 text-sm text-gray-500">No se encontraron clientes</div>
+                  {showClientDropdown && clientSearch.trim().length >= 2 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-64 overflow-y-auto">
+                      {searchingClients ? (
+                        <div className="p-3 text-sm text-gray-500 text-center">Buscando...</div>
+                      ) : filteredClientes.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500 text-center">Sin resultados para "{clientSearch}"</div>
                       ) : (
                         filteredClientes.map((cliente) => (
                           <div
                             key={cliente.id}
                             onClick={() => {
-                              setSelectedCliente(cliente)
+                              setSelectedCliente({
+                                ...cliente,
+                                limiteCredito: cliente.limiteCredito ?? (cliente as any).limite_credito ?? 0,
+                                saldoActual:   cliente.saldoActual   ?? (cliente as any).saldo_actualcli ?? 0,
+                              })
                               setShowClientDropdown(false)
                               setClientSearch('')
                             }}
                             className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
                           >
                             <p className="font-semibold text-sm text-gray-900">{cliente.nombre}</p>
-                            <p className="text-xs text-gray-500">Código: {cliente.codigoCliente} • Tel: {cliente.telefono1 || 'N/A'}</p>
+                            <p className="text-xs text-gray-500">
+                              Cód: {cliente.codigoCliente}
+                              {cliente.rfc ? ` • RFC: ${cliente.rfc}` : ''}
+                              {` • Tel: ${cliente.telefono1 || 'N/A'}`}
+                            </p>
                           </div>
                         ))
                       )}
+                    </div>
+                  )}
+                  {showClientDropdown && clientSearch.trim().length > 0 && clientSearch.trim().length < 2 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-sm px-3 py-2 text-xs text-gray-400">
+                      Escribe al menos 2 caracteres para buscar
                     </div>
                   )}
                 </div>
@@ -386,12 +419,12 @@ export default function NuevoPedidoPage() {
                   <div className="grid grid-cols-2 gap-2 text-xs border-t border-blue-200 pt-2 text-gray-700">
                     <div>
                       <span className="block text-gray-500 font-medium">Límite Crédito:</span>
-                      <strong className="text-gray-900">${selectedCliente.limiteCredito.toLocaleString()}</strong>
+                      <strong className="text-gray-900">${(selectedCliente.limiteCredito ?? 0).toLocaleString()}</strong>
                     </div>
                     <div>
                       <span className="block text-gray-500 font-medium">Saldo Pendiente:</span>
-                      <strong className={selectedCliente.saldoActual > 0 ? "text-red-600" : "text-green-600"}>
-                        ${selectedCliente.saldoActual.toLocaleString()}
+                      <strong className={(selectedCliente.saldoActual ?? 0) > 0 ? "text-red-600" : "text-green-600"}>
+                        ${(selectedCliente.saldoActual ?? 0).toLocaleString()}
                       </strong>
                     </div>
                   </div>
