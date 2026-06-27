@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth';
 import LabsMobileSMSService from '@/lib/sms-labsmobile';
 import { rateLimit } from '@/lib/rate-limit';
 
+import { prisma } from '@/lib/db';
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -41,10 +43,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Configuración de LabsMobile
+    // Configuración de LabsMobile desde la base de datos
+    const config = await prisma.configuracion.findFirst();
+    const configJson = config?.configJson as any;
+
     const labsMobileConfig = {
-      username: process.env.LABSMOBILE_USERNAME || '',
-      token: process.env.LABSMOBILE_TOKEN || '',
+      username: configJson?.smsApi?.labsmobileUsername || process.env.LABSMOBILE_USERNAME || '',
+      token: configJson?.smsApi?.labsmobileToken || process.env.LABSMOBILE_TOKEN || '',
     };
 
     if (!labsMobileConfig.username || !labsMobileConfig.token) {

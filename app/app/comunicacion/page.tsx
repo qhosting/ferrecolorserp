@@ -34,6 +34,8 @@ export default function ComunicacionPage() {
   const { data: session } = useSession() || {};
   const [whatsappStatus, setWhatsappStatus] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
+  const [smsStatus, setSmsStatus] = useState<any>(null);
+  const [loadingSms, setLoadingSms] = useState(false);
   
   // Estados para modales
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -51,6 +53,7 @@ export default function ComunicacionPage() {
   useEffect(() => {
     if (session?.user) {
       fetchWhatsAppStatus();
+      fetchSMSStatus();
     }
   }, [session]);
 
@@ -66,6 +69,21 @@ export default function ComunicacionPage() {
       console.error('Error fetching WhatsApp status:', error);
     } finally {
       setLoadingStatus(false);
+    }
+  };
+
+  const fetchSMSStatus = async () => {
+    setLoadingSms(true);
+    try {
+      const response = await fetch('/api/sms/status');
+      if (response.ok) {
+        const data = await response.json();
+        setSmsStatus(data);
+      }
+    } catch (error) {
+      console.error('Error fetching SMS status:', error);
+    } finally {
+      setLoadingSms(false);
     }
   };
 
@@ -139,7 +157,7 @@ export default function ComunicacionPage() {
 
       {/* Status Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">WhatsApp API</CardTitle>
             <MessageCircle className="h-4 w-4 text-green-600" />
@@ -172,26 +190,43 @@ export default function ComunicacionPage() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
+        <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">SMS LabsMobile</CardTitle>
             <MessageSquare className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <div className="text-2xl font-bold">Listo</div>
+              {smsStatus?.success ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-rose-500" />
+              )}
+              <div className="flex-1">
+                <div className="text-2xl font-bold">
+                  {smsStatus?.success 
+                    ? `€${smsStatus.balance?.toFixed(2) || '0.00'}` 
+                    : smsStatus?.error === 'No configurado' 
+                      ? 'No configurado' 
+                      : 'Error de conexión'
+                  }
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Servicio activo
+                  {smsStatus?.success ? 'Saldo disponible' : 'Verifique credenciales'}
                 </p>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchSMSStatus}
+                disabled={loadingSms}
+              >
+                <RefreshCw className={`h-4 w-4 ${loadingSms ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </CardContent>
         </Card>
-
-        <Card>
+        <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Configuración</CardTitle>
             <Settings className="h-4 w-4 text-gray-600" />
@@ -209,7 +244,7 @@ export default function ComunicacionPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Envío Rápido */}
-        <Card>
+        <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
@@ -274,7 +309,7 @@ export default function ComunicacionPage() {
         </Card>
 
         {/* Acciones Masivas */}
-        <Card>
+        <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -325,7 +360,7 @@ export default function ComunicacionPage() {
 
       {/* WhatsApp Status Details */}
       {whatsappStatus && (
-        <Card>
+        <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-green-600" />

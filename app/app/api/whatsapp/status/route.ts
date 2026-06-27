@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import WahaAPIService from '@/lib/waha-api';
 
+import { prisma } from '@/lib/db';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -16,10 +18,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Configuración de WAHA API desde la base de datos
+    const config = await prisma.configuracion.findFirst();
+    const configJson = config?.configJson as any;
+
     const wahaConfig = {
-      baseUrl: process.env.WAHA_API_URL || 'http://localhost:3000',
-      sessionName: process.env.WAHA_SESSION_NAME || 'default',
-      apiKey: process.env.WAHA_API_KEY || '',
+      baseUrl: configJson?.whatsappApi?.wahaApiUrl || process.env.WAHA_API_URL || 'http://localhost:3000',
+      sessionName: configJson?.whatsappApi?.wahaSessionName || process.env.WAHA_SESSION_NAME || 'default',
+      apiKey: configJson?.whatsappApi?.wahaApiKey || process.env.WAHA_API_KEY || '',
     };
 
     const wahaService = new WahaAPIService(wahaConfig);

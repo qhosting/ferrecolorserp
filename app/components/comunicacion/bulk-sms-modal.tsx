@@ -300,7 +300,7 @@ export function BulkSMSModal({ isOpen, onClose }: BulkSMSModalProps) {
               </div>
 
               {/* Resumen */}
-              <Card>
+              <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md">
                 <CardContent className="p-4">
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
@@ -347,7 +347,7 @@ export function BulkSMSModal({ isOpen, onClose }: BulkSMSModalProps) {
               <h3 className="text-lg font-medium mt-2">SMS Masivo Completado</h3>
             </div>
 
-            <Card>
+            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md">
               <CardContent className="p-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                   <div>

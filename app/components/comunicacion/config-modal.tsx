@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,12 +46,39 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
   }>({});
   
   const [config, setConfig] = useState<APIConfig>({
-    wahaApiUrl: process.env.NEXT_PUBLIC_WAHA_API_URL || 'http://localhost:3000',
-    wahaSessionName: process.env.NEXT_PUBLIC_WAHA_SESSION_NAME || 'default',
+    wahaApiUrl: 'http://localhost:3000',
+    wahaSessionName: 'default',
     wahaApiKey: '',
     labsmobileUsername: '',
     labsmobileToken: ''
   });
+
+  const cargarConfiguracion = useCallback(async () => {
+    try {
+      const response = await fetch('/api/configuracion');
+      if (response.ok) {
+        const data = await response.json();
+        const configJson = data.configJson || {};
+        setConfig({
+          wahaApiUrl: configJson.whatsappApi?.wahaApiUrl || 'http://localhost:3000',
+          wahaSessionName: configJson.whatsappApi?.wahaSessionName || 'default',
+          wahaApiKey: configJson.whatsappApi?.wahaApiKey || '',
+          labsmobileUsername: configJson.smsApi?.labsmobileUsername || '',
+          labsmobileToken: configJson.smsApi?.labsmobileToken || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error al cargar la configuración de comunicaciones:', error);
+      toast.error('Error al cargar configuración');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      cargarConfiguracion();
+      setTestResults({});
+    }
+  }, [isOpen, cargarConfiguracion]);
 
   const handleConfigChange = (field: keyof APIConfig, value: string) => {
     setConfig(prev => ({
@@ -111,11 +138,28 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
 
     setLoading(true);
     try {
-      // Simular test de conexión (en producción harías una llamada real)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setTestResults(prev => ({ ...prev, sms: true }));
-      toast.success('Conexión SMS exitosa');
+      const response = await fetch('/api/sms/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: config.labsmobileUsername,
+          token: config.labsmobileToken
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setTestResults(prev => ({ ...prev, sms: true }));
+        toast.success(`Conexión SMS exitosa. Saldo disponible: €${result.balance?.toFixed(2) || '0.00'}`);
+      } else {
+        setTestResults(prev => ({ ...prev, sms: false }));
+        toast.error(result.error || 'Error al conectar con LabsMobile');
+      }
     } catch (error) {
+      console.error('SMS Test Connection Error:', error);
       setTestResults(prev => ({ ...prev, sms: false }));
       toast.error('Error al conectar con LabsMobile');
     } finally {
@@ -126,12 +170,37 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
   const saveConfiguration = async () => {
     setLoading(true);
     try {
-      // En producción, aquí guardarías la configuración en la base de datos
-      // o actualizarías las variables de entorno
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const getConfigRes = await fetch('/api/configuracion');
+      if (!getConfigRes.ok) throw new Error('No se pudo obtener la configuración actual');
+      const currentConfig = await getConfigRes.json();
+      
+      const configJsonObj = currentConfig.configJson || {};
+      
+      configJsonObj.whatsappApi = {
+        wahaApiUrl: config.wahaApiUrl,
+        wahaSessionName: config.wahaSessionName,
+        wahaApiKey: config.wahaApiKey
+      };
+      
+      configJsonObj.smsApi = {
+        labsmobileUsername: config.labsmobileUsername,
+        labsmobileToken: config.labsmobileToken
+      };
+
+      const putRes = await fetch('/api/configuracion', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          configJson: configJsonObj
+        })
+      });
+
+      if (!putRes.ok) throw new Error('Error al guardar la configuración en el servidor');
+      
       toast.success('Configuración guardada exitosamente');
       onClose();
     } catch (error) {
+      console.error('Error al guardar configuración:', error);
       toast.error('Error al guardar configuración');
     } finally {
       setLoading(false);
@@ -171,7 +240,7 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
           </TabsList>
 
           <TabsContent value="whatsapp" className="space-y-4">
-            <Card>
+            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -255,7 +324,7 @@ export function ConfigModal({ isOpen, onClose }: ConfigModalProps) {
           </TabsContent>
 
           <TabsContent value="sms" className="space-y-4">
-            <Card>
+            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
