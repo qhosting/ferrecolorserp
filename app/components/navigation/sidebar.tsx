@@ -57,7 +57,7 @@ const navigationItems: NavigationItem[] = [
   { title: 'Servicios',              href: '/servicios',              icon: Briefcase,     group: 'Catálogos' },
   { title: 'Proveedores',            href: '/proveedores',            icon: Building2,     group: 'Catálogos' },
   { title: 'Agentes',               href: '/agentes',                icon: UserCheck,     group: 'Catálogos' },
-  { title: 'CONTPAQi',              href: '/integraciones',           icon: Link2,         group: 'Catálogos' },
+
   { title: 'Pedidos',               href: '/pedidos',                icon: ShoppingCart,  group: 'Movimientos' },
   { title: 'Compras',               href: '/compras',                icon: Truck,         group: 'Movimientos' },
   { title: 'Almacén',               href: '/almacen',                icon: Warehouse,     group: 'Movimientos' },
