@@ -403,9 +403,11 @@ export function Header({ title, description, actions }: HeaderProps) {
 
               <DropdownMenuSeparator className="bg-slate-800 my-1" />
 
-              <DropdownMenuItem onClick={() => toast('Función de perfil en desarrollo')}
+              <DropdownMenuItem asChild
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer text-sm">
-                <User className="h-4 w-4 text-slate-500" /><span>Mi Perfil</span>
+                <Link href="/perfil?tab=perfil">
+                  <User className="h-4 w-4 text-slate-500" /><span>Mi Perfil</span>
+                </Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild
@@ -415,9 +417,11 @@ export function Header({ title, description, actions }: HeaderProps) {
                 </Link>
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => toast('Panel de seguridad en desarrollo')}
+              <DropdownMenuItem asChild
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer text-sm">
-                <ShieldCheck className="h-4 w-4 text-slate-500" /><span>Seguridad</span>
+                <Link href="/perfil?tab=seguridad">
+                  <ShieldCheck className="h-4 w-4 text-slate-500" /><span>Seguridad</span>
+                </Link>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator className="bg-slate-800 my-1" />
