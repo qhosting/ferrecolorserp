@@ -22,7 +22,9 @@ import {
   CheckCircle2, 
   Loader2, 
   Save, 
-  Lock 
+  Lock,
+  Bell,
+  Palette
 } from 'lucide-react';
 
 const ROLE_COLORS: Record<string, string> = {
@@ -61,6 +63,20 @@ function PerfilContent() {
     confirmPassword: ''
   });
 
+  // State for user notifications preferences
+  const [notifPrefs, setNotifPrefs] = useState({
+    newOrders: true,
+    dailySummary: false,
+    lowStock: true
+  });
+
+  // State for user personalization preferences
+  const [personalData, setPersonalData] = useState({
+    theme: 'dark',
+    posMode: 'MOSTRADOR',
+    landingView: '/dashboard'
+  });
+
   const fetchProfile = useCallback(async () => {
     try {
       const res = await fetch('/api/user/profile');
@@ -78,9 +94,48 @@ function PerfilContent() {
     }
   }, []);
 
+  // Load preferences from localStorage on mount
   useEffect(() => {
     fetchProfile();
+
+    if (typeof window !== 'undefined') {
+      const savedNotif = localStorage.getItem('user_notif_prefs');
+      if (savedNotif) {
+        try {
+          setNotifPrefs(JSON.parse(savedNotif));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const savedPersonal = localStorage.getItem('user_personal_prefs');
+      if (savedPersonal) {
+        try {
+          setPersonalData(JSON.parse(savedPersonal));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
   }, [fetchProfile]);
+
+  const handleNotifChange = (key: string, val: boolean) => {
+    setNotifPrefs(prev => ({ ...prev, [key]: val }));
+  };
+
+  const handlePersonalChange = (key: string, val: string) => {
+    setPersonalData(prev => ({ ...prev, [key]: val }));
+  };
+
+  const saveNotifPrefs = () => {
+    localStorage.setItem('user_notif_prefs', JSON.stringify(notifPrefs));
+    toast.success('Preferencias de notificación guardadas');
+  };
+
+  const savePersonalPrefs = () => {
+    localStorage.setItem('user_personal_prefs', JSON.stringify(personalData));
+    toast.success('Personalización del sistema guardada');
+  };
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,14 +283,22 @@ function PerfilContent() {
           onValueChange={(val) => router.push(`/perfil?tab=${val}`)}
           className="space-y-4"
         >
-          <TabsList className="grid w-full grid-cols-2 bg-slate-900/60 border border-slate-800/80 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-slate-900/60 border border-slate-800/80 p-1 rounded-xl">
             <TabsTrigger value="perfil" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
-              <User className="w-4 h-4 shrink-0" />
+              <User className="w-4.5 h-4.5 shrink-0" />
               <span className="text-xs font-semibold">Mi Perfil</span>
             </TabsTrigger>
             <TabsTrigger value="seguridad" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
-              <KeyRound className="w-4 h-4 shrink-0" />
+              <KeyRound className="w-4.5 h-4.5 shrink-0" />
               <span className="text-xs font-semibold">Seguridad</span>
+            </TabsTrigger>
+            <TabsTrigger value="notificaciones" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+              <Bell className="w-4.5 h-4.5 shrink-0" />
+              <span className="text-xs font-semibold">Avisos</span>
+            </TabsTrigger>
+            <TabsTrigger value="personalizacion" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+              <Palette className="w-4.5 h-4.5 shrink-0" />
+              <span className="text-xs font-semibold">Ajustes</span>
             </TabsTrigger>
           </TabsList>
 
@@ -296,12 +359,12 @@ function PerfilContent() {
                     >
                       {guardando ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-4.5 h-4.5 mr-2 animate-spin" />
                           Guardando...
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4 mr-2" />
+                          <Save className="w-4.5 h-4.5 mr-2" />
                           Guardar Cambios
                         </>
                       )}
@@ -375,18 +438,157 @@ function PerfilContent() {
                     >
                       {cambiandoPass ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-4.5 h-4.5 mr-2 animate-spin" />
                           Actualizando...
                         </>
                       ) : (
                         <>
-                          <KeyRound className="w-4 h-4 mr-2" />
+                          <KeyRound className="w-4.5 h-4.5 mr-2" />
                           Actualizar Contraseña
                         </>
                       )}
                     </Button>
                   </div>
                 </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notificaciones">
+            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
+              <CardHeader className="border-b border-slate-800/50 pb-5">
+                <CardTitle className="flex items-center gap-2 text-slate-100 text-lg">
+                  <Bell className="w-5 h-5 text-indigo-400" />
+                  Preferencias de Avisos
+                </CardTitle>
+                <CardDescription className="text-slate-400 text-xs">
+                  Configure las notificaciones y alertas personales que desea recibir
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-slate-950/40 border border-slate-800/60">
+                    <div className="space-y-0.5">
+                      <h4 className="font-bold text-sm text-slate-200">Alertas de Pedidos (WhatsApp)</h4>
+                      <p className="text-xs text-slate-400">Recibir avisos a su celular cuando se asigne un nuevo pedido.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={notifPrefs.newOrders} 
+                        onChange={(e) => handleNotifChange('newOrders', e.target.checked)}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-650 peer-checked:after:bg-white"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-slate-950/40 border border-slate-800/60">
+                    <div className="space-y-0.5">
+                      <h4 className="font-bold text-sm text-slate-200">Auditoría Diaria (Correo)</h4>
+                      <p className="text-xs text-slate-400">Enviar un resumen de bitácoras del día al finalizar su turno.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={notifPrefs.dailySummary} 
+                        onChange={(e) => handleNotifChange('dailySummary', e.target.checked)}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-650 peer-checked:after:bg-white"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-slate-950/40 border border-slate-800/60">
+                    <div className="space-y-0.5">
+                      <h4 className="font-bold text-sm text-slate-200">Avisos de Stock Crítico</h4>
+                      <p className="text-xs text-slate-400">Alertar cuando falte mercancía de seguridad en la sucursal activa.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={notifPrefs.lowStock} 
+                        onChange={(e) => handleNotifChange('lowStock', e.target.checked)}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-650 peer-checked:after:bg-white"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={saveNotifPrefs}
+                    className="bg-indigo-650 hover:bg-indigo-600 text-white font-medium shadow-md shadow-indigo-650/15"
+                  >
+                    Guardar Avisos
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="personalizacion">
+            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
+              <CardHeader className="border-b border-slate-800/50 pb-5">
+                <CardTitle className="flex items-center gap-2 text-slate-100 text-lg">
+                  <Palette className="w-5 h-5 text-indigo-400" />
+                  Personalización del Sistema
+                </CardTitle>
+                <CardDescription className="text-slate-400 text-xs">
+                  Establezca el comportamiento predeterminado y apariencia para su cuenta
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Tema Visual</Label>
+                    <select 
+                      value={personalData.theme}
+                      onChange={(e) => handlePersonalChange('theme', e.target.value)}
+                      className="w-full rounded-md border border-slate-800 bg-slate-950 text-slate-100 p-2 text-sm focus:border-indigo-500"
+                    >
+                      <option value="dark">Tema Oscuro (Por defecto)</option>
+                      <option value="light">Tema Claro</option>
+                      <option value="system">Tema del Sistema</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Modo POS de Trabajo</Label>
+                    <select 
+                      value={personalData.posMode}
+                      onChange={(e) => handlePersonalChange('posMode', e.target.value)}
+                      className="w-full rounded-md border border-slate-800 bg-slate-950 text-slate-100 p-2 text-sm focus:border-indigo-500"
+                    >
+                      <option value="MOSTRADOR">Vendedor Mostrador</option>
+                      <option value="VENTANILLA">Cajero Ventanilla</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Vista de Inicio Predeterminada</Label>
+                    <select 
+                      value={personalData.landingView}
+                      onChange={(e) => handlePersonalChange('landingView', e.target.value)}
+                      className="w-full rounded-md border border-slate-800 bg-slate-950 text-slate-100 p-2 text-sm focus:border-indigo-500"
+                    >
+                      <option value="/dashboard">Tablero General (Dashboard)</option>
+                      <option value="/pos">Punto de Venta (POS)</option>
+                      <option value="/pedidos">Historial de Pedidos</option>
+                      <option value="/productos">Administrador de Productos</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button 
+                    onClick={savePersonalPrefs}
+                    className="bg-indigo-650 hover:bg-indigo-600 text-white font-medium shadow-md shadow-indigo-650/15"
+                  >
+                    Guardar Personalización
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

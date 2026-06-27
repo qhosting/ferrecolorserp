@@ -77,6 +77,7 @@ const navigationItems: NavigationItem[] = [
   { title: 'Reportes',              href: '/reportes',               icon: BarChart3,     group: 'Reportes' },
   { title: 'Business Intelligence', href: '/business-intelligence',  icon: TrendingUp,    group: 'Reportes' },
   { title: 'Configuración General', href: '/configuracion',          icon: Settings,      group: 'Configuración' },
+  { title: 'Usuarios y Roles',      href: '/usuarios',               icon: Users,         group: 'Configuración' },
   { title: 'Integración CONTPAQi',  href: '/integraciones',          icon: Database,      group: 'Configuración' },
   { title: 'Automatización',        href: '/automatizacion',         icon: Bot,           group: 'Configuración' },
 
