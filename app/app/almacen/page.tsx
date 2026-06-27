@@ -1026,8 +1026,6 @@ export default function AlmacenPage() {
                 )}
               </div>
 
-              </div>
-
               {/* ── Cantidad con stepper ── */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
