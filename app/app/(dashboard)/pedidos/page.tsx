@@ -227,15 +227,6 @@ export default function PedidosPage() {
         description="Gestión de pedidos y conversión a ventas"
       />
       <div className="p-6 space-y-6">
-        <div className="flex justify-end">
-          <Button 
-            onClick={() => router.push('/pedidos/nuevo')}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <PlusIcon className="w-4 h-4 mr-2" />
-            Nuevo Pedido
-          </Button>
-        </div>
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -434,6 +425,32 @@ export default function PedidosPage() {
         onConfirm={confirmCancelarPedido}
         onCancel={() => setCancelConfirm({ open: false, id: null, folio: '' })}
       />
+
+      {/* ── Floating Action Button ── */}
+      <button
+        onClick={() => router.push('/pedidos/nuevo')}
+        title="Nuevo Pedido"
+        className="
+          fixed bottom-8 right-8 z-50
+          flex items-center gap-2.5
+          bg-blue-600 hover:bg-blue-500 active:scale-95
+          text-white font-bold text-sm
+          pl-4 pr-5 py-3.5 rounded-2xl
+          shadow-[0_8px_32px_rgba(37,99,235,0.5)] hover:shadow-[0_12px_40px_rgba(37,99,235,0.65)]
+          border border-blue-400/30
+          transition-all duration-200 ease-out
+          group
+        "
+      >
+        <span className="
+          flex items-center justify-center
+          w-6 h-6 rounded-lg bg-white/20
+          group-hover:rotate-90 transition-transform duration-300
+        ">
+          <PlusIcon className="w-4 h-4" />
+        </span>
+        <span>Nuevo Pedido</span>
+      </button>
     </div>
     </div>
   )
