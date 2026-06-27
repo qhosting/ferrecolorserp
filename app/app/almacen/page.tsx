@@ -889,96 +889,238 @@ export default function AlmacenPage() {
 
         {/* ════════ MODAL: Ajuste Manual ════════ */}
         <Dialog open={showAdjustmentModal} onOpenChange={v => !v && setShowAdjustmentModal(false)}>
-          <DialogContent className="max-w-md bg-slate-950 border border-slate-800 rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-white">Ajustar Existencia Física</DialogTitle>
-              <DialogDescription className="text-slate-400 text-sm">
-                Registra una entrada, salida o ajuste directo en
-                {selectedSucursalId !== 'all' && currentSucursal ? ` ${currentSucursal.nombre}` : ' la sucursal del sistema'}.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAdjustmentSubmit} className="space-y-4 py-1">
-              {!selectedProd ? (
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Seleccionar Producto</label>
-                  <Input placeholder="Buscar por nombre o código..." value={modalSearch} onChange={e => setModalSearch(e.target.value)}
-                    className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm" />
-                  <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800">
-                    {filteredModalProducts.length === 0
-                      ? <div className="p-3 text-xs text-slate-500 text-center">Sin resultados</div>
-                      : filteredModalProducts.map(p => (
-                        <button key={p.id} type="button" onClick={() => setSelectedProd(p)}
-                          className="w-full p-2.5 text-left text-xs hover:bg-slate-900 flex justify-between items-center transition-colors">
-                          <div>
-                            <span className="font-medium text-slate-200">{p.nombre}</span>
-                            <span className="font-mono text-slate-500 block text-[10px]">{p.codigo}</span>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-400">{p.stock} {p.unidadMedida}</Badge>
-                        </button>
-                      ))
-                    }
-                  </div>
+          <DialogContent className="max-w-md bg-slate-950 border border-slate-800 rounded-2xl p-0 overflow-hidden">
+
+            {/* ── Header con color dinámico por tipo ── */}
+            <div className={`px-6 pt-6 pb-4 border-b border-slate-800/60 ${
+              adjType === 'ENTRADA' ? 'bg-emerald-500/5' :
+              adjType === 'SALIDA'  ? 'bg-rose-500/5'    :
+                                     'bg-amber-500/5'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${
+                  adjType === 'ENTRADA' ? 'bg-emerald-500/15 text-emerald-400' :
+                  adjType === 'SALIDA'  ? 'bg-rose-500/15 text-rose-400'       :
+                                         'bg-amber-500/15 text-amber-400'
+                }`}>
+                  {adjType === 'ENTRADA' ? <ArrowDownLeft className="h-5 w-5" /> :
+                   adjType === 'SALIDA'  ? <ArrowUpRight  className="h-5 w-5" /> :
+                                          <Sliders        className="h-5 w-5" />}
                 </div>
-              ) : (
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold text-slate-100 text-sm">{selectedProd.nombre}</p>
-                    <p className="font-mono text-xs text-slate-500">{selectedProd.codigo}</p>
-                    <p className="text-xs text-slate-500 mt-1">Stock actual: <span className="text-white font-bold">{selectedProd.stock} {selectedProd.unidadMedida}</span></p>
-                  </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedProd(null)} className="text-indigo-400 hover:text-indigo-300 text-xs">Cambiar</Button>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-400">Tipo</label>
-                  <Select value={adjType} onValueChange={(v: any) => setAdjType(v)}>
-                    <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
-                      <SelectItem value="ENTRADA">Entrada (+)</SelectItem>
-                      <SelectItem value="SALIDA">Salida (−)</SelectItem>
-                      <SelectItem value="AJUSTE">Ajuste físico (=)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-400">Cantidad</label>
-                  <Input type="number" min="1" value={adjQty} onChange={e => setAdjQty(Math.max(1, parseInt(e.target.value) || 1))} required
-                    className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-9" />
+                <div>
+                  <DialogTitle className="text-white text-base font-bold leading-tight">
+                    {adjType === 'ENTRADA' ? 'Entrada de Mercancía' :
+                     adjType === 'SALIDA'  ? 'Salida de Inventario'  :
+                                            'Ajuste Físico de Stock'}
+                  </DialogTitle>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    {selectedSucursalId !== 'all' && currentSucursal
+                      ? `Sucursal: ${currentSucursal.nombre}`
+                      : 'Sucursal del sistema'}
+                  </p>
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400">Motivo</label>
+            </div>
+
+            <form onSubmit={handleAdjustmentSubmit} className="px-6 py-5 space-y-5">
+
+              {/* ── Tipo como botones visuales ── */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo de Operación</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { val: 'ENTRADA' as const, label: 'Entrada', sub: 'Suma (+)',   icon: ArrowDownLeft, active: 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300', inactive: 'bg-slate-900 border-slate-700 text-slate-500' },
+                    { val: 'SALIDA'  as const, label: 'Salida',  sub: 'Resta (−)',  icon: ArrowUpRight,  active: 'bg-rose-500/20 border-rose-500/60 text-rose-300',           inactive: 'bg-slate-900 border-slate-700 text-slate-500' },
+                    { val: 'AJUSTE'  as const, label: 'Ajuste',  sub: 'Iguala (=)', icon: Sliders,       active: 'bg-amber-500/20 border-amber-500/60 text-amber-300',         inactive: 'bg-slate-900 border-slate-700 text-slate-500' },
+                  ]).map(({ val, label, sub, icon: Icon, active, inactive }) => (
+                    <button key={val} type="button" onClick={() => setAdjType(val)}
+                      className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border transition-all duration-150 cursor-pointer ${adjType === val ? active : inactive}`}>
+                      <Icon className="h-4 w-4" />
+                      <span className="text-xs font-bold">{label}</span>
+                      <span className="text-[9px] font-medium opacity-70">{sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Producto ── */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Producto</label>
+                {!selectedProd ? (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-3.5 w-3.5" />
+                      <Input placeholder="Buscar por nombre o código..." value={modalSearch}
+                        onChange={e => setModalSearch(e.target.value)} autoFocus
+                        className="pl-9 bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 focus:border-indigo-500" />
+                    </div>
+                    <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/60 max-h-44 overflow-y-auto">
+                      {filteredModalProducts.length === 0 ? (
+                        <div className="p-4 text-xs text-slate-500 text-center flex flex-col items-center gap-1">
+                          <Package className="h-5 w-5 opacity-30" /><span>Sin resultados</span>
+                        </div>
+                      ) : filteredModalProducts.map(p => {
+                        const ok  = p.stock > p.stockMinimo;
+                        const low = p.stock > 0 && p.stock <= p.stockMinimo;
+                        return (
+                          <button key={p.id} type="button" onClick={() => setSelectedProd(p)}
+                            className="w-full px-3 py-2.5 text-left hover:bg-slate-800/60 flex items-center justify-between gap-2 transition-colors group">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-200 truncate group-hover:text-white">{p.nombre}</p>
+                              <p className="font-mono text-[10px] text-slate-500">{p.codigo}</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              ok  ? 'bg-emerald-500/15 text-emerald-400' :
+                              low ? 'bg-amber-500/15 text-amber-400'    :
+                                    'bg-rose-500/15 text-rose-400'
+                            }`}>{p.stock} {p.unidadMedida}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden">
+                    <div className="px-4 py-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-100 text-sm truncate">{selectedProd.nombre}</p>
+                        <p className="font-mono text-[10px] text-slate-500 mt-0.5">{selectedProd.codigo}</p>
+                        {selectedProd.categoria && <p className="text-[10px] text-slate-600 mt-0.5">{selectedProd.categoria}</p>}
+                      </div>
+                      <button type="button" onClick={() => setSelectedProd(null)}
+                        className="text-indigo-400 hover:text-indigo-300 text-[10px] font-bold shrink-0 underline underline-offset-2 cursor-pointer">
+                        Cambiar
+                      </button>
+                    </div>
+                    {/* Live stock preview */}
+                    <div className="px-4 pb-3 space-y-1.5">
+                      <div className="flex justify-between text-[10px] text-slate-500">
+                        <span>Stock actual</span>
+                        <span className="font-bold text-white">{selectedProd.stock} {selectedProd.unidadMedida}</span>
+                      </div>
+                      {(() => {
+                        const curr = selectedProd.stock;
+                        const qty  = adjQty || 0;
+                        const next = adjType === 'ENTRADA' ? curr + qty : adjType === 'SALIDA' ? curr - qty : qty;
+                        const isNeg = next < 0;
+                        const max   = Math.max(curr, next, selectedProd.stockMaximo || curr * 2 || 1);
+                        const pct   = Math.min(100, Math.max(0, (next / max) * 100));
+                        return (
+                          <div className="space-y-1">
+                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-300 ${
+                                isNeg ? 'bg-rose-500' : next <= selectedProd.stockMinimo ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-slate-600">Mín: {selectedProd.stockMinimo}</span>
+                              <span className={`font-bold ${isNeg ? 'text-rose-400' : next <= selectedProd.stockMinimo ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                → {isNeg ? 'Stock insuficiente' : `${next} ${selectedProd.unidadMedida}`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              </div>
+
+              {/* ── Cantidad con stepper ── */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  {adjType === 'AJUSTE' ? 'Stock resultante (cantidad final)' : 'Cantidad'}
+                </label>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setAdjQty(q => Math.max(1, q - 1))}
+                    className="h-10 w-10 shrink-0 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors text-xl font-bold cursor-pointer flex items-center justify-center">
+                    −
+                  </button>
+                  <Input
+                    type="number" min="1" value={adjQty}
+                    onChange={e => setAdjQty(Math.max(1, parseInt(e.target.value) || 1))}
+                    required
+                    className="h-10 text-center text-xl font-bold bg-slate-900 border-slate-700 text-white rounded-xl flex-1 focus:border-indigo-500"
+                  />
+                  <button type="button" onClick={() => setAdjQty(q => q + 1)}
+                    className="h-10 w-10 shrink-0 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors text-xl font-bold cursor-pointer flex items-center justify-center">
+                    +
+                  </button>
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {[5, 10, 25, 50, 100].map(n => (
+                    <button key={n} type="button" onClick={() => setAdjQty(n)}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
+                        adjQty === n
+                          ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                          : 'bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300'
+                      }`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Motivo ── */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Motivo <span className="text-rose-500">*</span></label>
                 <Select value={adjMotive} onValueChange={setAdjMotive}>
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-9">
-                    <SelectValue placeholder="Seleccionar motivo" />
+                  <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 focus:border-indigo-500">
+                    <SelectValue placeholder="Seleccionar motivo..." />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
-                    <SelectItem value="Compra / Entrada de almacén">Compra / Entrada de almacén</SelectItem>
-                    <SelectItem value="Venta / Despacho">Venta / Despacho</SelectItem>
-                    <SelectItem value="Ajuste por Inventario Físico">Ajuste por Inventario Físico</SelectItem>
-                    <SelectItem value="Merma, Rotura o Daño">Merma, Rotura o Daño</SelectItem>
-                    <SelectItem value="Devolución de Cliente">Devolución de Cliente</SelectItem>
-                    <SelectItem value="Corrección de captura">Corrección de captura</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
+                    <SelectItem value="Compra / Entrada de almacén">📦 Compra / Entrada de almacén</SelectItem>
+                    <SelectItem value="Venta / Despacho">🛒 Venta / Despacho</SelectItem>
+                    <SelectItem value="Ajuste por Inventario Físico">📋 Ajuste por Inventario Físico</SelectItem>
+                    <SelectItem value="Merma, Rotura o Daño">⚠️ Merma, Rotura o Daño</SelectItem>
+                    <SelectItem value="Devolución de Cliente">↩️ Devolución de Cliente</SelectItem>
+                    <SelectItem value="Corrección de captura">✏️ Corrección de captura</SelectItem>
+                    <SelectItem value="Otro">📝 Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400">Referencia / Folio (Opcional)</label>
-                <Input placeholder="Ej. Factura, Orden..." value={adjRef} onChange={e => setAdjRef(e.target.value)}
-                  className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-9" />
+
+              {/* ── Referencia ── */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Referencia / Folio <span className="normal-case font-normal text-slate-600">(opcional)</span>
+                </label>
+                <Input
+                  placeholder="Ej. Factura F-001, OC-2025, Ticket..."
+                  value={adjRef}
+                  onChange={e => setAdjRef(e.target.value)}
+                  className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 placeholder:text-slate-600 focus:border-indigo-500"
+                />
               </div>
-              <DialogFooter>
+
+              {/* ── Footer ── */}
+              <div className="flex gap-2 pt-1">
                 <Button type="button" variant="outline" onClick={() => setShowAdjustmentModal(false)}
-                  className="border-slate-700 text-slate-300 rounded-xl">Cancelar</Button>
-                <Button type="submit" disabled={submitting || !selectedProd}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
-                  {submitting ? 'Guardando...' : 'Aplicar Ajuste'}
+                  className="flex-1 border-slate-700 text-slate-300 rounded-xl h-10">
+                  Cancelar
                 </Button>
-              </DialogFooter>
+                <Button
+                  type="submit"
+                  disabled={submitting || !selectedProd || !adjMotive}
+                  className={`flex-1 h-10 rounded-xl font-bold transition-all ${
+                    adjType === 'ENTRADA' ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_4px_16px_rgba(16,185,129,0.3)]' :
+                    adjType === 'SALIDA'  ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-[0_4px_16px_rgba(239,68,68,0.3)]'       :
+                                           'bg-amber-600 hover:bg-amber-500 text-white shadow-[0_4px_16px_rgba(245,158,11,0.3)]'
+                  }`}
+                >
+                  {submitting ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Aplicando...
+                    </span>
+                  ) : (
+                    adjType === 'ENTRADA' ? '+ Registrar Entrada' :
+                    adjType === 'SALIDA'  ? '− Registrar Salida'  :
+                                           '= Aplicar Ajuste'
+                  )}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>

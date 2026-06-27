@@ -717,99 +717,214 @@ export default function FacturacionElectronicaPage() {
 
       {/* Dialog Nueva Factura */}
       <Dialog open={dialogType === 'factura'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-[750px]">
-          <DialogHeader>
-            <DialogTitle>Nueva Factura Electrónica</DialogTitle>
-            <DialogDescription>Captura los datos del receptor y los conceptos del CFDI.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-auto">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="rfc">RFC *</Label>
-                <Input id="rfc" placeholder="XAXX010101000" value={facturaCliente.rfc}
-                  onChange={(e) => setFacturaCliente({ ...facturaCliente, rfc: e.target.value.toUpperCase() })} />
+        <DialogContent className="sm:max-w-[850px] p-0 bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden">
+          
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-800/60 bg-indigo-500/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-indigo-500/15 text-indigo-400">
+                <FileText className="h-5 w-5" />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="cnombre">Nombre / Razón social *</Label>
-                <Input id="cnombre" placeholder="Cliente S.A. de C.V." value={facturaCliente.nombre}
-                  onChange={(e) => setFacturaCliente({ ...facturaCliente, nombre: e.target.value })} />
+              <div>
+                <DialogTitle className="text-white text-base font-bold leading-tight">
+                  Nueva Factura Electrónica
+                </DialogTitle>
+                <DialogDescription className="text-slate-400 text-xs mt-0.5">
+                  Generación de CFDI y timbrado de comprobante fiscal digital.
+                </DialogDescription>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="cemail">Email</Label>
-                <Input id="cemail" type="email" placeholder="correo@cliente.com" value={facturaCliente.email}
-                  onChange={(e) => setFacturaCliente({ ...facturaCliente, email: e.target.value })} />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label>Conceptos</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addConcepto}>
-                <Plus className="h-4 w-4 mr-1" /> Agregar concepto
-              </Button>
-            </div>
-
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-2 py-2 text-left">Descripción</th>
-                    <th className="px-2 py-2 text-left w-24">Clave SAT</th>
-                    <th className="px-2 py-2 text-left w-16">Cant.</th>
-                    <th className="px-2 py-2 text-left w-28">Valor Unit.</th>
-                    <th className="px-2 py-2 text-left w-24">Importe</th>
-                    <th className="px-2 py-2 w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {conceptos.map((c, idx) => (
-                    <tr key={idx} className="border-b">
-                      <td className="px-2 py-2">
-                        <Input value={c.descripcion} placeholder="Descripción"
-                          onChange={(e) => updateConcepto(idx, 'descripcion', e.target.value)} />
-                      </td>
-                      <td className="px-2 py-2">
-                        <Input value={c.claveProdServ}
-                          onChange={(e) => updateConcepto(idx, 'claveProdServ', e.target.value)} />
-                      </td>
-                      <td className="px-2 py-2">
-                        <Input type="number" min={1} value={c.cantidad}
-                          onChange={(e) => updateConcepto(idx, 'cantidad', Math.max(1, parseInt(e.target.value) || 1))} />
-                      </td>
-                      <td className="px-2 py-2">
-                        <Input type="number" min={0} step="0.01" value={c.valorUnitario}
-                          onChange={(e) => updateConcepto(idx, 'valorUnitario', parseFloat(e.target.value) || 0)} />
-                      </td>
-                      <td className="px-2 py-2">${(c.cantidad * c.valorUnitario).toFixed(2)}</td>
-                      <td className="px-2 py-2">
-                        {conceptos.length > 1 && (
-                          <Button variant="ghost" size="sm" onClick={() => removeConcepto(idx)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex flex-col items-end gap-1 text-sm">
-              <div>Subtotal: <span className="font-medium">${facturaSubtotal.toFixed(2)}</span></div>
-              <div>IVA (16%): <span className="font-medium">${facturaIva.toFixed(2)}</span></div>
-              <div className="text-base">Total: <span className="font-bold">${facturaTotal.toFixed(2)}</span></div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="fobs">Observaciones</Label>
-              <Textarea id="fobs" value={facturaObs} onChange={(e) => setFacturaObs(e.target.value)} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={submitFactura} disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Crear Factura'}
+
+          <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            
+            {/* Receptor Section */}
+            <div className="space-y-3">
+              <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Datos del Receptor</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-900/60 rounded-xl border border-slate-800/80">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rfc" className="text-xs font-semibold text-slate-300">RFC *</Label>
+                  <Input 
+                    id="rfc" 
+                    placeholder="XAXX010101000" 
+                    value={facturaCliente.rfc}
+                    onChange={(e) => setFacturaCliente({ ...facturaCliente, rfc: e.target.value.toUpperCase() })}
+                    className="bg-slate-950 border-slate-700 text-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cnombre" className="text-xs font-semibold text-slate-300">Nombre / Razón social *</Label>
+                  <Input 
+                    id="cnombre" 
+                    placeholder="Cliente S.A. de C.V." 
+                    value={facturaCliente.nombre}
+                    onChange={(e) => setFacturaCliente({ ...facturaCliente, nombre: e.target.value })}
+                    className="bg-slate-950 border-slate-700 text-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cemail" className="text-xs font-semibold text-slate-300">Email</Label>
+                  <Input 
+                    id="cemail" 
+                    type="email" 
+                    placeholder="correo@cliente.com" 
+                    value={facturaCliente.email}
+                    onChange={(e) => setFacturaCliente({ ...facturaCliente, email: e.target.value })}
+                    className="bg-slate-950 border-slate-700 text-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Conceptos Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Conceptos del CFDI</h3>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addConcepto}
+                  className="border-slate-700 hover:border-slate-600 hover:bg-slate-900 text-slate-300 hover:text-white rounded-xl h-8 text-xs font-semibold"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Agregar Concepto
+                </Button>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/40">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      <th className="px-4 py-3 text-left">Descripción</th>
+                      <th className="px-3 py-3 text-left w-28">Clave SAT</th>
+                      <th className="px-3 py-3 text-center w-20">Cant.</th>
+                      <th className="px-3 py-3 text-right w-32">Valor Unit.</th>
+                      <th className="px-3 py-3 text-right w-32">Importe</th>
+                      <th className="w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40">
+                    {conceptos.map((c, idx) => (
+                      <tr key={idx} className="hover:bg-slate-900/30 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <Input 
+                            value={c.descripcion} 
+                            placeholder="Descripción del concepto"
+                            onChange={(e) => updateConcepto(idx, 'descripcion', e.target.value)}
+                            className="bg-slate-950 border-slate-800 text-slate-200 rounded-lg text-xs h-8 focus:border-indigo-500"
+                          />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Input 
+                            value={c.claveProdServ}
+                            placeholder="01010101"
+                            onChange={(e) => updateConcepto(idx, 'claveProdServ', e.target.value)}
+                            className="bg-slate-950 border-slate-800 text-slate-200 rounded-lg text-xs h-8 text-center font-mono focus:border-indigo-500"
+                          />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Input 
+                            type="number" 
+                            min={1} 
+                            value={c.cantidad}
+                            onChange={(e) => updateConcepto(idx, 'cantidad', Math.max(1, parseInt(e.target.value) || 1))}
+                            className="bg-slate-950 border-slate-800 text-slate-200 rounded-lg text-xs h-8 text-center focus:border-indigo-500"
+                          />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
+                            <Input 
+                              type="number" 
+                              min={0} 
+                              step="0.01" 
+                              value={c.valorUnitario}
+                              onChange={(e) => updateConcepto(idx, 'valorUnitario', parseFloat(e.target.value) || 0)}
+                              className="pl-6 bg-slate-950 border-slate-800 text-slate-200 rounded-lg text-xs h-8 text-right focus:border-indigo-500"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-slate-200">
+                          ${(c.cantidad * c.valorUnitario).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-2 py-2.5 text-center">
+                          {conceptos.length > 1 && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => removeConcepto(idx)}
+                              className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Calculations & Observations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="fobs" className="text-xs font-semibold text-slate-400">Observaciones (Opcional)</Label>
+                <Textarea 
+                  id="fobs" 
+                  value={facturaObs} 
+                  onChange={(e) => setFacturaObs(e.target.value)}
+                  placeholder="Detalles adicionales a incluir en la factura..."
+                  rows={4}
+                  className="bg-slate-900/60 border-slate-800 text-slate-200 rounded-xl text-sm placeholder:text-slate-600 focus:border-indigo-500 resize-none"
+                />
+              </div>
+
+              <div className="flex flex-col justify-between p-4 bg-slate-900/40 rounded-xl border border-slate-800 h-full">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-slate-400">
+                    <span>Subtotal</span>
+                    <span className="font-semibold text-slate-200">${facturaSubtotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-400">
+                    <span>IVA (16%)</span>
+                    <span className="font-semibold text-slate-200">${facturaIva.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center border-t border-slate-800 pt-3 mt-3">
+                  <span className="text-sm font-bold text-slate-300">Total Factura</span>
+                  <span className="text-xl font-bold text-indigo-400">${facturaTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Footer Actions */}
+          <div className="px-6 py-4 bg-slate-900/50 border-t border-slate-850 flex justify-end gap-3">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={closeDialog}
+              className="border-slate-800 text-slate-300 hover:text-white rounded-xl h-10 px-5 cursor-pointer"
+            >
+              Cancelar
             </Button>
-          </DialogFooter>
+            <Button 
+              onClick={submitFactura} 
+              disabled={submitting}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl h-10 px-6 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all cursor-pointer"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" /> Creando...
+                </span>
+              ) : (
+                'Crear Factura'
+              )}
+            </Button>
+          </div>
+
         </DialogContent>
       </Dialog>
 
