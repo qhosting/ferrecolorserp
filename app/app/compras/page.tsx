@@ -390,16 +390,7 @@ export default function ComprasPage() {
         description="Gestión integral de proveedores, órdenes de compra y recepción de mercancía"
       />
       <div className="p-6 space-y-6">
-        <div className="flex justify-end gap-2">
-          <Button onClick={openProveedor}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Proveedor
-          </Button>
-          <Button onClick={openOrden}>
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Nueva Orden
-          </Button>
-        </div>
+
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -496,6 +487,25 @@ export default function ComprasPage() {
                 <SelectItem value="CANCELADA">Cancelada</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openProveedor}
+                className="h-10 px-3 text-sm font-medium whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4 mr-1.5" />
+                Nuevo Proveedor
+              </Button>
+              <Button
+                size="sm"
+                onClick={openOrden}
+                className="h-10 px-3 text-sm font-medium whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <ShoppingCart className="h-4 w-4 mr-1.5" />
+                Nueva Orden
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
