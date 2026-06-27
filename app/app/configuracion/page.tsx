@@ -116,8 +116,13 @@ export default function ConfiguracionPage() {
     
     if (seccion === 'general') {
       (nuevaConfig as any)[campo] = valor;
+    } else if (seccion === 'root') {
+      if (!nuevaConfig.configJson) nuevaConfig.configJson = {};
+      if (typeof nuevaConfig.configJson !== 'object') nuevaConfig.configJson = {};
+      nuevaConfig.configJson[campo] = valor;
     } else {
       if (!nuevaConfig.configJson) nuevaConfig.configJson = {};
+      if (typeof nuevaConfig.configJson !== 'object') nuevaConfig.configJson = {};
       if (!nuevaConfig.configJson[seccion]) nuevaConfig.configJson[seccion] = {};
       
       // Manejar configuraciones anidadas
@@ -160,19 +165,40 @@ export default function ConfiguracionPage() {
         </div>
 
       <Tabs defaultValue="empresa" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="empresa">Empresa</TabsTrigger>
-          <TabsTrigger value="apariencia">Apariencia</TabsTrigger>
-          <TabsTrigger value="financiero">Financiero</TabsTrigger>
-          <TabsTrigger value="pos">POS</TabsTrigger>
-          <TabsTrigger value="notificaciones">Notificaciones</TabsTrigger>
-          <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
-          <TabsTrigger value="avanzado">Avanzado</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-7 bg-slate-900/60 border border-slate-800/60 p-1 rounded-xl">
+          <TabsTrigger value="empresa" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+            <Building className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">Empresa</span>
+          </TabsTrigger>
+          <TabsTrigger value="apariencia" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+            <Palette className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">Apariencia</span>
+          </TabsTrigger>
+          <TabsTrigger value="financiero" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+            <DollarSign className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">Financiero</span>
+          </TabsTrigger>
+          <TabsTrigger value="pos" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+            <Settings className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">POS</span>
+          </TabsTrigger>
+          <TabsTrigger value="notificaciones" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+            <Bell className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">Notificaciones</span>
+          </TabsTrigger>
+          <TabsTrigger value="integraciones" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+            <Link className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">Integraciones</span>
+          </TabsTrigger>
+          <TabsTrigger value="avanzado" className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-indigo-600/20 data-[state=active]:text-indigo-400 text-slate-400 transition-all duration-200">
+            <Shield className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:inline text-xs font-semibold">Avanzado</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Configuración de Empresa */}
         <TabsContent value="empresa" className="space-y-6">
-          <Card>
+          <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building className="w-5 h-5" />
@@ -245,7 +271,7 @@ export default function ConfiguracionPage() {
 
         {/* Configuración de Apariencia */}
         <TabsContent value="apariencia" className="space-y-6">
-          <Card>
+          <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="w-5 h-5" />
@@ -301,7 +327,7 @@ export default function ConfiguracionPage() {
                     <Label>Moneda por Defecto</Label>
                     <Select 
                       value={configuracion.configJson?.monedaDefecto || 'MXN'}
-                      onValueChange={(value) => actualizarConfig('general', 'monedaDefecto', value)}
+                      onValueChange={(value) => actualizarConfig('root', 'monedaDefecto', value)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -318,7 +344,7 @@ export default function ConfiguracionPage() {
                     <Label>Formato de Fecha</Label>
                     <Select 
                       value={configuracion.configJson?.formatoFecha || 'dd/MM/yyyy'}
-                      onValueChange={(value) => actualizarConfig('general', 'formatoFecha', value)}
+                      onValueChange={(value) => actualizarConfig('root', 'formatoFecha', value)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -338,7 +364,7 @@ export default function ConfiguracionPage() {
 
         {/* Configuración Financiera */}
         <TabsContent value="financiero" className="space-y-6">
-          <Card>
+          <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5" />
@@ -357,7 +383,7 @@ export default function ConfiguracionPage() {
                     <Input
                       type="number"
                       value={configuracion.configJson?.iva || 16}
-                      onChange={(e) => actualizarConfig('general', 'iva', parseFloat(e.target.value))}
+                      onChange={(e) => actualizarConfig('root', 'iva', parseFloat(e.target.value))}
                       step="0.1"
                     />
                   </div>
@@ -366,7 +392,7 @@ export default function ConfiguracionPage() {
                     <Label>Decimales en Precios</Label>
                     <Select 
                       value={configuracion.configJson?.decimalesPrecios?.toString() || '2'}
-                      onValueChange={(value) => actualizarConfig('general', 'decimalesPrecios', parseInt(value))}
+                      onValueChange={(value) => actualizarConfig('root', 'decimalesPrecios', parseInt(value))}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -462,7 +488,7 @@ export default function ConfiguracionPage() {
 
         {/* Configuración del POS */}
         <TabsContent value="pos" className="space-y-6">
-          <Card>
+          <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building className="w-5 h-5" />
@@ -523,7 +549,7 @@ export default function ConfiguracionPage() {
 
         {/* Configuración de Notificaciones */}
         <TabsContent value="notificaciones" className="space-y-6">
-          <Card>
+          <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
@@ -591,7 +617,7 @@ export default function ConfiguracionPage() {
 
         {/* Configuración de Integraciones */}
         <TabsContent value="integraciones" className="space-y-6">
-          <Card>
+          <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Link className="w-5 h-5" />
@@ -704,7 +730,7 @@ export default function ConfiguracionPage() {
 
         {/* Configuración Avanzada */}
         <TabsContent value="avanzado" className="space-y-6">
-          <Card>
+          <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
