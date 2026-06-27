@@ -717,6 +717,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clienteId: targetClienteId,
+          sucursalId: sesion.sucursalId,
           detalles: cart.map(item => ({
             productoId: item.productoId,
             cantidad: item.cantidad,

@@ -147,15 +147,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const validatedData = updatePedidoSchema.parse(body)
 
     // Verificar que el pedido existe
-    const pedidoExistente = await prisma.pedido.findUnique({
+    const pedidoExistente = (await prisma.pedido.findUnique({
       where: { id: params.id },
-      select: {
-        id: true,
-        vendedorId: true,
-        estatus: true,
-        convertidoAVenta: true
+      include: {
+        detalles: true
       }
-    })
+    })) as any
 
     if (!pedidoExistente) {
       return NextResponse.json({ 
@@ -182,6 +179,47 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Si se enviaron detalles, realizamos la actualización transaccional que recalcula totales y actualiza las partidas
     const pedidoActualizado = await prisma.$transaction(async (tx) => {
+      // 1. Si el estatus cambia a CANCELADO o RECHAZADO, devolvemos el stock al almacén
+      const returningStock = (baseData.estatus === 'CANCELADO' || baseData.estatus === 'RECHAZADO') &&
+                             pedidoExistente.estatus !== 'CANCELADO' &&
+                             pedidoExistente.estatus !== 'RECHAZADO' &&
+                             pedidoExistente.estatus !== 'CONVERTIDO_VENTA';
+
+      if (returningStock && pedidoExistente.sucursalId) {
+        for (const detalle of pedidoExistente.detalles) {
+          const stockRows = await tx.$queryRaw<Array<{ id: string; stock: number }>>`
+            SELECT id, stock FROM stock_sucursales 
+            WHERE "sucursalId" = ${pedidoExistente.sucursalId} AND "productoId" = ${detalle.productoId}
+            LIMIT 1
+            FOR UPDATE
+          `;
+          const stockRecord = stockRows[0];
+          if (stockRecord) {
+            const cantidadAnterior = stockRecord.stock;
+            const cantidadNueva = cantidadAnterior + detalle.cantidad;
+
+            await tx.stockSucursal.update({
+              where: { id: stockRecord.id },
+              data: { stock: cantidadNueva }
+            });
+
+            await tx.movimientoInventario.create({
+              data: {
+                productoId: detalle.productoId,
+                sucursalId: pedidoExistente.sucursalId,
+                tipo: 'ENTRADA',
+                cantidad: detalle.cantidad,
+                cantidadAnterior,
+                cantidadNueva,
+                motivo: `Cancelación/Rechazo Pedido Mostrador ${pedidoExistente.folio}`,
+                referencia: pedidoExistente.folio,
+                userId: session.user.id
+              }
+            });
+          }
+        }
+      }
+
       let subtotal = undefined
       let iva = undefined
       let total = undefined
@@ -296,14 +334,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verificar que el pedido existe y no está convertido
-    const pedido = await prisma.pedido.findUnique({
+    const pedido = (await prisma.pedido.findUnique({
       where: { id: params.id },
-      select: {
-        id: true,
-        folio: true,
-        convertidoAVenta: true
+      include: {
+        detalles: true
       }
-    })
+    })) as any
 
     if (!pedido) {
       return NextResponse.json({ 
@@ -317,9 +353,51 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
-    // Eliminar pedido (cascade eliminará los detalles)
-    await prisma.pedido.delete({
-      where: { id: params.id }
+    // Realizar eliminación y devolución de stock en transacción
+    await prisma.$transaction(async (tx) => {
+      const isReserved = pedido.estatus !== 'CANCELADO' &&
+                         pedido.estatus !== 'RECHAZADO' &&
+                         pedido.estatus !== 'CONVERTIDO_VENTA';
+
+      if (isReserved && pedido.sucursalId) {
+        for (const detalle of pedido.detalles) {
+          const stockRows = await tx.$queryRaw<Array<{ id: string; stock: number }>>`
+            SELECT id, stock FROM stock_sucursales 
+            WHERE "sucursalId" = ${pedido.sucursalId} AND "productoId" = ${detalle.productoId}
+            LIMIT 1
+            FOR UPDATE
+          `;
+          const stockRecord = stockRows[0];
+          if (stockRecord) {
+            const cantidadAnterior = stockRecord.stock;
+            const cantidadNueva = cantidadAnterior + detalle.cantidad;
+
+            await tx.stockSucursal.update({
+              where: { id: stockRecord.id },
+              data: { stock: cantidadNueva }
+            });
+
+            await tx.movimientoInventario.create({
+              data: {
+                productoId: detalle.productoId,
+                sucursalId: pedido.sucursalId,
+                tipo: 'ENTRADA',
+                cantidad: detalle.cantidad,
+                cantidadAnterior,
+                cantidadNueva,
+                motivo: `Eliminación Pedido Mostrador ${pedido.folio}`,
+                referencia: pedido.folio,
+                userId: session.user.id
+              }
+            });
+          }
+        }
+      }
+
+      // Eliminar pedido (cascade eliminará los detalles)
+      await tx.pedido.delete({
+        where: { id: params.id }
+      })
     })
 
     return NextResponse.json({

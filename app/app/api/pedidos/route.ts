@@ -8,6 +8,7 @@ import { z } from 'zod'
 // Schema de validación para pedidos
 const pedidoSchema = z.object({
   clienteId: z.string().min(1, "Cliente requerido"),
+  sucursalId: z.string().optional(),
   detalles: z.array(z.object({
     productoId: z.string().min(1),
     cantidad: z.number().positive(),
@@ -152,13 +153,76 @@ export async function POST(request: NextRequest) {
     const iva = subtotal * 0.16 // 16% IVA
     const total = subtotal + iva
 
+    // Obtener sucursal de destino
+    let activeSucursalId = validatedData.sucursalId;
+    if (!activeSucursalId) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { sucursalDefaultId: true }
+      });
+      activeSucursalId = user?.sucursalDefaultId || undefined;
+    }
+    if (!activeSucursalId) {
+      const firstSuc = await prisma.sucursal.findFirst({ where: { isActive: true } });
+      activeSucursalId = firstSuc?.id || undefined;
+    }
+
     // Crear pedido con transacción
-    const pedido = await prisma.$transaction(async (prisma) => {
-      const nuevoPedido = await prisma.pedido.create({
+    const pedido = await prisma.$transaction(async (tx) => {
+      // 1. Decrementar de stock y reservar si hay sucursal activa
+      if (activeSucursalId) {
+        for (const detalle of detallesCalculados) {
+          // Bloquear la fila de stock
+          const stockRows = await tx.$queryRaw<Array<{ id: string; stock: number; productoNombre?: string }>>`
+            SELECT s.id, s.stock, p.nombre as "productoNombre"
+            FROM stock_sucursales s
+            JOIN productos p ON s."productoId" = p.id
+            WHERE s."sucursalId" = ${activeSucursalId} AND s."productoId" = ${detalle.productoId}
+            LIMIT 1
+            FOR UPDATE
+          `;
+
+          const stockRecord = stockRows[0];
+          if (!stockRecord) {
+            throw new Error(`El producto con ID ${detalle.productoId} no está inicializado en la sucursal.`);
+          }
+
+          if (stockRecord.stock < detalle.cantidad) {
+            throw new Error(`Stock insuficiente para "${stockRecord.productoNombre || detalle.productoId}". Disponible: ${stockRecord.stock}, solicitado: ${detalle.cantidad}`);
+          }
+
+          const cantidadAnterior = stockRecord.stock;
+          const cantidadNueva = cantidadAnterior - detalle.cantidad;
+
+          await tx.stockSucursal.update({
+            where: { id: stockRecord.id },
+            data: { stock: cantidadNueva }
+          });
+
+          // Registrar movimiento de inventario (Reserva)
+          await tx.movimientoInventario.create({
+            data: {
+              productoId: detalle.productoId,
+              sucursalId: activeSucursalId,
+              tipo: 'SALIDA',
+              cantidad: detalle.cantidad,
+              cantidadAnterior,
+              cantidadNueva,
+              motivo: `Reserva Pedido Mostrador ${folio}`,
+              referencia: folio,
+              userId: session.user.id
+            }
+          });
+        }
+      }
+
+      // 2. Crear registro del Pedido
+      const nuevoPedido = await (tx.pedido as any).create({
         data: {
           folio,
           clienteId: validatedData.clienteId,
           vendedorId: session.user.id!,
+          sucursalId: activeSucursalId,
           subtotal,
           iva,
           total,
@@ -167,7 +231,13 @@ export async function POST(request: NextRequest) {
           fechaEntregaEstimada: validatedData.fechaEntregaEstimada ? 
             new Date(validatedData.fechaEntregaEstimada) : undefined,
           detalles: {
-            create: detallesCalculados
+            create: detallesCalculados.map(d => ({
+              productoId: d.productoId,
+              cantidad: d.cantidad,
+              precioUnitario: d.precioUnitario,
+              descuento: d.descuento,
+              subtotal: d.subtotal
+            }))
           }
         },
         include: {
