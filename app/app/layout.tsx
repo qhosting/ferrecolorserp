@@ -10,13 +10,13 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FerreColors - Gestión Empresarial",
-  description: "FerreColors: Sistema integral para la gestión de recursos empresariales con módulos de ventas, cobranza, inventario y más. Funcionalidad offline para cobranza móvil.",
+  title: "VertexERP - Sistema para Ferreterías",
+  description: "VertexERP: Sistema integral para la gestión de recursos de ferreterías con módulos de ventas, cobranza, inventario y más. Funcionalidad offline para cobranza móvil.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "FerreColors",
+    title: "VertexERP",
   },
   formatDetection: {
     telephone: false,
@@ -53,7 +53,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="FerreColors" />
+        <meta name="apple-mobile-web-app-title" content="VertexERP" />
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-tap-highlight" content="no" />
         

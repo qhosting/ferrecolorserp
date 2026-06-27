@@ -73,7 +73,7 @@ export default function SignIn() {
             <Building2 className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            FerreColors
+            VertexERP
           </span>
         </motion.div>
 
@@ -92,7 +92,7 @@ export default function SignIn() {
               Simplifica tu operación, acelera tu facturación.
             </h1>
             <p className="text-lg text-slate-300 font-light leading-relaxed">
-              La plataforma administrativa diseñada específicamente para Ferre Colors. Sincroniza clientes, productos y agentes sin esfuerzo.
+              La plataforma administrativa diseñada específicamente para Ferreterías. Sincroniza clientes, productos y agentes sin esfuerzo.
             </p>
           </motion.div>
 
@@ -128,7 +128,7 @@ export default function SignIn() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="text-xs text-slate-500 z-10"
         >
-          © 2026 FerreColors. Todos los derechos reservados.
+          © 2026 VertexERP. Todos los derechos reservados.
         </motion.div>
       </div>
 
@@ -272,7 +272,7 @@ export default function SignIn() {
 
           <div className="text-center lg:hidden">
             <p className="text-xs text-slate-600">
-              © 2026 FerreColors. Todos los derechos reservados.
+              © 2026 VertexERP. Todos los derechos reservados.
             </p>
           </div>
         </motion.div>

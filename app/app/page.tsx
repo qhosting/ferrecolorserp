@@ -128,9 +128,9 @@ export default async function HomePage() {
             <Building className="h-7 w-7 text-[#002d72] dark:text-[#009bdf] animate-pulse" />
             <div className="flex flex-col">
               <span className="text-md font-extrabold tracking-tight bg-gradient-to-r from-[#002d72] via-[#009bdf] to-[#2da53d] dark:from-[#009bdf] dark:via-emerald-400 dark:to-emerald-500 bg-clip-text text-transparent">
-                FerreColors
+                VertexERP
               </span>
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Pinturas e Insumos Industriales</span>
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">SISTEMA PARA FERRETERIAS</span>
             </div>
           </Link>
 
@@ -572,7 +572,7 @@ export default async function HomePage() {
             <div className="space-y-4">
               <Link href="/" className="flex items-center gap-2">
                 <Building className="h-6 w-6 text-[#002d72] dark:text-[#009bdf]" />
-                <span className="font-extrabold text-foreground text-md">FerreColors</span>
+                <span className="font-extrabold text-foreground text-md">VertexERP</span>
               </Link>
               <p className="text-xs leading-relaxed">
                 Todo lo que necesitas. Enlace confiable entre fabricantes reconocidos y el cliente final, comprometidos con la rapidez y la excelencia en Celaya, Guanajuato.

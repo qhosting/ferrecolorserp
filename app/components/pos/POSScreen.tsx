@@ -1123,7 +1123,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping"></span>
             <span className="font-black text-lg bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400">
-              FERRECOLORS POS
+              VertexERP POS
             </span>
           </div>
           
@@ -2156,7 +2156,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
             {lastVentaResult && (
               <div className="space-y-2">
                 <div className="text-center space-y-1">
-                  <p className="font-bold text-sm">FERRECOLORS ERP</p>
+                  <p className="font-bold text-sm">VertexERP</p>
                   <p>RFC: XAXX010101000</p>
                   <p>{sesion?.sucursal?.nombre || 'SUCURSAL MATRIZ'}</p>
                   <p>----------------------------------</p>
@@ -2628,7 +2628,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               {/* Vista preliminar simplificada del ticket de mostrador para imprimir */}
               <div className="max-h-[30vh] overflow-y-auto border border-slate-800 p-4 bg-slate-950 font-mono text-[9px] leading-tight space-y-1 rounded-xl text-slate-300">
                 <div className="text-center font-bold text-white">
-                  <p>FERRECOLORS ERP</p>
+                  <p>VertexERP</p>
                   <p>TICKET DE PRE-VENTA</p>
                   <p>----------------------------------</p>
                 </div>

@@ -195,7 +195,7 @@ function NavigationContent({ collapsed = false }: { collapsed?: boolean }) {
                 bg-gradient-to-r from-indigo-400 via-violet-400 to-indigo-300
                 bg-clip-text text-transparent
               ">
-                FerreColors
+                VertexERP
               </span>
               <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.15em] truncate">
                 ERP Corporativo

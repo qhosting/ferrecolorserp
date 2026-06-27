@@ -5,8 +5,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 export const metadata: Metadata = {
-  title: 'Punto de Venta (POS) - FerreColors ERP',
-  description: 'Módulo de venta rápida y facturación rápida para sucursales de FerreColors',
+  title: 'Punto de Venta (POS) - VertexERP',
+  description: 'Módulo de venta rápida y facturación rápida para sucursales de VertexERP',
 };
 
 export default async function POSLayout({
