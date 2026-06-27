@@ -1678,7 +1678,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
 
       {/* MODAL 1: COBRO / PAGO (PaymentModal) */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-6">
+        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-6 max-h-[95vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
               <DollarSign className="h-6 w-6 text-emerald-400" />
