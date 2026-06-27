@@ -205,7 +205,7 @@ export default function GarantiasPage() {
       const response = await fetch('/api/productos');
       if (response.ok) {
         const productosData = await response.json();
-        setProductos(productosData);
+        setProductos(productosData.productos || []);
       }
     } catch (error) {
       console.error('Error al cargar productos:', error);
@@ -217,7 +217,7 @@ export default function GarantiasPage() {
       const response = await fetch(`/api/ventas?clienteId=${clienteId}`);
       if (response.ok) {
         const ventasData = await response.json();
-        setVentas(ventasData);
+        setVentas(ventasData.data?.ventas || []);
       }
     } catch (error) {
       console.error('Error al cargar ventas:', error);
