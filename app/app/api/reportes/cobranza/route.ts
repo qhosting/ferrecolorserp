@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         FROM "pagares" p
         INNER JOIN "ventas" v ON v."id" = p."ventaId"
         INNER JOIN "clientes" c ON c."id" = v."clienteId"
-        LEFT JOIN "users" u ON u."id" = c."gestorId"
+        LEFT JOIN "User" u ON u."id" = c."gestorId"
         WHERE p."estatus" IN ('VENCIDO', 'PARCIAL')
         AND (p."monto" - p."montoPagado") > 0
         ${fechaInicio && fechaFin ? 

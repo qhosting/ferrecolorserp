@@ -103,14 +103,18 @@ export default function ReportesPage() {
         fetch('/api/clientes'),
       ]);
 
-      if (usuariosRes.ok && clientesRes.ok) {
-        const [usuariosData, clientesData] = await Promise.all([
-          usuariosRes.json(),
-          clientesRes.json(),
-        ]);
-        
+      if (usuariosRes.ok) {
+        const usuariosData = await usuariosRes.json();
         setUsuarios(usuariosData);
+      } else {
+        console.warn('No se pudieron cargar los usuarios (puede ser por falta de permisos):', usuariosRes.status);
+      }
+
+      if (clientesRes.ok) {
+        const clientesData = await clientesRes.json();
         setClientes(clientesData);
+      } else {
+        console.error('Error al cargar clientes:', clientesRes.status);
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
