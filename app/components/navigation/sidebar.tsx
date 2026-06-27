@@ -50,7 +50,7 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
-  { title: 'Dashboard',              href: '/dashboard',              icon: Home,          group: 'Empresa' },
+  { title: 'Empresa',                href: '/dashboard',              icon: Home,          group: 'Empresa' },
   { title: 'Auditoría / Bitácoras',  href: '/auditoria',              icon: Eye,           group: 'Ver' },
   { title: 'Clientes',               href: '/clientes',               icon: Users,         group: 'Catálogos' },
   { title: 'Productos',              href: '/productos',              icon: Package,       group: 'Catálogos' },
@@ -254,6 +254,35 @@ function NavigationContent({ collapsed = false }: { collapsed?: boolean }) {
             }
 
             // ── Full mode: accordion groups ──
+            if (groupName === 'Empresa') {
+              const item = items[0];
+              const Icon = item.icon;
+              return (
+                <div key={groupName} className="mb-1">
+                  <Link href={item.href} className="block w-full">
+                    <div className={cn(
+                      "flex items-center w-full px-3 py-2 rounded-lg",
+                      "text-[10px] font-extrabold uppercase tracking-[0.12em]",
+                      "transition-all duration-200 ease-out cursor-pointer outline-none",
+                      isGroupActive
+                        ? cn(cfg.headerActive, cfg.color, "border-l-2 pl-[10px]", cfg.border)
+                        : "text-slate-500 hover:text-slate-300 hover:bg-slate-900/30"
+                    )}>
+                      <div className="flex items-center gap-2.5">
+                        <Icon className={cn(
+                          "h-[14px] w-[14px] flex-shrink-0 transition-all duration-200",
+                          isGroupActive
+                            ? cn(cfg.color, cfg.glow)
+                            : "text-slate-500 group-hover:text-slate-300"
+                        )} />
+                        <span>{item.title}</span>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              );
+            }
+
             return (
               <div key={groupName} className="mb-1">
                 {/* Accordion Group Button */}
