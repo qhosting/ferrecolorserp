@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
@@ -24,7 +25,8 @@ import {
   Sliders,
   Settings,
   AlertTriangle,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,6 +95,21 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
   const [selectedPriceList, setSelectedPriceList] = useState<number>(1);
   const [globalDiscountPercent, setGlobalDiscountPercent] = useState<number>(0);
   const [observaciones, setObservaciones] = useState<string>('');
+
+  // Roles & workflows
+  const { data: session } = useSession() || {};
+  const [posMode, setPosMode] = useState<'MOSTRADOR' | 'VENTANILLA'>('VENTANILLA');
+  const [counterPedidos, setCounterPedidos] = useState<any[]>([]);
+  const [loadingCounterPedidos, setLoadingCounterPedidos] = useState(false);
+  const [showCounterPedidosModal, setShowCounterPedidosModal] = useState(false);
+  const [counterSearchQuery, setCounterSearchQuery] = useState('');
+  const [savingPedido, setSavingPedido] = useState(false);
+  const [createdPedidoResult, setCreatedPedidoResult] = useState<any>(null);
+  const [showPedidoCreatedModal, setShowPedidoCreatedModal] = useState(false);
+  const [requiresInvoice, setRequiresInvoice] = useState(false);
+  const [invoiceEmail, setInvoiceEmail] = useState('');
+  const [invoiceWhatsApp, setInvoiceWhatsApp] = useState('');
+  const [invoiceDeliveryChannel, setInvoiceDeliveryChannel] = useState<'EMAIL' | 'WHATSAPP' | 'AMBOS'>('EMAIL');
 
   // Estados de Catálogo de Productos
   const [products, setProducts] = useState<any[]>([]);
@@ -251,6 +268,13 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     fetchClientes();
     fetchCategories();
     fetchProducts();
+
+    // Configurar modo del POS por rol del usuario
+    if (session?.user?.role === 'VENTAS') {
+      setPosMode('MOSTRADOR');
+    } else {
+      setPosMode('VENTANILLA');
+    }
     
     // Configuración por defecto de la sucursal activa
     if (sesion?.sucursal?.listaPrecioDefecto) {
@@ -669,6 +693,78 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     }
   };
 
+  const handleSaveAsPedido = async () => {
+    if (cart.length === 0) {
+      toast.error('El carrito está vacío');
+      return;
+    }
+
+    let targetClienteId = selectedCliente?.id;
+    if (!targetClienteId) {
+      const generic = clientes.find(c => c.nombre.toLowerCase().includes('público') || c.nombre.toLowerCase().includes('general') || c.status === 'ACTIVO');
+      targetClienteId = generic?.id;
+    }
+
+    if (!targetClienteId) {
+      toast.error('Debe seleccionar o buscar un cliente para guardar el pedido');
+      return;
+    }
+
+    setSavingPedido(true);
+    try {
+      const res = await fetch('/api/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clienteId: targetClienteId,
+          detalles: cart.map(item => ({
+            productoId: item.productoId,
+            cantidad: item.cantidad,
+            precioUnitario: item.precioUnitario,
+            descuento: item.descuento || 0
+          })),
+          prioridad: 'NORMAL',
+          observaciones: 'Pedido generado desde Mostrador POS'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Pedido creado con éxito: ${data.data.folio}`);
+        setCreatedPedidoResult(data.data);
+        setShowPedidoCreatedModal(true);
+        // Limpiar carrito
+        setCart([]);
+        setSelectedCliente(null);
+        setGlobalDiscountPercent(0);
+      } else {
+        toast.error(data.error || 'Error al guardar el pedido');
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Error de red al guardar el pedido');
+    } finally {
+      setSavingPedido(false);
+    }
+  };
+
+  const fetchCounterPedidos = async () => {
+    try {
+      setLoadingCounterPedidos(true);
+      const res = await fetch('/api/pedidos?estatus=PENDIENTE&limit=50');
+      if (res.ok) {
+        const data = await res.json();
+        const allPedidos = data.data?.pedidos || [];
+        const filtered = allPedidos.filter((p: any) => p.folio && !p.folio.startsWith('PED-CC-'));
+        setCounterPedidos(filtered);
+      }
+    } catch (err) {
+      console.error('Error al obtener pedidos mostrador:', err);
+    } finally {
+      setLoadingCounterPedidos(false);
+    }
+  };
+
   const handleKickDrawer = async () => {
     if (!printerPort) {
       toast.warning('Debe conectar la impresora en configuración primero');
@@ -689,6 +785,12 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
       return;
     }
     
+    // Inicializar datos de cobro y pre-cargar campos de facturación si existe cliente
+    setRequiresInvoice(false);
+    setInvoiceEmail(selectedCliente?.email || '');
+    setInvoiceWhatsApp(selectedCliente?.telefono1 || selectedCliente?.telefono2 || selectedCliente?.tel1_cliente || '');
+    setInvoiceDeliveryChannel('EMAIL');
+
     const total = getTotal();
     setPaymentType('EFECTIVO');
     setCashReceived(Math.ceil(total).toString());
@@ -732,6 +834,14 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
         return;
       }
     }
+
+    // Copiar variables locales para proceso de facturación posterior
+    const tempCart = [...cart];
+    const tempCliente = selectedCliente;
+    const tempRequiresInvoice = requiresInvoice;
+    const tempInvoiceEmail = invoiceEmail;
+    const tempInvoiceWhatsApp = invoiceWhatsApp;
+    const tempInvoiceDeliveryChannel = invoiceDeliveryChannel;
 
     try {
       setSubmittingVenta(true);
@@ -783,6 +893,78 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
         } else {
           // Si no hay impresora directa, abrir visor de reimpresión para window.print
           setShowTicketPreview(true);
+        }
+
+        // Proceso de facturación automática y timbrado en segundo plano
+        if (tempRequiresInvoice) {
+          (async () => {
+            try {
+              toast.info('Generando pre-factura...');
+              const clienteRfc = tempCliente?.rfc || 'XAXX010101000';
+              const clienteNombre = tempCliente?.nombre || 'Público General';
+              const clientEmailVal = tempInvoiceEmail || tempCliente?.email || '';
+
+              const factRes = await fetch('/api/facturacion/facturas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  clienteRfc,
+                  clienteNombre,
+                  clienteEmail: clientEmailVal,
+                  conceptos: tempCart.map((c) => ({
+                    claveProdServ: '01010101',
+                    descripcion: c.nombre,
+                    cantidad: c.cantidad,
+                    unidad: c.unidadMedida || 'H87',
+                    valorUnitario: c.precioUnitario
+                  })),
+                  observaciones: `Factura generada desde POS para Venta ${data.venta.numeroTicket}`
+                })
+              });
+
+              if (factRes.ok) {
+                const factData = await factRes.json();
+                const newFacturaId = factData.factura?.id;
+
+                if (newFacturaId) {
+                  toast.info('Factura creada. Timbrando en CONTPAQi...');
+                  const timbrarRes = await fetch(`/api/facturacion/facturas/${newFacturaId}/timbrar`, {
+                    method: 'POST'
+                  });
+
+                  if (timbrarRes.ok) {
+                    toast.success('Factura timbrada exitosamente en CONTPAQi');
+
+                    const clientPhone = tempInvoiceWhatsApp || tempCliente?.telefono1 || tempCliente?.telefono2 || tempCliente?.tel1_cliente;
+                    if (clientPhone && (tempInvoiceDeliveryChannel === 'WHATSAPP' || tempInvoiceDeliveryChannel === 'AMBOS')) {
+                      try {
+                        await fetch('/api/whatsapp/send', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            number: clientPhone,
+                            message: `¡Hola ${clienteNombre}! Te confirmamos que tu factura para la compra ticket *${data.venta.numeroTicket}* ha sido timbrada con éxito en CONTPAQi.\n\nSe ha enviado al correo: ${clientEmailVal || 'N/A'}.\n\n¡Gracias por tu preferencia!`
+                          })
+                        });
+                        toast.success('Factura enviada por WhatsApp');
+                      } catch (waErr) {
+                        console.error('Error al enviar WhatsApp de factura:', waErr);
+                      }
+                    }
+                  } else {
+                    const timbrarErr = await timbrarRes.json();
+                    toast.error(`Factura creada pero falló el timbrado: ${timbrarErr.error || 'Error CONTPAQi'}`);
+                  }
+                }
+              } else {
+                const factErr = await factRes.json();
+                toast.error(`Error al generar la pre-factura: ${factErr.error}`);
+              }
+            } catch (errFact) {
+              console.error('Error en facturación POS:', errFact);
+              toast.error('Error en el proceso de facturación automática');
+            }
+          })();
         }
 
         // Recargar productos para ver existencias actualizadas
@@ -1002,6 +1184,47 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
             <RotateCcw className="h-4 w-4" />
             <span>Mov. Manual</span>
           </Button>
+
+          {/* Selector de Modo POS */}
+          <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-0.5 shrink-0">
+            <button
+              onClick={() => setPosMode('MOSTRADOR')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                posMode === 'MOSTRADOR' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/15' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Mostrador
+            </button>
+            <button
+              onClick={() => setPosMode('VENTANILLA')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                posMode === 'VENTANILLA' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/15' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Ventanilla
+            </button>
+          </div>
+
+          {/* Pedidos de Mostrador Pendientes (Solo en Ventanilla/Caja) */}
+          {posMode === 'VENTANILLA' && (
+            <Button
+              onClick={() => {
+                fetchCounterPedidos();
+                setShowCounterPedidosModal(true);
+              }}
+              variant="outline"
+              size="sm"
+              className="h-9 bg-slate-950 border-emerald-500/30 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs gap-1.5 relative"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Pedidos Mostrador</span>
+              {counterPedidos.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-emerald-500 text-white font-black text-[9px] w-4.5 h-4.5 flex items-center justify-center rounded-full border border-slate-950">
+                  {counterPedidos.length}
+                </span>
+              )}
+            </Button>
+          )}
 
           {/* Pedidos en Línea (Click & Collect) */}
           <Button
@@ -1420,13 +1643,30 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               </span>
             </div>
 
-            <Button
-              onClick={handleOpenPayment}
-              disabled={cart.length === 0}
-              className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-emerald-950/20 active:scale-[0.98]"
-            >
-              COBRAR (F12)
-            </Button>
+            {posMode === 'MOSTRADOR' ? (
+              <Button
+                onClick={handleSaveAsPedido}
+                disabled={cart.length === 0 || savingPedido}
+                className="w-full h-16 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-indigo-950/20 active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                {savingPedido ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Guardando Pedido...</span>
+                  </>
+                ) : (
+                  <span>GUARDAR PEDIDO</span>
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleOpenPayment}
+                disabled={cart.length === 0}
+                className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-emerald-950/20 active:scale-[0.98]"
+              >
+                COBRAR (F12)
+              </Button>
+            )}
           </div>
 
         </div>
@@ -1576,6 +1816,66 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
                 </span>
               </div>
             )}
+
+            {/* Facturación Electrónica */}
+            <div className="space-y-3 border-t border-slate-800 pt-4 mt-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  id="requires-invoice"
+                  type="checkbox"
+                  checked={requiresInvoice}
+                  onChange={(e) => setRequiresInvoice(e.target.checked)}
+                  className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-950 w-4 h-4 cursor-pointer"
+                />
+                <Label htmlFor="requires-invoice" className="text-xs font-semibold text-slate-200 cursor-pointer select-none">
+                  ¿Generar Factura de Venta? (Cliente Frecuente)
+                </Label>
+              </div>
+
+              {requiresInvoice && (
+                <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl space-y-3 text-xs">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Correo de Envío (Email)</Label>
+                    <Input
+                      type="email"
+                      value={invoiceEmail}
+                      onChange={(e) => setInvoiceEmail(e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      className="h-9 bg-slate-950 border-slate-800 text-white rounded-xl text-xs placeholder:text-slate-600"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">WhatsApp de Envío (Celular)</Label>
+                    <Input
+                      type="text"
+                      value={invoiceWhatsApp}
+                      onChange={(e) => setInvoiceWhatsApp(e.target.value)}
+                      placeholder="52..."
+                      className="h-9 bg-slate-950 border-slate-800 text-white rounded-xl text-xs placeholder:text-slate-600"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Método de Envío Automático</span>
+                    <div className="flex gap-2 mt-1">
+                      {['EMAIL', 'WHATSAPP', 'AMBOS'].map((channel) => (
+                        <button
+                          key={channel}
+                          type="button"
+                          onClick={() => setInvoiceDeliveryChannel(channel as any)}
+                          className={`flex-1 py-1.5 rounded-lg border text-[10px] font-bold text-center transition-all ${
+                            invoiceDeliveryChannel === channel 
+                              ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' 
+                              : 'bg-slate-950 border-slate-850 text-slate-500 hover:text-slate-300'
+                          }`}
+                        >
+                          {channel}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <DialogFooter className="pt-4 flex gap-2">
               <Button
@@ -2158,6 +2458,222 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               className="w-full h-11 border-slate-800 bg-transparent text-slate-400 hover:text-white rounded-xl"
             >
               Cerrar Ventana
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 8: PEDIDOS DE MOSTRADOR (VENTANILLA) */}
+      <Dialog open={showCounterPedidosModal} onOpenChange={setShowCounterPedidosModal}>
+        <DialogContent className="max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-6 max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
+              <ShoppingCart className="h-7 w-7 text-emerald-400" />
+              Pedidos de Mostrador Pendientes
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 text-sm">
+              Seleccione un pedido levantado en Mostrador para procesar su cobro en Ventanilla.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Buscador de Folio/Cliente en Pedidos Mostrador */}
+          <div className="py-2">
+            <Input
+              type="text"
+              placeholder="Buscar por folio o nombre de cliente..."
+              value={counterSearchQuery}
+              onChange={(e) => setCounterSearchQuery(e.target.value)}
+              className="bg-slate-950 border-slate-800 text-white placeholder-slate-650 rounded-xl focus-visible:ring-indigo-500"
+            />
+          </div>
+
+          <div className="py-4 space-y-4">
+            {loadingCounterPedidos ? (
+              <div className="flex flex-col items-center justify-center py-10 space-y-2 text-slate-400">
+                <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+                <p className="text-xs">Cargando pedidos de mostrador...</p>
+              </div>
+            ) : counterPedidos.length === 0 ? (
+              <div className="text-center py-10 text-slate-500 text-xs">
+                No hay pedidos de mostrador pendientes por cobrar.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {counterPedidos
+                  .filter(p => 
+                    p.folio.toLowerCase().includes(counterSearchQuery.toLowerCase()) ||
+                    p.cliente?.nombre.toLowerCase().includes(counterSearchQuery.toLowerCase())
+                  )
+                  .map((pedido) => (
+                    <div 
+                      key={pedido.id} 
+                      className="p-4 bg-slate-950 border border-slate-850 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-slate-800"
+                    >
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-bold text-emerald-450 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                            {pedido.folio}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-500">
+                            Atendido por: {pedido.vendedor?.name || 'Mostrador'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400 font-sans">
+                          <div className="text-left">
+                            <span className="text-slate-550 font-semibold">Cliente:</span>{' '}
+                            <span className="text-slate-200 font-bold">{pedido.cliente?.nombre}</span>
+                          </div>
+                          <div className="text-left font-mono">
+                            <span className="text-slate-555">Fecha:</span>{' '}
+                            <span>{new Date(pedido.createdAt).toLocaleString()}</span>
+                          </div>
+                          <div className="text-left">
+                            <span className="text-slate-550 font-semibold">Total a Pagar:</span>{' '}
+                            <span className="text-emerald-400 font-bold font-mono">${pedido.total?.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        {/* Detalle de productos */}
+                        <div className="pt-2 text-left">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Productos:</p>
+                          <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-950 space-y-1 text-xs font-mono">
+                            {pedido.detalles.map((d: any) => (
+                              <div key={d.id} className="flex justify-between text-slate-300">
+                                <span className="truncate max-w-[280px]">{d.producto?.nombre}</span>
+                                <span>{d.cantidad} {d.producto?.unidadMedida || 'PZA'} x ${d.precioUnitario?.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex md:flex-col gap-2 shrink-0 justify-end md:w-44">
+                        <Button
+                          onClick={() => {
+                            const mappedItems = pedido.detalles.map((d: any) => {
+                              const stockVal = d.producto?.stockSucursales?.[0]?.stock ?? 999;
+                              return {
+                                productoId: d.productoId,
+                                codigo: d.producto?.codigo || 'N/A',
+                                nombre: d.producto?.nombre || 'Producto',
+                                cantidad: d.cantidad,
+                                precioUnitario: d.precioUnitario,
+                                descuento: d.descuento || 0,
+                                descuentoEspecialUnitario: (d.descuento || 0) / d.cantidad,
+                                stock: stockVal,
+                                unidadMedida: d.producto?.unidadMedida || 'PZA'
+                              };
+                            });
+                            setCart(mappedItems);
+                            setSelectedCliente(pedido.cliente);
+                            setSelectedPriceList(pedido.cliente?.listaPrecio || 1);
+                            setGlobalDiscountPercent(pedido.cliente?.descuento || 0);
+                            setSelectedPedidoId(pedido.id);
+                            setShowCounterPedidosModal(false);
+                            toast.success(`Pedido de mostrador ${pedido.folio} cargado. Registre el pago del cliente.`);
+                          }}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs py-2 h-9"
+                        >
+                          Cobrar en Caja
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCounterPedidosModal(false)}
+              className="w-full h-11 border-slate-800 bg-transparent text-slate-400 hover:text-white rounded-xl"
+            >
+              Cerrar Ventana
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 9: PEDIDO CREADO EXITOSAMENTE (MOSTRADOR) */}
+      <Dialog open={showPedidoCreatedModal} onOpenChange={setShowPedidoCreatedModal}>
+        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex flex-col items-center gap-2 pt-2 text-center">
+              <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 mb-1">
+                <CheckCircle2 className="h-6 w-6 animate-pulse" />
+              </div>
+              Pedido Guardado con Éxito
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 text-center">
+              El pedido ha sido registrado en mostrador. Entregue este número al cliente para cobrar en Ventanilla.
+            </DialogDescription>
+          </DialogHeader>
+
+          {createdPedidoResult && (
+            <div className="py-4 space-y-4">
+              <div className="text-center bg-slate-950 border border-slate-850 p-6 rounded-2xl">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Número de Pedido (Folio)</p>
+                <p className="text-3xl font-black text-white font-mono mt-1 tracking-wider">{createdPedidoResult.folio}</p>
+                <p className="text-xs text-slate-400 mt-2">
+                  Cliente: <span className="font-bold text-slate-200">{createdPedidoResult.cliente?.nombre}</span>
+                </p>
+                <p className="text-xs text-slate-400">
+                  Total a pagar en caja: <span className="font-mono text-emerald-400 font-bold">${createdPedidoResult.total?.toFixed(2)}</span>
+                </p>
+              </div>
+
+              {/* Vista preliminar simplificada del ticket de mostrador para imprimir */}
+              <div className="max-h-[30vh] overflow-y-auto border border-slate-800 p-4 bg-slate-950 font-mono text-[9px] leading-tight space-y-1 rounded-xl text-slate-300">
+                <div className="text-center font-bold text-white">
+                  <p>FERRECOLORS ERP</p>
+                  <p>TICKET DE PRE-VENTA</p>
+                  <p>----------------------------------</p>
+                </div>
+                <div>
+                  <p>FOLIO PEDIDO: {createdPedidoResult.folio}</p>
+                  <p>VENDEDOR: {sesion?.cajero?.name || 'Vendedor'}</p>
+                  <p>FECHA: {new Date().toLocaleString()}</p>
+                  <p>----------------------------------</p>
+                </div>
+                <div>
+                  {createdPedidoResult.detalles?.map((d: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-[8.5px]">
+                      <span>{d.cantidad} x {d.producto?.nombre?.substring(0, 18)}</span>
+                      <span>${d.subtotal?.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <p>----------------------------------</p>
+                </div>
+                <div className="text-right font-bold text-emerald-450">
+                  <p>TOTAL A PAGAR: ${createdPedidoResult.total?.toFixed(2)}</p>
+                </div>
+                <div className="text-center pt-2 text-[8px] text-slate-500">
+                  <p>PASE A VENTANILLA DE COBRO</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPedidoCreatedModal(false)}
+              className="flex-1 h-11 border-slate-800 bg-transparent text-slate-400 hover:text-white rounded-xl"
+            >
+              Listo
+            </Button>
+            <Button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.print();
+                }
+              }}
+              className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"
+            >
+              Imprimir Ticket
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -164,7 +164,18 @@ export async function POST(request: NextRequest) {
       });
 
       // 3. Decrementar stock en Sucursal y registrar movimientos de inventario con bloqueo FOR UPDATE (SOLO SI NO ES PEDIDO ONLINE YA RESERVADO)
-      if (!pedidoId) {
+      let isOnlineReservation = false;
+      if (pedidoId) {
+        const ped = await tx.pedido.findUnique({
+          where: { id: pedidoId },
+          select: { folio: true }
+        });
+        if (ped?.folio?.startsWith('PED-CC-')) {
+          isOnlineReservation = true;
+        }
+      }
+
+      if (!pedidoId || !isOnlineReservation) {
         for (const d of detallesCalculados) {
           const stockRows = await tx.$queryRaw<Array<{ id: string; stock: number; productoNombre?: string }>>`
             SELECT s.id, s.stock, p.nombre as "productoNombre"
@@ -207,8 +218,10 @@ export async function POST(request: NextRequest) {
             }
           });
         }
-      } else {
-        // Si viene de un pedido online, actualizamos el estado del pedido y asociamos la venta
+      }
+
+      if (pedidoId) {
+        // Actualizamos el estado del pedido y asociamos la venta
         await tx.pedido.update({
           where: { id: pedidoId },
           data: {
