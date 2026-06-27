@@ -109,7 +109,8 @@ export async function GET(request: NextRequest) {
       empleo: cliente.empleo,
       aval: cliente.aval,
       limite_credito: cliente.limiteCredito,
-      listaPrecio: cliente.listaPrecio
+      listaPrecio: cliente.listaPrecio,
+      descuento: cliente.descuento
     }));
 
     return NextResponse.json(formattedClientes);

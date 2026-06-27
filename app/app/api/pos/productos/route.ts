@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
         stock: stockItem ? stockItem.stock : 0,
         stockMinimo: stockItem ? stockItem.stockMinimo : 0,
         stockMaximo: stockItem ? stockItem.stockMaximo : 1000,
+        descuento: p.descuento || 0,
         isExternal: false
       };
     });
@@ -123,6 +124,7 @@ export async function GET(request: NextRequest) {
               stock: 0,
               stockMinimo: 0,
               stockMaximo: 1000,
+              descuento: 0,
               isExternal: true
             };
           }
@@ -165,6 +167,7 @@ export async function GET(request: NextRequest) {
                 stock: 0,
                 stockMinimo: 0,
                 stockMaximo: 1000,
+                descuento: 0,
                 isExternal: true
               };
             }

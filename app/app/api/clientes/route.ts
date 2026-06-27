@@ -95,6 +95,8 @@ export async function GET(request: NextRequest) {
       empleo: cliente.empleo,
       aval: cliente.aval,
       limite_credito: cliente.limiteCredito,
+      listaPrecio: cliente.listaPrecio,
+      descuento: cliente.descuento,
       
       // Campos adicionales para la web
       createdAt: cliente.fechaAlta,

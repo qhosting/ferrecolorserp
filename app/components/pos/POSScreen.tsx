@@ -67,6 +67,7 @@ interface CartItem {
   cantidad: number;
   precioUnitario: number;
   descuento: number; // Monto de descuento en pesos
+  descuentoEspecialUnitario?: number; // Descuento unitario especial
   stock: number;
   unidadMedida: string;
 }
@@ -375,6 +376,16 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     if (client?.listaPrecio) {
       setSelectedPriceList(client.listaPrecio);
       toast.info(`Lista de precios "${client.listaPrecio}" aplicada para ${client.nombre}`);
+    } else {
+      setSelectedPriceList(sesion.sucursal.listaPrecioDefecto || 1);
+    }
+    if (client?.descuento !== undefined) {
+      setGlobalDiscountPercent(client.descuento || 0);
+      if (client.descuento > 0) {
+        toast.info(`Descuento global del ${client.descuento}% aplicado para ${client.nombre}`);
+      }
+    } else {
+      setGlobalDiscountPercent(0);
     }
   };
 
@@ -503,6 +514,9 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     const key = `precio${selectedPriceList}` as keyof typeof product;
     const price = parseFloat(product[key]?.toString()) || 0;
 
+    // Descuento especial del producto (si tiene)
+    const specialDiscount = parseFloat(product.descuento?.toString()) || 0;
+
     // Verificar si ya existe en el carrito
     const existingIndex = cart.findIndex((item) => item.productoId === product.id);
 
@@ -515,6 +529,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
       
       const newCart = [...cart];
       newCart[existingIndex].cantidad = newQty;
+      newCart[existingIndex].descuento = specialDiscount * newQty;
       setCart(newCart);
       toast.success(`Incrementado: ${product.nombre}`);
     } else {
@@ -529,7 +544,8 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
         nombre: product.nombre,
         cantidad: 1,
         precioUnitario: price,
-        descuento: 0,
+        descuento: specialDiscount,
+        descuentoEspecialUnitario: specialDiscount,
         stock: product.stock,
         unidadMedida: product.unidadMedida || 'PZA'
       };
@@ -554,7 +570,17 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     }
 
     setCart(
-      cart.map((c) => (c.productoId === productId ? { ...c, cantidad: qty } : c))
+      cart.map((c) => {
+        if (c.productoId === productId) {
+          const discountUnit = c.descuentoEspecialUnitario || 0;
+          return {
+            ...c,
+            cantidad: qty,
+            descuento: discountUnit * qty
+          };
+        }
+        return c;
+      })
     );
   };
 
@@ -615,6 +641,17 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     if (client?.listaPrecio) {
       setSelectedPriceList(client.listaPrecio);
       toast.info(`Cargando lista de precios "${client.listaPrecio}" preferencial para este cliente`);
+    } else {
+      setSelectedPriceList(sesion.sucursal.listaPrecioDefecto || 1);
+    }
+
+    if (client?.descuento !== undefined) {
+      setGlobalDiscountPercent(client.descuento || 0);
+      if (client.descuento > 0) {
+        toast.info(`Descuento global del ${client.descuento}% aplicado para este cliente`);
+      }
+    } else {
+      setGlobalDiscountPercent(0);
     }
   };
 
@@ -1071,7 +1108,12 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
                           <span className="font-mono text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full font-semibold truncate max-w-[70%]">
                             {p.codigo}
                           </span>
-                          <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {p.descuento > 0 && (
+                              <span className="text-[9px] font-black text-rose-300 bg-rose-500/20 border border-rose-500/30 px-1.5 py-0.5 rounded-md shrink-0">
+                                -${p.descuento}
+                              </span>
+                            )}
                             <span className={`h-2 w-2 rounded-full ${stockColor}`}></span>
                             <span className="text-[10px] font-bold text-slate-400">{p.stock} {p.unidadMedida}</span>
                           </div>
@@ -1332,7 +1374,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               </div>
 
               {/* Observaciones */}
-              <div className="space-y-1">
+              <div className="space-y-1 hidden">
                 <Label htmlFor="obs" className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Observaciones</Label>
                 <Input
                   id="obs"
