@@ -57,6 +57,7 @@ const navigationItems: NavigationItem[] = [
   { title: 'Servicios',              href: '/servicios',              icon: Briefcase,     group: 'Catálogos' },
   { title: 'Proveedores',            href: '/proveedores',            icon: Building2,     group: 'Catálogos' },
   { title: 'Agentes',               href: '/agentes',                icon: UserCheck,     group: 'Catálogos' },
+  { title: 'Sucursales',            href: '/sucursales',             icon: Building,      group: 'Catálogos' },
 
   { title: 'Pedidos',               href: '/pedidos',                icon: ShoppingCart,  group: 'Movimientos' },
   { title: 'Compras',               href: '/compras',                icon: Truck,         group: 'Movimientos' },
@@ -78,7 +79,7 @@ const navigationItems: NavigationItem[] = [
   { title: 'Configuración General', href: '/configuracion',          icon: Settings,      group: 'Configuración' },
   { title: 'Integración CONTPAQi',  href: '/integraciones',          icon: Database,      group: 'Configuración' },
   { title: 'Automatización',        href: '/automatizacion',         icon: Bot,           group: 'Configuración' },
-  { title: 'Sucursales',            href: '/sucursales',             icon: Building,      group: 'Configuración' },
+
   { title: 'Comunicación / WhatsApp', href: '/comunicacion',         icon: MessageSquare, group: 'Buzón' },
 ];
 
