@@ -110,3 +110,10 @@
 .dark .glow-primary {
   box-shadow: 0 0 20px -3px rgba(129, 140, 248, 0.6);
 }
+
+/* Ajuste dinámico de los layouts al contraer la barra lateral */
+@media (min-width: 768px) {
+  .md\:ml-64 {
+    margin-left: var(--sidebar-width, 16rem) !important;
+  }
+}

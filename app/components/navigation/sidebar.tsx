@@ -393,6 +393,28 @@ function NavigationContent({ collapsed = false }: { collapsed?: boolean }) {
 function DesktopSidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
+  // Cargar estado de localStorage al montar
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('fc_sidebar_collapsed');
+      if (stored !== null) {
+        setCollapsed(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  // Guardar en localStorage y actualizar la variable CSS de margen del layout
+  useEffect(() => {
+    try {
+      localStorage.setItem('fc_sidebar_collapsed', JSON.stringify(collapsed));
+      document.documentElement.style.setProperty('--sidebar-width', collapsed ? '60px' : '256px');
+    } catch (e) {
+      console.error(e);
+    }
+  }, [collapsed]);
+
   return (
     <div className={cn(
       "hidden md:flex flex-col fixed inset-y-0 left-0 z-30",
