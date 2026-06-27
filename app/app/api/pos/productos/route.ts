@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       take: barcode ? 1 : 30 // Si es barcode, con 1 basta. Si es búsqueda de texto, máx 30.
     });
 
-    let mapped = productos.map((p) => {
+    let mapped = productos.map((p: any) => {
       const stockItem = p.stockSucursales[0];
       return {
         id: p.id,
