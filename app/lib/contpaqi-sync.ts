@@ -357,7 +357,7 @@ export async function syncAllAlmacenesFromContpaqi(): Promise<{ importados: numb
     const almacenesExt = await contpaqi.getAlmacenes();
 
     for (const ext of almacenesExt) {
-      await prisma.almacen.upsert({
+      const almacenLocal = await prisma.almacen.upsert({
         where: { codigo: ext.codigo },
         update: {
           nombre: ext.nombre,
@@ -372,6 +372,59 @@ export async function syncAllAlmacenesFromContpaqi(): Promise<{ importados: numb
           isActive: true,
         },
       });
+
+      // Auto-crear Sucursal si el nombre contiene "SUCURSAL" y no existe
+      const nombreLimpio = ext.nombre.trim();
+      if (nombreLimpio.toUpperCase().includes('SUCURSAL')) {
+        const sucursalExistente = await prisma.sucursal.findFirst({
+          where: { almacenId: almacenLocal.id }
+        });
+
+        if (!sucursalExistente) {
+          // Extraer un código de sucursal único
+          let codigoSuc = nombreLimpio.toUpperCase().replace('SUCURSAL ', '').replace(/[^A-Z0-9]/g, '').substring(0, 10).trim();
+          if (!codigoSuc) {
+            codigoSuc = `SUC${ext.codigo.trim()}`;
+          }
+
+          // Asegurar que el código de sucursal sea único en la BD local
+          const codigoDuplicado = await prisma.sucursal.findUnique({
+            where: { codigo: codigoSuc }
+          });
+          if (codigoDuplicado) {
+            codigoSuc = `${codigoSuc.substring(0, 7)}${Math.floor(Math.random() * 900 + 100)}`;
+          }
+
+          const nuevaSucursal = await prisma.sucursal.create({
+            data: {
+              codigo: codigoSuc,
+              nombre: nombreLimpio,
+              almacenId: almacenLocal.id,
+              listaPrecioDefecto: 1,
+              impuestoIncluido: true,
+              esMatriz: nombreLimpio.toUpperCase().includes('MATRIZ'),
+              isActive: true,
+            }
+          });
+
+          // Inicializar StockSucursal para todos los productos existentes
+          const todosProductos = await prisma.producto.findMany({
+            select: { id: true }
+          });
+
+          for (const prod of todosProductos) {
+            await prisma.stockSucursal.create({
+              data: {
+                sucursalId: nuevaSucursal.id,
+                productoId: prod.id,
+                stock: 0,
+                stockMinimo: 0,
+                stockMaximo: 1000
+              }
+            });
+          }
+        }
+      }
       importados++;
     }
   } catch (err) {

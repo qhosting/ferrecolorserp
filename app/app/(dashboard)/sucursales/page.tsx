@@ -288,6 +288,7 @@ export default function SucursalesPage() {
       if (res.ok) {
         toast.success(data.message || 'Almacenes sincronizados');
         setAlmacenes(data.almacenes || []);
+        fetchSucursales();
       } else {
         toast.error(data.error || 'Error al sincronizar almacenes');
       }
@@ -640,6 +641,16 @@ export default function SucursalesPage() {
               className="border-slate-800 bg-slate-950 text-slate-400 hover:text-white rounded-xl text-xs"
             >
               {healthLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              onClick={handleSyncAlmacenes}
+              variant="outline"
+              size="sm"
+              disabled={syncingAlmacenes}
+              className="border-slate-800 bg-slate-950 text-slate-400 hover:text-white rounded-xl text-xs flex items-center gap-1.5"
+            >
+              {syncingAlmacenes ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className={`h-3.5 w-3.5 ${syncingAlmacenes ? 'animate-spin' : ''}`} />}
+              <span>Sincronizar CONTPAQi</span>
             </Button>
             <Button
               onClick={handleOpenCreateSucursal}
