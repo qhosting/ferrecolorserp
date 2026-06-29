@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { ContpaqiClient } from '@/lib/contpaqi-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Crear agente manual (no proveniente de CONTPAQi)
+// POST - Crear agente manual y sincronizar a CONTPAQi
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -49,14 +50,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Ya existe un agente con el código: ${codigo}` }, { status: 400 });
     }
 
-    // Los agentes de CONTPAQi tienen contpaqiId positivo. Para agentes manuales
-    // asignamos un contpaqiId negativo único para no colisionar con la sincronización.
-    const minAgente = await prisma.agente.findFirst({ orderBy: { contpaqiId: 'asc' } });
-    const nextManualId = Math.min(0, minAgente?.contpaqiId ?? 0) - 1;
+    let contpaqiId = null;
+
+    try {
+      const contpaqiClient = ContpaqiClient.getInstance();
+      const contpaqiResult = await contpaqiClient.crearAgente({
+        codigo,
+        nombre,
+        tipo: tipo ? parseInt(tipo.toString()) : 1
+      });
+      contpaqiId = contpaqiResult.id;
+    } catch (contpaqiError: any) {
+      console.error('Error al crear agente en CONTPAQi:', contpaqiError);
+      return NextResponse.json({
+        error: `No se pudo crear el agente en CONTPAQi: ${contpaqiError.message || 'Error de conexión'}`
+      }, { status: 500 });
+    }
 
     const agente = await prisma.agente.create({
       data: {
-        contpaqiId: nextManualId,
+        contpaqiId,
         codigo,
         nombre,
         tipo: tipo ? parseInt(tipo.toString()) : 1,

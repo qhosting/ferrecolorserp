@@ -184,6 +184,14 @@ export class ContpaqiClient {
     }));
   }
 
+  public async crearAgente(data: { codigo: string; nombre: string; tipo: number }): Promise<{ id: number; codigo: string }> {
+    const res = await this.request<any>('/agentes', 'POST', data);
+    return {
+      id: res.cidagente,
+      codigo: res.ccodigoagente?.trim(),
+    };
+  }
+
   // --- ALMACENES ---
   public async getAlmacenes(): Promise<ContpaqiAlmacen[]> {
     const raw = await this.request<any[]>('/almacenes');
