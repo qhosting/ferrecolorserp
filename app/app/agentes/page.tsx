@@ -315,6 +315,7 @@ export default function AgentesPage() {
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Código / Nombre</th>
                       <th className="text-center px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Tipo</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Usuario ERP</th>
+                      <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Sincronización</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Última Sync</th>
                       <th className="text-center px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Estado</th>
                       <th className="px-4 py-3"></th>
@@ -345,6 +346,23 @@ export default function AgentesPage() {
                             ) : (
                               <span className="text-xs text-muted-foreground/50">Sin usuario asignado</span>
                             )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="bg-indigo-500/10 text-indigo-600 border-indigo-500/20 text-[10px] py-0.5 px-2">
+                                ERP
+                              </Badge>
+                              {a.contpaqiId >= 0 ? (
+                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] py-0.5 px-2 flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3 text-emerald-500" />
+                                  CONTPAQi
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] py-0.5 px-2">
+                                  Solo Local
+                                </Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-xs text-muted-foreground">
@@ -445,10 +463,20 @@ export default function AgentesPage() {
             <DialogTitle>{verAgente?.nombre}</DialogTitle>
             <DialogDescription>{verAgente?.codigo}</DialogDescription>
           </DialogHeader>
-          {verAgente && (
+           {verAgente && (
             <div className="grid gap-2 py-4 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Tipo</span><span>{TIPO_LABEL[verAgente.tipo]?.label ?? 'Desconocido'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Usuario ERP</span><span>{verAgente.user?.email ?? 'Sin asignar'}</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sincronización</span>
+                <span>
+                  {verAgente.contpaqiId >= 0 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Sincronizado con CONTPAQi (ID: {verAgente.contpaqiId})</span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold">Solo Local (Sin CONTPAQi)</span>
+                  )}
+                </span>
+              </div>
               <div className="flex justify-between"><span className="text-muted-foreground">Estado</span><span>{verAgente.isActive ? 'Activo' : 'Inactivo'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Última sync</span><span>{new Date(verAgente.syncAt).toLocaleString('es-MX')}</span></div>
             </div>
