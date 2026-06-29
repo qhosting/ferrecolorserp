@@ -21,6 +21,7 @@ export async function GET(
     const sucursal = await prisma.sucursal.findUnique({
       where: { id: params.id },
       include: {
+        almacen: true,
         _count: {
           select: {
             stockProductos: true,
@@ -71,6 +72,7 @@ export async function PATCH(
       direccion,
       telefono,
       email,
+      almacenId,
       listaPrecioDefecto,
       impuestoIncluido,
       esMatriz,
@@ -105,11 +107,13 @@ export async function PATCH(
           direccion: direccion !== undefined ? (direccion?.trim() || null) : undefined,
           telefono: telefono !== undefined ? (telefono?.trim() || null) : undefined,
           email: email !== undefined ? (email?.trim() || null) : undefined,
+          almacenId: almacenId !== undefined ? (almacenId || null) : undefined,
           listaPrecioDefecto: listaPrecioDefecto !== undefined ? parseInt(listaPrecioDefecto.toString()) : undefined,
           impuestoIncluido: impuestoIncluido !== undefined ? !!impuestoIncluido : undefined,
           esMatriz: esMatriz !== undefined ? !!esMatriz : undefined,
           isActive: isActive !== undefined ? !!isActive : undefined
-        }
+        },
+        include: { almacen: true }
       });
 
       return updated;

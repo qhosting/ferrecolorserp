@@ -670,12 +670,13 @@ model Agente {
 }
 
 model Almacen {
-  id         String   @id @default(cuid())
-  contpaqiId Int      @unique
-  codigo     String   @unique
+  id         String     @id @default(cuid())
+  contpaqiId Int        @unique
+  codigo     String     @unique
   nombre     String
-  isActive   Boolean  @default(true)
-  syncAt     DateTime @default(now())
+  isActive   Boolean    @default(true)
+  syncAt     DateTime   @default(now())
+  sucursales Sucursal[]
 
   @@map("almacenes")
 }
@@ -701,12 +702,14 @@ model Sucursal {
   direccion             String?
   telefono              String?
   email                 String?
+  almacenId             String?
   listaPrecioDefecto    Int                       @default(1)
   impuestoIncluido      Boolean                   @default(false)
   isActive              Boolean                   @default(true)
   esMatriz              Boolean                   @default(false)
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
+  almacen               Almacen?                  @relation(fields: [almacenId], references: [id])
   usuariosDefault       User[]                    @relation("UserSucursalDefault")
   movimientos           MovimientoInventario[]
   pedidos               Pedido[]

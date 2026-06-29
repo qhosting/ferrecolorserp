@@ -22,7 +22,21 @@ import {
   Boxes,
   Loader2,
   Minus,
-  Trash2
+  Trash2,
+  Database,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Link2,
+  Unlink,
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  Tag,
+  Shield,
+  Power,
+  Warehouse
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +54,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+interface Almacen {
+  id: string;
+  contpaqiId: number;
+  codigo: string;
+  nombre: string;
+  isActive: boolean;
+  syncAt: string;
+}
+
 interface Sucursal {
   id: string;
   codigo: string;
@@ -47,6 +70,8 @@ interface Sucursal {
   direccion: string | null;
   telefono: string | null;
   email: string | null;
+  almacenId: string | null;
+  almacen: Almacen | null;
   listaPrecioDefecto: number;
   impuestoIncluido: boolean;
   esMatriz: boolean;
@@ -77,6 +102,14 @@ interface Transferencia {
   }>;
 }
 
+interface ContpaqiHealth {
+  conectado: boolean;
+  empresa: string;
+  sdkInicializado: boolean;
+  sqlConectado: boolean;
+  mensaje: string;
+}
+
 export default function SucursalesPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -90,6 +123,9 @@ export default function SucursalesPage() {
   const [stockList, setStockList] = useState<any[]>([]);
   const [transferencias, setTransferencias] = useState<Transferencia[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
+  const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
+  const [contpaqiHealth, setContpaqiHealth] = useState<ContpaqiHealth | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
 
   // Search/Filters
   const [searchStock, setSearchStock] = useState('');
@@ -111,7 +147,9 @@ export default function SucursalesPage() {
   const [sTaxInc, setSTaxInc] = useState(false);
   const [sMatriz, setSMatriz] = useState(false);
   const [sActive, setSActive] = useState(true);
+  const [sAlmacenId, setSAlmacenId] = useState('');
   const [submittingSuc, setSubmittingSuc] = useState(false);
+  const [syncingAlmacenes, setSyncingAlmacenes] = useState(false);
 
   // Form states - Adjustment
   const [adjProd, setAdjProd] = useState<any>(null);
@@ -143,7 +181,6 @@ export default function SucursalesPage() {
     }
 
     if (status === 'authenticated') {
-      // Validate Admin/Superadmin access
       const role = session.user?.role;
       if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
         toast.error('Acceso restringido - Solo administradores');
@@ -167,7 +204,9 @@ export default function SucursalesPage() {
       await Promise.all([
         fetchSucursales(),
         fetchTransferencias(),
-        fetchCatalogProducts()
+        fetchCatalogProducts(),
+        fetchAlmacenes(),
+        checkContpaqiHealth()
       ]);
     } catch (err) {
       console.error(err);
@@ -212,6 +251,53 @@ export default function SucursalesPage() {
     }
   };
 
+  const fetchAlmacenes = async () => {
+    try {
+      const res = await fetch('/api/sucursales/almacenes');
+      if (res.ok) {
+        const data = await res.json();
+        setAlmacenes(data.almacenes || []);
+      }
+    } catch (err) {
+      console.error('Error cargando almacenes:', err);
+    }
+  };
+
+  const checkContpaqiHealth = async () => {
+    try {
+      setHealthLoading(true);
+      const res = await fetch('/api/contpaqi/health');
+      if (res.ok) {
+        const data = await res.json();
+        setContpaqiHealth(data.data || null);
+      } else {
+        setContpaqiHealth(null);
+      }
+    } catch {
+      setContpaqiHealth(null);
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
+  const handleSyncAlmacenes = async () => {
+    try {
+      setSyncingAlmacenes(true);
+      const res = await fetch('/api/sucursales/almacenes', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Almacenes sincronizados');
+        setAlmacenes(data.almacenes || []);
+      } else {
+        toast.error(data.error || 'Error al sincronizar almacenes');
+      }
+    } catch {
+      toast.error('Error de conexión al sincronizar almacenes');
+    } finally {
+      setSyncingAlmacenes(false);
+    }
+  };
+
   // CRUD Sucursal
   const handleOpenCreateSucursal = () => {
     setEditingSucursal(null);
@@ -224,6 +310,7 @@ export default function SucursalesPage() {
     setSTaxInc(false);
     setSMatriz(false);
     setSActive(true);
+    setSAlmacenId('');
     setShowSucursalModal(true);
   };
 
@@ -238,6 +325,7 @@ export default function SucursalesPage() {
     setSTaxInc(suc.impuestoIncluido);
     setSMatriz(suc.esMatriz);
     setSActive(suc.isActive);
+    setSAlmacenId(suc.almacenId || '');
     setShowSucursalModal(true);
   };
 
@@ -262,6 +350,7 @@ export default function SucursalesPage() {
           direccion: sDir,
           telefono: sTel,
           email: sEmail,
+          almacenId: sAlmacenId || null,
           listaPrecioDefecto: parseInt(sPriceList),
           impuestoIncluido: sTaxInc,
           esMatriz: sMatriz,
@@ -407,7 +496,6 @@ export default function SucursalesPage() {
     setProcessAction(action);
     setActionObs('');
     
-    // Inicializar inputs
     const inputs: { [key: string]: number } = {};
     trans.detalles.forEach(d => {
       if (action === 'enviar') {
@@ -424,7 +512,6 @@ export default function SucursalesPage() {
     e.preventDefault();
     if (!selectedTransfer) return;
 
-    // Estructurar cantidades segun accion
     const detallesList = selectedTransfer.detalles.map(d => {
       const val = actionQtyInputs[d.id] || 0;
       return {
@@ -487,12 +574,15 @@ export default function SucursalesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-4">
+      <div className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
         <span className="text-sm font-medium tracking-wide">Cargando Panel de Sucursales...</span>
       </div>
     );
   }
+
+  const vinculadas = sucursales.filter(s => s.almacenId).length;
+  const sinVincular = sucursales.filter(s => !s.almacenId).length;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -501,21 +591,64 @@ export default function SucursalesPage() {
         description="Administre inventarios sucursalizados, configure puntos de venta y transfiera existencias."
       />
       <div className="p-6 space-y-6">
-        <div className="flex justify-end gap-2">
-          <Button
-            onClick={() => router.push('/')}
-            variant="outline"
-            className="border-slate-800 bg-slate-900 text-slate-400 hover:text-white rounded-xl"
-          >
-            Volver al Inicio
-          </Button>
-          <Button
-            onClick={handleOpenCreateSucursal}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/10"
-          >
-            <Plus className="h-4.5 w-4.5" />
-            <span>Crear Sucursal</span>
-          </Button>
+        {/* CONTPAQi Connection Status Bar */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className={`p-2.5 rounded-xl ${contpaqiHealth?.conectado ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+              <Database className={`h-5 w-5 ${contpaqiHealth?.conectado ? 'text-emerald-400' : 'text-rose-400'}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white">CONTPAQi Comercial</h3>
+                {healthLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
+                ) : contpaqiHealth?.conectado ? (
+                  <Badge className="bg-emerald-500/15 text-emerald-400 border-0 text-[9px] font-bold uppercase">
+                    <Wifi className="h-2.5 w-2.5 mr-1" /> Conectado
+                  </Badge>
+                ) : (
+                  <Badge className="bg-rose-500/15 text-rose-400 border-0 text-[9px] font-bold uppercase">
+                    <WifiOff className="h-2.5 w-2.5 mr-1" /> Sin conexión
+                  </Badge>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {contpaqiHealth?.empresa
+                  ? <>Empresa: <span className="text-slate-300 font-semibold">{contpaqiHealth.empresa}</span> · SDK: {contpaqiHealth.sdkInicializado ? '✓' : '✗'} · SQL: {contpaqiHealth.sqlConectado ? '✓' : '✗'}</>
+                  : 'No se pudo verificar la conexión con el servidor CONTPAQi'
+                }
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-4 text-[10px] font-bold uppercase tracking-wide text-slate-500 border-r border-slate-800 pr-4">
+              <span className="flex items-center gap-1.5">
+                <Link2 className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400">{vinculadas}</span> vinculadas
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Unlink className="h-3 w-3 text-amber-400" />
+                <span className="text-amber-400">{sinVincular}</span> sin vincular
+              </span>
+            </div>
+            <Button
+              onClick={checkContpaqiHealth}
+              variant="outline"
+              size="sm"
+              disabled={healthLoading}
+              className="border-slate-800 bg-slate-950 text-slate-400 hover:text-white rounded-xl text-xs"
+            >
+              {healthLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              onClick={handleOpenCreateSucursal}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/10"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Crear Sucursal</span>
+            </Button>
+          </div>
         </div>
 
       {/* 2. Tabs del panel */}
@@ -542,7 +675,7 @@ export default function SucursalesPage() {
             {sucursales.map((s) => (
               <div 
                 key={s.id} 
-                className={`bg-slate-900 border rounded-2xl p-5 flex flex-col justify-between h-48 relative overflow-hidden transition-all hover:border-slate-700 ${
+                className={`group bg-slate-900 border rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-indigo-500/5 ${
                   !s.isActive ? 'opacity-50 border-slate-900' : 'border-slate-800'
                 }`}
               >
@@ -551,7 +684,7 @@ export default function SucursalesPage() {
                   <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl"></div>
                 )}
                 
-                <div className="space-y-1.5">
+                <div className="space-y-2.5">
                   <div className="flex justify-between items-start gap-1">
                     <span className="font-mono text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full font-bold uppercase">
                       {s.codigo}
@@ -562,11 +695,38 @@ export default function SucursalesPage() {
                     </div>
                   </div>
                   <h3 className="text-lg font-bold text-white leading-snug">{s.nombre}</h3>
-                  <p className="text-xs text-slate-400 line-clamp-1">{s.direccion || 'Sin dirección registrada'}</p>
-                  <p className="text-xs text-slate-500 font-mono">{s.telefono || 'Sin teléfono'}</p>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                      <MapPin className="h-3 w-3 text-slate-500 shrink-0" />
+                      <span className="line-clamp-1">{s.direccion || 'Sin dirección'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <Phone className="h-3 w-3 text-slate-600 shrink-0" />
+                      <span className="font-mono">{s.telefono || 'Sin teléfono'}</span>
+                    </div>
+                  </div>
+
+                  {/* CONTPAQi Almacen Badge */}
+                  <div className="pt-1">
+                    {s.almacen ? (
+                      <div className="flex items-center gap-1.5 bg-emerald-500/8 border border-emerald-500/15 rounded-lg px-2.5 py-1.5">
+                        <Warehouse className="h-3.5 w-3.5 text-emerald-400" />
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Almacén CONTPAQi</span>
+                          <span className="text-xs text-white font-semibold">{s.almacen.nombre} <span className="text-emerald-400/60 font-mono text-[10px]">({s.almacen.codigo})</span></span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 bg-amber-500/8 border border-amber-500/15 rounded-lg px-2.5 py-1.5">
+                        <Unlink className="h-3.5 w-3.5 text-amber-400" />
+                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Sin almacén CONTPAQi vinculado</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-800/60 pt-3 mt-3">
+                <div className="flex items-center justify-between border-t border-slate-800/60 pt-3 mt-4">
                   <span className="text-[10px] text-slate-500 uppercase font-semibold">
                     Lista Precios: {s.listaPrecioDefecto} ({s.impuestoIncluido ? 'Con IVA' : 'Mas IVA'})
                   </span>
@@ -575,9 +735,10 @@ export default function SucursalesPage() {
                     onClick={() => handleOpenEditSucursal(s)}
                     variant="ghost"
                     size="sm"
-                    className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/5 text-xs font-semibold rounded-lg"
+                    className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/5 text-xs font-semibold rounded-lg opacity-80 group-hover:opacity-100 transition-opacity"
                   >
-                    Editar Configuración
+                    <Settings className="h-3.5 w-3.5 mr-1" />
+                    Configurar
                   </Button>
                 </div>
               </div>
@@ -776,155 +937,245 @@ export default function SucursalesPage() {
         </TabsContent>
       </Tabs>
 
-      {/* 3. MODALES DE SUCURSAL */}
+      {/* ═══════════════════════════════════════════════════
+          MODALES
+      ═══════════════════════════════════════════════════ */}
 
-      {/* MODAL SUCURSAL (Create/Edit) */}
+      {/* MODAL SUCURSAL (Create/Edit) — REDISEÑADO */}
       <Dialog open={showSucursalModal} onOpenChange={setShowSucursalModal}>
-        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-              <Store className="h-6 w-6 text-indigo-400" />
-              {editingSucursal ? 'Editar Sucursal' : 'Crear Nueva Sucursal'}
-            </DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Configure la sucursal física y los valores fiscales y de precios por defecto.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl text-slate-100 p-0 overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600/10 via-violet-600/5 to-transparent border-b border-slate-800 px-6 pt-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-500/15 rounded-xl border border-indigo-500/20">
+                  <Store className="h-5 w-5 text-indigo-400" />
+                </div>
+                {editingSucursal ? 'Editar Sucursal' : 'Crear Nueva Sucursal'}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-sm">
+                Configure la sucursal física, vincule con CONTPAQi y defina valores por defecto.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <form onSubmit={handleSucursalSubmit} className="space-y-4 py-2">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="suc-code" className="text-xs font-semibold text-slate-300">Código</Label>
-                <Input
-                  id="suc-code"
-                  type="text"
-                  placeholder="CENTRO"
-                  value={sCode}
-                  onChange={(e) => setSCode(e.target.value)}
-                  className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs uppercase"
-                  disabled={!!editingSucursal}
-                  required
-                />
+          <form onSubmit={handleSucursalSubmit} className="px-6 pb-6 pt-4 space-y-5 max-h-[70vh] overflow-y-auto">
+            
+            {/* ── Sección: Datos Generales ── */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+                Datos Generales
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="suc-code" className="text-xs font-semibold text-slate-300">Código</Label>
+                  <Input
+                    id="suc-code"
+                    type="text"
+                    placeholder="CENTRO"
+                    value={sCode}
+                    onChange={(e) => setSCode(e.target.value)}
+                    className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs uppercase"
+                    disabled={!!editingSucursal}
+                    required
+                  />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="suc-name" className="text-xs font-semibold text-slate-300">Nombre de la Sucursal</Label>
+                  <Input
+                    id="suc-name"
+                    type="text"
+                    placeholder="Sucursal Centro Histórico"
+                    value={sName}
+                    onChange={(e) => setSName(e.target.value)}
+                    className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="suc-name" className="text-xs font-semibold text-slate-300">Nombre de la Sucursal</Label>
-                <Input
-                  id="suc-name"
-                  type="text"
-                  placeholder="Sucursal Centro Histórico"
-                  value={sName}
-                  onChange={(e) => setSName(e.target.value)}
-                  className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="suc-dir" className="text-xs font-semibold text-slate-300">Dirección</Label>
-              <Input
-                id="suc-dir"
-                type="text"
-                placeholder="Calle Principal #123, Col. Centro"
-                value={sDir}
-                onChange={(e) => setSDir(e.target.value)}
-                className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="suc-tel" className="text-xs font-semibold text-slate-300">Teléfono</Label>
+                <Label htmlFor="suc-dir" className="text-xs font-semibold text-slate-300">Dirección</Label>
                 <Input
-                  id="suc-tel"
+                  id="suc-dir"
                   type="text"
-                  placeholder="81-1234-5678"
-                  value={sTel}
-                  onChange={(e) => setSTel(e.target.value)}
+                  placeholder="Calle Principal #123, Col. Centro"
+                  value={sDir}
+                  onChange={(e) => setSDir(e.target.value)}
                   className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="suc-email" className="text-xs font-semibold text-slate-300">Email</Label>
-                <Input
-                  id="suc-email"
-                  type="email"
-                  placeholder="centro@empresa.com"
-                  value={sEmail}
-                  onChange={(e) => setSEmail(e.target.value)}
-                  className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="suc-tel" className="text-xs font-semibold text-slate-300">Teléfono</Label>
+                  <Input
+                    id="suc-tel"
+                    type="text"
+                    placeholder="81-1234-5678"
+                    value={sTel}
+                    onChange={(e) => setSTel(e.target.value)}
+                    className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="suc-email" className="text-xs font-semibold text-slate-300">Email</Label>
+                  <Input
+                    id="suc-email"
+                    type="email"
+                    placeholder="centro@empresa.com"
+                    value={sEmail}
+                    onChange={(e) => setSEmail(e.target.value)}
+                    className="h-10 bg-slate-950 border-slate-800 text-white placeholder-slate-700 focus-visible:ring-indigo-500 rounded-xl text-xs"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="suc-prices" className="text-xs font-semibold text-slate-300">Lista Precios Defecto</Label>
-                <select
-                  id="suc-prices"
-                  value={sPriceList}
-                  onChange={(e) => setSPriceList(e.target.value)}
-                  className="w-full h-10 bg-slate-950 border border-slate-800 text-white rounded-xl px-2.5 text-xs focus:outline-none"
+            {/* ── Separador ── */}
+            <div className="border-t border-slate-800/60" />
+
+            {/* ── Sección: Configuración de Precios ── */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <Tag className="h-3.5 w-3.5 text-violet-400" />
+                Configuración de Precios
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="suc-prices" className="text-xs font-semibold text-slate-300">Lista Precios Defecto</Label>
+                  <select
+                    id="suc-prices"
+                    value={sPriceList}
+                    onChange={(e) => setSPriceList(e.target.value)}
+                    className="w-full h-10 bg-slate-950 border border-slate-800 text-white rounded-xl px-2.5 text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                  >
+                    <option value="1">Lista 1 (Público)</option>
+                    <option value="2">Lista 2 (Mayorista)</option>
+                    <option value="3">Lista 3 (Distribuidor)</option>
+                    <option value="4">Lista 4 (Especial)</option>
+                    <option value="5">Lista 5 (Promocional)</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2.5 pt-5">
+                  <input
+                    id="suc-tax"
+                    type="checkbox"
+                    checked={sTaxInc}
+                    onChange={(e) => setSTaxInc(e.target.checked)}
+                    className="h-4 w-4 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500 accent-indigo-500"
+                  />
+                  <Label htmlFor="suc-tax" className="text-xs font-semibold text-slate-300 cursor-pointer">Impuesto incluido en precio</Label>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Separador ── */}
+            <div className="border-t border-slate-800/60" />
+
+            {/* ── Sección: Vinculación CONTPAQi ── */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  <Database className="h-3.5 w-3.5 text-emerald-400" />
+                  Vinculación CONTPAQi
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSyncAlmacenes}
+                  disabled={syncingAlmacenes}
+                  className="h-7 text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/5 rounded-lg font-semibold"
                 >
-                  <option value="1">Lista 1 (Público)</option>
-                  <option value="2">Lista 2 (Mayorista)</option>
-                  <option value="3">Lista 3 (Distribuidor)</option>
-                  <option value="4">Lista 4 (Especial)</option>
-                  <option value="5">Lista 5 (Promocional)</option>
+                  {syncingAlmacenes ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  Sincronizar Almacenes
+                </Button>
+              </div>
+              
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <Label htmlFor="suc-almacen" className="text-xs font-semibold text-slate-300">Almacén CONTPAQi asignado</Label>
+                <select
+                  id="suc-almacen"
+                  value={sAlmacenId}
+                  onChange={(e) => setSAlmacenId(e.target.value)}
+                  className="w-full h-10 bg-slate-900 border border-slate-800 text-white rounded-xl px-2.5 text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                >
+                  <option value="">— Sin vincular —</option>
+                  {almacenes.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nombre} ({a.codigo})
+                    </option>
+                  ))}
                 </select>
-              </div>
-
-              <div className="flex items-center gap-2 pt-5">
-                <input
-                  id="suc-tax"
-                  type="checkbox"
-                  checked={sTaxInc}
-                  onChange={(e) => setSTaxInc(e.target.checked)}
-                  className="h-4 w-4 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500"
-                />
-                <Label htmlFor="suc-tax" className="text-xs font-semibold text-slate-300 cursor-pointer">Impuesto incluido en precio</Label>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Al vincular un almacén, las ventas y movimientos de esta sucursal se sincronizarán con el almacén seleccionado en CONTPAQi Comercial.
+                  {almacenes.length === 0 && (
+                    <span className="text-amber-400 font-semibold block mt-1">
+                      No hay almacenes disponibles. Presione &quot;Sincronizar Almacenes&quot; para importar desde CONTPAQi.
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="flex items-center gap-2">
-                <input
-                  id="suc-matriz"
-                  type="checkbox"
-                  checked={sMatriz}
-                  onChange={(e) => setSMatriz(e.target.checked)}
-                  className="h-4 w-4 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500"
-                />
-                <Label htmlFor="suc-matriz" className="text-xs font-semibold text-slate-300 cursor-pointer">Establecer como MATRIZ</Label>
-              </div>
+            {/* ── Separador ── */}
+            <div className="border-t border-slate-800/60" />
 
-              <div className="flex items-center gap-2">
-                <input
-                  id="suc-active"
-                  type="checkbox"
-                  checked={sActive}
-                  onChange={(e) => setSActive(e.target.checked)}
-                  className="h-4 w-4 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500"
-                />
-                <Label htmlFor="suc-active" className="text-xs font-semibold text-slate-300 cursor-pointer">Sucursal activa</Label>
+            {/* ── Sección: Opciones ── */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <Settings className="h-3.5 w-3.5 text-slate-400" />
+                Opciones
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+                  <input
+                    id="suc-matriz"
+                    type="checkbox"
+                    checked={sMatriz}
+                    onChange={(e) => setSMatriz(e.target.checked)}
+                    className="h-4 w-4 bg-slate-950 border-slate-700 rounded focus:ring-indigo-500 accent-indigo-500"
+                  />
+                  <Label htmlFor="suc-matriz" className="text-xs font-semibold text-slate-300 cursor-pointer flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-indigo-400" />
+                    Establecer como MATRIZ
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+                  <input
+                    id="suc-active"
+                    type="checkbox"
+                    checked={sActive}
+                    onChange={(e) => setSActive(e.target.checked)}
+                    className="h-4 w-4 bg-slate-950 border-slate-700 rounded focus:ring-indigo-500 accent-emerald-500"
+                  />
+                  <Label htmlFor="suc-active" className="text-xs font-semibold text-slate-300 cursor-pointer flex items-center gap-1.5">
+                    <Power className="h-3.5 w-3.5 text-emerald-400" />
+                    Sucursal activa
+                  </Label>
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="pt-4 flex gap-2">
+            {/* ── Footer ── */}
+            <div className="border-t border-slate-800/60 pt-4 flex gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowSucursalModal(false)}
-                className="flex-1 h-10 border-slate-800 bg-transparent text-slate-400 hover:text-white rounded-xl"
+                className="flex-1 h-11 border-slate-800 bg-transparent text-slate-400 hover:text-white rounded-xl"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={submittingSuc}
-                className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"
+                className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/10"
               >
                 {submittingSuc ? (
                   <>
@@ -935,7 +1186,7 @@ export default function SucursalesPage() {
                   'Guardar Sucursal'
                 )}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

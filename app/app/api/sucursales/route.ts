@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
 
     const sucursales = await prisma.sucursal.findMany({
       where: activeOnly ? { isActive: true } : undefined,
+      include: { almacen: true },
       orderBy: { nombre: 'asc' }
     });
 
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       direccion,
       telefono,
       email,
+      almacenId,
       listaPrecioDefecto,
       impuestoIncluido,
       esMatriz
@@ -91,6 +93,7 @@ export async function POST(request: NextRequest) {
           direccion: direccion?.trim() || null,
           telefono: telefono?.trim() || null,
           email: email?.trim() || null,
+          almacenId: almacenId || null,
           listaPrecioDefecto: parseInt(listaPrecioDefecto?.toString()) || 1,
           impuestoIncluido: !!impuestoIncluido,
           esMatriz: !!esMatriz

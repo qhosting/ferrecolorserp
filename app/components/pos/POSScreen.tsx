@@ -54,7 +54,8 @@ import {
 } from '@/lib/pos/thermal-printer';
 import { 
   generateTicketESCPOSTemplate, 
-  generateZCutESCPOSTemplate 
+  generateZCutESCPOSTemplate,
+  generatePedidoESCPOSTemplate
 } from '@/lib/pos/ticket-template';
 
 interface POSScreenProps {
@@ -291,6 +292,17 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Cargar y actualizar pedidos de mostrador periódicamente en modo Ventanilla
+  useEffect(() => {
+    if (posMode === 'VENTANILLA') {
+      fetchCounterPedidos();
+      const interval = setInterval(() => {
+        fetchCounterPedidos();
+      }, 30000); // 30 segundos
+      return () => clearInterval(interval);
+    }
+  }, [posMode]);
 
   // Recargar productos al cambiar búsqueda o categoría
   useEffect(() => {
@@ -1001,6 +1013,35 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     } catch (err) {
       console.error(err);
       toast.error('Fallo en la comunicación con la impresora térmica', { id: 'printing' });
+    }
+  };
+
+  // Imprimir pedido/pre-venta con puerto serie o fallback a navegador
+  const printPedidoDirectly = async (pedidoFolio: string) => {
+    if (!printerPort) {
+      // Fallback a impresión de ventana si no hay puerto serial configurado
+      if (typeof window !== 'undefined') {
+        window.print();
+      }
+      return;
+    }
+    toast.loading('Generando ticket de pre-venta...', { id: 'printing-pedido' });
+    try {
+      const res = await fetch(`/api/pos/ticket/${pedidoFolio}`);
+      if (res.ok) {
+        const data = await res.json();
+        const bytes = generatePedidoESCPOSTemplate(data.ticket);
+        
+        // Enviar comandos a la impresora
+        await printRawBytes(printerPort, bytes, baudRate);
+        
+        toast.success('Ticket de pre-venta impreso', { id: 'printing-pedido' });
+      } else {
+        toast.error('No se pudieron obtener datos de impresión del pedido', { id: 'printing-pedido' });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Fallo en la comunicación con la impresora térmica', { id: 'printing-pedido' });
     }
   };
 
@@ -2315,7 +2356,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
           </DialogHeader>
 
           {/* Área del ticket imprimible */}
-          <div className="max-h-[60vh] overflow-y-auto border p-4 bg-slate-50 font-mono text-[10px] leading-tight space-y-2 select-text">
+          <div className="printable-ticket max-h-[60vh] overflow-y-auto border p-4 bg-slate-50 font-mono text-[10px] leading-tight space-y-2 select-text">
             {lastVentaResult && (
               <div className="space-y-2">
                 <div className="text-center space-y-1">
@@ -2789,7 +2830,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
               </div>
 
               {/* Vista preliminar simplificada del ticket de mostrador para imprimir */}
-              <div className="max-h-[30vh] overflow-y-auto border border-slate-800 p-4 bg-slate-950 font-mono text-[9px] leading-tight space-y-1 rounded-xl text-slate-300">
+              <div className="printable-ticket max-h-[30vh] overflow-y-auto border border-slate-800 p-4 bg-slate-950 font-mono text-[9px] leading-tight space-y-1 rounded-xl text-slate-300">
                 <div className="text-center font-bold text-white">
                   <p>VertexERP</p>
                   <p>TICKET DE PRE-VENTA</p>
@@ -2831,8 +2872,8 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
             </Button>
             <Button
               onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.print();
+                if (createdPedidoResult?.folio) {
+                  printPedidoDirectly(createdPedidoResult.folio);
                 }
               }}
               className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"

@@ -298,3 +298,96 @@ export function generateZCutESCPOSTemplate(data: any): Uint8Array {
 
   return concatBuffers(parts);
 }
+
+/**
+ * Genera el stream binario de comandos ESC/POS para imprimir un ticket de pedido/pre-venta.
+ */
+export function generatePedidoESCPOSTemplate(data: any): Uint8Array {
+  const encoder = new TextEncoder();
+  const parts: Uint8Array[] = [];
+
+  const writeCmd = (cmd: Uint8Array) => parts.push(cmd);
+  const writeLine = (text: string = '') => parts.push(encoder.encode(sanitizeText(text) + '\n'));
+
+  // 1. Inicializar
+  writeCmd(ESC_POS_COMMANDS.INIT);
+  writeCmd(ESC_POS_COMMANDS.ALIGN_CENTER);
+
+  // 2. Encabezado Empresa
+  writeCmd(ESC_POS_COMMANDS.DOUBLE_SIZE_ON);
+  writeCmd(ESC_POS_COMMANDS.BOLD_ON);
+  writeLine(data.empresa.nombre);
+  writeCmd(ESC_POS_COMMANDS.NORMAL_SIZE);
+  writeCmd(ESC_POS_COMMANDS.BOLD_OFF);
+  
+  writeLine(`RFC: ${data.empresa.rfc}`);
+  writeLine(data.sucursal.nombre);
+  writeLine(data.sucursal.direccion);
+  writeLine(`Tel: ${data.sucursal.telefono}`);
+  writeLine('-'.repeat(48));
+
+  // Título Pre-Venta
+  writeCmd(ESC_POS_COMMANDS.BOLD_ON);
+  writeCmd(ESC_POS_COMMANDS.DOUBLE_HEIGHT_ON);
+  writeLine('TICKET DE PRE-VENTA / PEDIDO');
+  writeCmd(ESC_POS_COMMANDS.NORMAL_SIZE);
+  writeCmd(ESC_POS_COMMANDS.BOLD_OFF);
+  writeLine('-'.repeat(48));
+
+  // 3. Info Pedido
+  writeCmd(ESC_POS_COMMANDS.ALIGN_LEFT);
+  writeLine(`FOLIO PEDIDO: ${data.ticket.numeroTicket}`);
+  writeLine(`FECHA:        ${new Date(data.ticket.fecha).toLocaleString()}`);
+  writeLine(`VENDEDOR:     ${data.ticket.cajero}`);
+  writeLine(`CLIENTE:      ${data.cliente.nombre} (${data.cliente.codigo})`);
+  writeLine(`RFC:          ${data.cliente.rfc}`);
+  writeLine('='.repeat(48));
+
+  // 4. Cabecera Tabla Productos
+  writeCmd(ESC_POS_COMMANDS.BOLD_ON);
+  writeLine(
+    padString('CANT', 5, 'left') + 
+    padString('PRODUCTO', 22, 'left') + ' ' +
+    padString('P.UNIT', 10, 'right') +
+    padString('TOTAL', 11, 'right')
+  );
+  writeCmd(ESC_POS_COMMANDS.BOLD_OFF);
+  writeLine('-'.repeat(48));
+
+  // 5. Listado de Productos
+  for (const item of data.conceptos) {
+    writeLine(formatProductRow(item.cantidad, item.nombre, item.precioUnitario, item.importe));
+  }
+  writeLine('-'.repeat(48));
+
+  // 6. Totales
+  writeCmd(ESC_POS_COMMANDS.ALIGN_RIGHT);
+  writeLine(`SUBTOTAL: ${padString(`$${data.totales.subtotal.toFixed(2)}`, 15, 'right')}`);
+  writeLine(`IVA (16%): ${padString(`$${data.totales.iva.toFixed(2)}`, 15, 'right')}`);
+  if (data.totales.descuento > 0) {
+    writeLine(`DESCUENTO: ${padString(`-$${data.totales.descuento.toFixed(2)}`, 15, 'right')}`);
+  }
+  
+  writeCmd(ESC_POS_COMMANDS.BOLD_ON);
+  writeCmd(ESC_POS_COMMANDS.DOUBLE_HEIGHT_ON);
+  writeLine(`TOTAL A PAGAR: ${padString(`$${data.totales.total.toFixed(2)}`, 15, 'right')}`);
+  writeCmd(ESC_POS_COMMANDS.NORMAL_SIZE);
+  writeCmd(ESC_POS_COMMANDS.BOLD_OFF);
+  writeLine('='.repeat(48));
+
+  // 7. Mensaje de cobro
+  writeCmd(ESC_POS_COMMANDS.ALIGN_CENTER);
+  writeCmd(ESC_POS_COMMANDS.BOLD_ON);
+  writeLine('FAVOR DE PASAR A CAJA A REALIZAR SU PAGO');
+  writeCmd(ESC_POS_COMMANDS.BOLD_OFF);
+  writeLine('Presente este ticket de pre-venta al cajero.');
+  writeLine('Una vez pagado, regrese con su vendedor');
+  writeLine('para recoger su mercancia.');
+  
+  // Espaciado final y corte de papel
+  writeLine('\n\n\n\n');
+  writeCmd(ESC_POS_COMMANDS.PAPER_CUT);
+
+  return concatBuffers(parts);
+}
+
