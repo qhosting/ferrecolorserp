@@ -79,6 +79,7 @@ interface Pedido {
       nombre: string
       precio1: number
       unidadMedida: string
+      stock: number
     }
   }>
   venta?: {
@@ -591,14 +592,23 @@ export default function PedidoDetailsPage({ params }: RouteParams) {
   )
 
   // Helper to map order details to schema required by ConvertirVentaDialog
-  function pedidoSeleccionadoParaConversion(p: Pedido): any {
+  function pedidoSeleccionadoParaConversion(p: Pedido | null): any {
+    if (!p) return null;
     return {
       id: p.id,
       folio: p.folio,
       total: p.total,
       cliente: {
+        codigoCliente: p.cliente.codigoCliente,
         nombre: p.cliente.nombre
-      }
+      },
+      detalles: p.detalles?.map(d => ({
+        cantidad: d.cantidad,
+        producto: {
+          nombre: d.producto.nombre,
+          stock: d.producto.stock
+        }
+      })) || []
     }
   }
 }
