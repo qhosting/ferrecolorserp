@@ -14,10 +14,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const almacenes = await prisma.almacen.findMany({
+    let almacenes = await prisma.almacen.findMany({
       where: { isActive: true },
       orderBy: { nombre: 'asc' },
     });
+
+    // Auto-sincronizar si la base de datos local está vacía
+    if (almacenes.length === 0) {
+      try {
+        console.log('[Auto-Sync] No local warehouses found. Syncing from CONTPAQi...');
+        await syncAllAlmacenesFromContpaqi();
+        almacenes = await prisma.almacen.findMany({
+          where: { isActive: true },
+          orderBy: { nombre: 'asc' },
+        });
+      } catch (syncError) {
+        console.error('[Auto-Sync Error] Failed to auto-sync warehouses:', syncError);
+      }
+    }
 
     return NextResponse.json({ almacenes });
   } catch (error) {
