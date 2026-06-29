@@ -381,3 +381,79 @@ export async function syncAllAlmacenesFromContpaqi(): Promise<{ importados: numb
 
   return { importados };
 }
+
+/**
+ * Sincroniza un proveedor individual desde CONTPAQi al ERP
+ */
+export async function syncProveedorFromContpaqi(codigo: string): Promise<boolean> {
+  try {
+    const ext = await contpaqi.getCliente(codigo);
+    if (!ext) return false;
+
+    // Buscar si ya existe localmente
+    const provExistente = await prisma.proveedor.findFirst({
+      where: {
+        OR: [
+          { contpaqiId: ext.id },
+          { codigo: ext.codigo },
+        ],
+      },
+    });
+
+    const data = {
+      contpaqiId: ext.id,
+      codigo: ext.codigo,
+      nombre: ext.razonSocial,
+      rfc: ext.rfc,
+      email: ext.email || null,
+      limiteCredito: ext.limiteCredito || 0,
+      diasCredito: ext.diasCredito || 0,
+      isActive: ext.estatus === 0, // 0 = Activo en CONTPAQi
+      syncAt: new Date(),
+    };
+
+    if (provExistente) {
+      await prisma.proveedor.update({
+        where: { id: provExistente.id },
+        data,
+      });
+      await registrarLog('proveedor', 'pull', provExistente.id, 'success', ext.codigo, ext);
+    } else {
+      const nuevoProv = await prisma.proveedor.create({
+        data,
+      });
+      await registrarLog('proveedor', 'pull', nuevoProv.id, 'success', ext.codigo, ext);
+    }
+
+    return true;
+  } catch (err: any) {
+    console.error(`Error al sincronizar proveedor ${codigo} desde CONTPAQi:`, err);
+    return false;
+  }
+}
+
+/**
+ * Importación masiva de proveedores desde CONTPAQi
+ */
+export async function syncAllProveedoresFromContpaqi(): Promise<{ importados: number; fallidos: number }> {
+  let importados = 0;
+  let fallidos = 0;
+
+  try {
+    const provsExt = await contpaqi.getClientes(2, 1); // 2 = Proveedor, 1 = Alta/Activos
+
+    for (const ext of provsExt) {
+      const success = await syncProveedorFromContpaqi(ext.codigo);
+      if (success) {
+        importados++;
+      } else {
+        fallidos++;
+      }
+    }
+  } catch (err) {
+    console.error('Error en syncAllProveedoresFromContpaqi:', err);
+    throw err;
+  }
+
+  return { importados, fallidos };
+}

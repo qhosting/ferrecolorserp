@@ -42,6 +42,7 @@ import {
 
 interface Proveedor {
   id: string;
+  contpaqiId?: number | null;
   codigo: string;
   nombre: string;
   rfc?: string;
@@ -73,7 +74,27 @@ export default function ProveedoresPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [verProveedor, setVerProveedor] = useState<Proveedor | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
+
+  const handleSync = async () => {
+    setSyncing(true);
+    toast({ title: 'Sincronizando proveedores', description: 'Por favor espera un momento...' });
+    try {
+      const res = await fetch('/api/contpaqi/sync/proveedores', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al sincronizar');
+      toast({
+        title: 'Sincronización completada',
+        description: `Importados/Actualizados: ${data.importados}, Fallidos: ${data.fallidos}`,
+      });
+      fetchProveedores();
+    } catch (e: any) {
+      toast({ title: 'Error de sincronización', description: e.message, variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchProveedores = async () => {
     setLoading(true);
@@ -179,8 +200,18 @@ export default function ProveedoresPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={handleSync}
+              disabled={loading || syncing}
+              className="gap-2 border-amber-500/30 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 dark:text-amber-400 dark:hover:text-amber-300"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              Sync CONTPAQi
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={fetchProveedores}
-              disabled={loading}
+              disabled={loading || syncing}
               className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -314,6 +345,7 @@ export default function ProveedoresPage() {
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">RFC</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Contacto</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Ciudad</th>
+                      <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Sincronización</th>
                       <th className="text-right px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Saldo Pendiente</th>
                       <th className="text-center px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Estado</th>
                       <th className="px-4 py-3"></th>
@@ -355,6 +387,23 @@ export default function ProveedoresPage() {
                           ) : (
                             <span className="text-xs text-muted-foreground/50">—</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="bg-indigo-500/10 text-indigo-600 border-indigo-500/20 text-[10px] py-0.5 px-2">
+                              ERP
+                            </Badge>
+                            {p.contpaqiId != null && p.contpaqiId >= 0 ? (
+                              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] py-0.5 px-2 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3 text-emerald-500" />
+                                CONTPAQi
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] py-0.5 px-2">
+                                Solo Local
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className={`font-semibold text-sm ${p.saldoActual > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
@@ -488,6 +537,16 @@ export default function ProveedoresPage() {
               <div className="flex justify-between"><span className="text-muted-foreground">Días de crédito</span><span>{verProveedor.diasCredito ?? 0}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Límite de crédito</span><span>${(verProveedor.limiteCredito ?? 0).toLocaleString('es-MX')}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Saldo pendiente</span><span className={verProveedor.saldoActual > 0 ? 'text-rose-600 font-semibold' : 'text-emerald-600'}>${verProveedor.saldoActual.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sincronización</span>
+                <span>
+                  {verProveedor.contpaqiId != null && verProveedor.contpaqiId >= 0 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Sincronizado con CONTPAQi (ID: {verProveedor.contpaqiId})</span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold">Solo Local (Sin CONTPAQi)</span>
+                  )}
+                </span>
+              </div>
               <div className="flex justify-between"><span className="text-muted-foreground">Estado</span><span>{verProveedor.activo ? 'Activo' : 'Inactivo'}</span></div>
             </div>
           )}

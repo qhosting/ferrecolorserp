@@ -1,8 +1,8 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { ContpaqiClient } from '@/lib/contpaqi-client';
 
 // GET - Obtener proveedores
 export async function GET(request: NextRequest) {
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Crear nuevo proveedor
+// POST - Crear nuevo proveedor y sincronizar a CONTPAQi
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -107,8 +107,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let contpaqiId = null;
+
+    try {
+      const contpaqiClient = ContpaqiClient.getInstance();
+      const contpaqiResult = await contpaqiClient.crearCliente({
+        codigo,
+        razonSocial: nombre,
+        rfc: rfc || 'XAXX010101000',
+        tipo: 2, // 2 = Proveedor en CONTPAQi
+        limiteCredito: limiteCredito ? parseFloat(limiteCredito.toString()) : 0,
+        diasCredito: diasCredito ? parseInt(diasCredito.toString()) : 0,
+        email: email || '',
+        telefono1: telefono || '',
+        calle: direccion || '',
+      });
+      contpaqiId = contpaqiResult.id;
+    } catch (contpaqiError: any) {
+      console.error('Error al crear proveedor en CONTPAQi:', contpaqiError);
+      return NextResponse.json({
+        error: `No se pudo crear el proveedor en CONTPAQi: ${contpaqiError.message || 'Error de conexión'}`
+      }, { status: 500 });
+    }
+
     const nuevoProveedor = await prisma.proveedor.create({
       data: {
+        contpaqiId,
         codigo,
         nombre,
         contacto: contacto || null,

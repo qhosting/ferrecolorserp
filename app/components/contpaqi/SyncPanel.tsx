@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { RefreshCw, Server, Users, Box, HardDrive, ShieldAlert, CheckCircle, HelpCircle } from 'lucide-react';
+import { RefreshCw, Server, Users, Box, HardDrive, ShieldAlert, CheckCircle, HelpCircle, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SyncLogItem {
@@ -31,6 +31,7 @@ export default function SyncPanel() {
     clientes: false,
     productos: false,
     agentes: false,
+    proveedores: false,
   });
 
   const checkHealth = async () => {
@@ -81,7 +82,7 @@ export default function SyncPanel() {
     fetchLogs();
   }, []);
 
-  const triggerSync = async (type: 'clientes' | 'productos' | 'agentes') => {
+  const triggerSync = async (type: 'clientes' | 'productos' | 'agentes' | 'proveedores') => {
     setSyncStates(prev => ({ ...prev, [type]: true }));
     toast.info(`Iniciando sincronización de ${type}...`);
     
@@ -95,6 +96,8 @@ export default function SyncPanel() {
       } else if (type === 'productos') {
         endpoint = '/api/contpaqi/sync/productos';
         body = { accion: 'pull' };
+      } else if (type === 'proveedores') {
+        endpoint = '/api/contpaqi/sync/proveedores';
       } else {
         endpoint = '/api/contpaqi/sync/agentes';
       }
@@ -156,7 +159,7 @@ export default function SyncPanel() {
       </Card>
 
       {/* Acciones de Sincronización Manual */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="shadow-sm border-t-4 border-t-blue-500">
           <CardHeader>
             <CardTitle className="text-md font-semibold flex items-center gap-2">
@@ -208,6 +211,34 @@ export default function SyncPanel() {
                 </>
               ) : (
                 'Importar Productos'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-t-4 border-t-amber-500">
+          <CardHeader>
+            <CardTitle className="text-md font-semibold flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-amber-500" />
+              Sincronizar Proveedores
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Importa proveedores registrados en CONTPAQi Comercial Premium.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={syncStates.proveedores || !healthStatus.conectado}
+              onClick={() => triggerSync('proveedores')}
+            >
+              {syncStates.proveedores ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Sincronizando...
+                </>
+              ) : (
+                'Importar Proveedores'
               )}
             </Button>
           </CardContent>
