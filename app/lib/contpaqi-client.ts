@@ -132,13 +132,17 @@ export class ContpaqiClient {
     sqlConectado: boolean;
     mensaje: string;
   }> {
-    return this.request<{
-      conectado: boolean;
-      empresa: string;
-      sdkInicializado: boolean;
-      sqlConectado: boolean;
-      mensaje: string;
-    }>('/health/verificar');
+    const raw = await this.request<any>('/health/verificar');
+    const sdkOk = raw?.Sdk?.status === 'OK';
+    const sqlOk = raw?.Sql?.status === 'OK';
+    
+    return {
+      conectado: sdkOk && sqlOk,
+      empresa: this.companyId,
+      sdkInicializado: sdkOk,
+      sqlConectado: sqlOk,
+      mensaje: `${raw?.Sdk?.mensaje || ''} / ${raw?.Sql?.mensaje || ''}`.trim() || 'Verificación completada',
+    };
   }
 
   // --- CLIENTES ---
