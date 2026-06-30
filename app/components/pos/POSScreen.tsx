@@ -93,6 +93,16 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const clientSearchRef = useRef<HTMLDivElement>(null);
   const clientSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const focusSearchInput = () => {
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select();
+      }
+    }, 50);
+  };
   const [selectedPriceList, setSelectedPriceList] = useState<number>(1);
   const [globalDiscountPercent, setGlobalDiscountPercent] = useState<number>(0);
   const [observaciones, setObservaciones] = useState<string>('');
@@ -304,6 +314,32 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     }
   }, [posMode]);
 
+  // Auto-enfocar el buscador principal al cargar la pantalla, al cambiar a modo Mostrador,
+  // y al cerrar cualquier modal para asegurar un flujo de escaneo continuo.
+  useEffect(() => {
+    if (
+      !showPaymentModal &&
+      !showMovementModal &&
+      !showCloseSessionModal &&
+      !showTicketPreview &&
+      !showQuickRegisterModal &&
+      !showOnlinePedidosModal &&
+      !showCounterPedidosModal &&
+      posMode === 'MOSTRADOR'
+    ) {
+      focusSearchInput();
+    }
+  }, [
+    showPaymentModal,
+    showMovementModal,
+    showCloseSessionModal,
+    showTicketPreview,
+    showQuickRegisterModal,
+    showOnlinePedidosModal,
+    showCounterPedidosModal,
+    posMode
+  ]);
+
   // Recargar productos al cambiar búsqueda o categoría
   useEffect(() => {
     fetchProducts();
@@ -346,7 +382,9 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
   // Escáner de código de barras USB
   useBarcodeScanner(async (barcode) => {
     toast.info(`Escanéo detectado: ${barcode}`);
+    setSearchQuery(barcode);
     await handleAddByBarcode(barcode);
+    focusSearchInput();
   });
 
   const fetchClientes = async () => {
@@ -423,6 +461,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     } else {
       setGlobalDiscountPercent(0);
     }
+    focusSearchInput();
   };
 
   const fetchCategories = async () => {
@@ -589,6 +628,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
       setCart([...cart, newItem]);
       toast.success(`Agregado: ${product.nombre}`);
     }
+    focusSearchInput();
   };
 
   const updateCartQty = (productId: string, qty: number) => {
@@ -644,6 +684,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
     setObservaciones('');
     setSelectedPedidoId(null);
     toast.info('Carrito vaciado');
+    focusSearchInput();
   };
 
   // Cálculos totales
@@ -1316,6 +1357,7 @@ export default function POSScreen({ sesion, onSessionClosed }: POSScreenProps) {
                 <div className="relative flex-1">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-550" />
                   <Input
+                    ref={searchInputRef}
                     id="pos-search-input"
                     type="text"
                     placeholder="Busque por nombre, código o escanee código de barras..."
