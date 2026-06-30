@@ -194,7 +194,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       pagaresVencidos: pagaresVencidos.length,
       proximoVencimiento: proximoPagare?.fechaVencimiento || null,
       diasVencidoProximo: proximoPagare?.diasVencido || 0,
-      totalNotasCargo: ventaAny.notesCargo?.filter((n: any) => n.aplicada).reduce((sum: number, n: any) => sum + n.monto, 0) || 0,
+      totalNotasCargo: ventaAny.notasCargo?.filter((n: any) => n.aplicada).reduce((sum: number, n: any) => sum + n.monto, 0) || 0,
       totalNotasCredito: ventaAny.notasCredito?.filter((n: any) => n.aplicada).reduce((sum: number, n: any) => sum + n.monto, 0) || 0
     }
 

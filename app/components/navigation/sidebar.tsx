@@ -38,7 +38,8 @@ import {
   UserCheck,
   PanelLeftClose,
   PanelLeftOpen,
-  CheckCircle2
+  CheckCircle2,
+  Banknote
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -64,6 +65,7 @@ const navigationItems: NavigationItem[] = [
   { title: 'Almacén',               href: '/almacen',                icon: Warehouse,     group: 'Movimientos' },
   { title: 'Cobranza',              href: '/cobranza',               icon: ArrowDownRight, group: 'Movimientos' },
   { title: 'Cobranza Móvil',        href: '/cobranza-movil',         icon: Zap,           group: 'Movimientos' },
+  { title: 'Pagos',                  href: '/pagos',                  icon: Banknote,      group: 'Movimientos' },
   { title: 'Ventas',                href: '/ventas',                 icon: FileText,      group: 'Notas de venta' },
   { title: 'Facturación Electrónica', href: '/facturacion-electronica', icon: FileCheck,   group: 'Notas de venta' },
   { title: 'Punto de Venta (POS)',  href: '/pos',                    icon: ShoppingCart,  group: 'Notas de venta' },
