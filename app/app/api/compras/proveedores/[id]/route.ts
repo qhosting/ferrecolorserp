@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { ContpaqiClient } from '@/lib/contpaqi-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,63 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     });
   } catch (error) {
     console.error('Error updating proveedor:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  }
+}
+
+// DELETE - Eliminar un proveedor local solo si ya no existe en CONTPAQi
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const localProveedor = await prisma.proveedor.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!localProveedor) {
+      return NextResponse.json({ error: 'Proveedor no encontrado' }, { status: 404 });
+    }
+
+    // Si tiene código, verificar si aún existe en CONTPAQi
+    if (localProveedor.codigo) {
+      try {
+        const contpaqiClient = ContpaqiClient.getInstance();
+        const ext = await contpaqiClient.getCliente(localProveedor.codigo);
+        if (ext) {
+          return NextResponse.json({
+            error: 'No se permite eliminar este proveedor porque aún existe en CONTPAQi. Debe eliminarlo en CONTPAQi primero.'
+          }, { status: 400 });
+        }
+      } catch (err) {
+        console.warn('No se pudo verificar existencia en CONTPAQi API:', err);
+      }
+    }
+
+    // Intentar eliminarlo físicamente de la base de datos local
+    try {
+      await prisma.proveedor.delete({
+        where: { id: params.id },
+      });
+      return NextResponse.json({
+        success: true,
+        message: 'Proveedor eliminado permanentemente de la base de datos local.',
+      });
+    } catch (e) {
+      // Si tiene transacciones relacionadas, no se puede eliminar físicamente. Lo marcamos como inactivo.
+      await prisma.proveedor.update({
+        where: { id: params.id },
+        data: { isActive: false },
+      });
+      return NextResponse.json({
+        success: true,
+        message: 'El proveedor no pudo ser eliminado físicamente debido a que tiene transacciones registradas localmente. Ha sido marcado como Inactivo.',
+      });
+    }
+  } catch (error) {
+    console.error('Error al intentar eliminar proveedor:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

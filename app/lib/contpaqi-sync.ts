@@ -485,15 +485,13 @@ export async function syncProveedorFromContpaqi(codigo: string): Promise<boolean
   }
 }
 
-/**
- * Importación masiva de proveedores desde CONTPAQi
- */
 export async function syncAllProveedoresFromContpaqi(): Promise<{ importados: number; fallidos: number }> {
   let importados = 0;
   let fallidos = 0;
 
   try {
     const provsExt = await contpaqi.getClientes(2, 1); // 2 = Proveedor, 1 = Alta/Activos
+    const codigosExt = new Set(provsExt.map(p => p.codigo.trim().toUpperCase()));
 
     for (const ext of provsExt) {
       const success = await syncProveedorFromContpaqi(ext.codigo);
@@ -501,6 +499,39 @@ export async function syncAllProveedoresFromContpaqi(): Promise<{ importados: nu
         importados++;
       } else {
         fallidos++;
+      }
+    }
+
+    // Identificar y procesar proveedores locales que ya no existen en CONTPAQi
+    const localProvs = await prisma.proveedor.findMany({
+      where: {
+        contpaqiId: { not: null },
+        isActive: true,
+      },
+      select: { id: true, codigo: true, nombre: true },
+    });
+
+    for (const local of localProvs) {
+      const codigoNormalizado = local.codigo.trim().toUpperCase();
+      if (!codigosExt.has(codigoNormalizado)) {
+        try {
+          // Intentar eliminarlo físicamente
+          await prisma.proveedor.delete({
+            where: { id: local.id },
+          });
+          await registrarLog('proveedor', 'delete_missing', local.id, 'success', local.codigo, {
+            mensaje: `Proveedor ${local.nombre} eliminado físicamente porque ya no existe en CONTPAQi.`,
+          });
+        } catch (e) {
+          // Si tiene transacciones locales, marcarlo como inactivo
+          await prisma.proveedor.update({
+            where: { id: local.id },
+            data: { isActive: false },
+          });
+          await registrarLog('proveedor', 'deactivate_missing', local.id, 'success', local.codigo, {
+            mensaje: `Proveedor ${local.nombre} marcado como inactivo porque ya no existe en CONTPAQi pero tiene relaciones locales.`,
+          });
+        }
       }
     }
   } catch (err) {

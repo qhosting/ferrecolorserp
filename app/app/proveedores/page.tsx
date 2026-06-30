@@ -31,6 +31,7 @@ import {
   CheckCircle,
   AlertCircle,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import {
   Select,
@@ -75,6 +76,8 @@ export default function ProveedoresPage() {
   const [verProveedor, setVerProveedor] = useState<Proveedor | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeleteNombre, setConfirmDeleteNombre] = useState('');
   const { toast } = useToast();
 
   const handleSync = async () => {
@@ -156,6 +159,24 @@ export default function ProveedoresPage() {
       fetchProveedores();
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/compras/proveedores/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+      toast({ title: 'Proveedor procesado', description: data.message });
+      setConfirmDeleteId(null);
+      fetchProveedores();
+    } catch (e: any) {
+      toast({ title: 'Error al eliminar', description: e.message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -428,6 +449,9 @@ export default function ProveedoresPage() {
                             <Button variant="ghost" size="sm" title="Editar" onClick={() => openEditar(p)} className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600">
                               <Edit3 className="h-3.5 w-3.5" />
                             </Button>
+                            <Button variant="ghost" size="sm" title="Eliminar" onClick={() => { setConfirmDeleteId(p.id); setConfirmDeleteNombre(p.nombre); }} className="h-7 w-7 p-0 text-muted-foreground hover:text-rose-600">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -553,6 +577,28 @@ export default function ProveedoresPage() {
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cerrar</Button>
             {verProveedor && <Button onClick={() => openEditar(verProveedor)}>Editar</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Confirmar Eliminar */}
+      <Dialog open={confirmDeleteId !== null} onOpenChange={(o) => !o && setConfirmDeleteId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>¿Confirmas eliminar al proveedor?</DialogTitle>
+            <DialogDescription>
+              Se intentará eliminar permanentemente a <strong>{confirmDeleteNombre}</strong> de ferrecolorserp.
+              <br /><br />
+              <span className="text-amber-600 font-semibold dark:text-amber-400">
+                Nota: Solo se permitirá la eliminación si el proveedor ya fue eliminado previamente en CONTPAQi Comercial.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)} disabled={submitting}>
+              {submitting ? 'Eliminando...' : 'Eliminar Proveedor'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
