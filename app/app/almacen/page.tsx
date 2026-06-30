@@ -18,6 +18,9 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Package, Search, ArrowUpRight, ArrowDownLeft, Plus, MapPin, History,
   AlertTriangle, CheckCircle, XCircle, RefreshCw, Sliders,
   ChevronLeft, ChevronRight, Building2, ArrowLeftRight, Truck,
@@ -629,8 +632,38 @@ export default function AlmacenPage() {
                                 {prod.marca && <span className="text-xs text-slate-500">{prod.marca}</span>}
                               </TableCell>
                               <TableCell className="text-xs text-slate-400">{prod.categoria || '—'}</TableCell>
-                              <TableCell className="text-right font-semibold text-white">
-                                {prod.stock} <span className="text-xs font-normal text-slate-500">{prod.unidadMedida}</span>
+                              <TableCell className="text-right">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="font-semibold text-white cursor-help hover:underline decoration-dotted inline-block select-none">
+                                        {prod.stock} <span className="text-xs font-normal text-slate-500">{prod.unidadMedida}</span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-slate-950 border-slate-800 text-slate-200 p-3 w-64 shadow-xl rounded-xl z-50">
+                                      <p className="text-xs font-bold text-slate-400 border-b border-slate-800 pb-1.5 mb-1.5 flex items-center justify-between">
+                                        <span>Distribución de Stock</span>
+                                        <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+                                      </p>
+                                      <div className="space-y-1.5">
+                                        {prod.stockSucursalesFull && prod.stockSucursalesFull.length > 0 ? (
+                                          prod.stockSucursalesFull.map(ss => (
+                                            <div key={ss.sucursalId} className="flex justify-between items-center text-xs">
+                                              <span className="text-slate-400 font-medium truncate max-w-[150px]" title={ss.sucursal.nombre}>
+                                                {ss.sucursal.nombre}
+                                              </span>
+                                              <span className="font-mono font-bold text-white bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                                {ss.stock}
+                                              </span>
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <span className="text-xs text-slate-500">Sin datos de sucursales</span>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </TableCell>
                               <TableCell>{stockBadge}</TableCell>
                               <TableCell>

@@ -67,15 +67,41 @@ export async function GET(request: NextRequest) {
       prisma.producto.count({ where }),
     ]);
 
+    const sucursalId = searchParams.get('sucursalId') || '';
+
     const mappedProductos = productos.map(p => {
-      const stockTotal = p.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
-      const defaultStock = p.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || p.stockSucursales[0];
+      let stock = 0;
+      let stockMinimo = 0;
+      let stockMaximo = 1000;
+
+      if (sucursalId && sucursalId !== 'all') {
+        const matchingStock = p.stockSucursales.find((sp: any) => sp.sucursalId === sucursalId);
+        stock = matchingStock?.stock ?? 0;
+        stockMinimo = matchingStock?.stockMinimo ?? 0;
+        stockMaximo = matchingStock?.stockMaximo ?? 1000;
+      } else {
+        stock = p.stockSucursales.reduce((acc: number, curr: any) => acc + curr.stock, 0);
+        const defaultStock = p.stockSucursales.find((sp: any) => sp.sucursal.esMatriz) || p.stockSucursales[0];
+        stockMinimo = defaultStock?.stockMinimo ?? 0;
+        stockMaximo = defaultStock?.stockMaximo ?? 1000;
+      }
+
       return {
         ...p,
-        stock: stockTotal,
-        stockMinimo: defaultStock?.stockMinimo ?? 0,
-        stockMaximo: defaultStock?.stockMaximo ?? 1000,
-        stockSucursales: undefined
+        stock,
+        stockMinimo,
+        stockMaximo,
+        stockSucursales: undefined,
+        stockSucursalesFull: p.stockSucursales.map((sp: any) => ({
+          sucursalId: sp.sucursalId,
+          stock: sp.stock,
+          stockMinimo: sp.stockMinimo,
+          stockMaximo: sp.stockMaximo,
+          sucursal: {
+            nombre: sp.sucursal.nombre,
+            codigo: sp.sucursal.codigo,
+          },
+        })),
       };
     });
 
