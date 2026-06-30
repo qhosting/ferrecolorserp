@@ -52,7 +52,17 @@ export async function GET(
       stock: stockTotal,
       stockMinimo: defaultStock?.stockMinimo ?? 0,
       stockMaximo: defaultStock?.stockMaximo ?? 1000,
-      stockSucursales: undefined
+      stockSucursales: undefined,
+      stockSucursalesFull: producto.stockSucursales.map((sp: any) => ({
+        sucursalId: sp.sucursalId,
+        stock: sp.stock,
+        stockMinimo: sp.stockMinimo,
+        stockMaximo: sp.stockMaximo,
+        sucursal: {
+          nombre: sp.sucursal.nombre,
+          codigo: sp.sucursal.codigo,
+        },
+      })),
     };
 
     return NextResponse.json({ producto: mappedProducto });
@@ -243,7 +253,17 @@ export async function PUT(
       stock: stockTotal,
       stockMinimo: defaultStock?.stockMinimo ?? 0,
       stockMaximo: defaultStock?.stockMaximo ?? 1000,
-      stockSucursales: undefined
+      stockSucursales: undefined,
+      stockSucursalesFull: finalProduct.stockSucursales.map((sp: any) => ({
+        sucursalId: sp.sucursalId,
+        stock: sp.stock,
+        stockMinimo: sp.stockMinimo,
+        stockMaximo: sp.stockMaximo,
+        sucursal: {
+          nombre: sp.sucursal.nombre,
+          codigo: sp.sucursal.codigo,
+        },
+      })),
     };
 
     return NextResponse.json({ producto: mappedProducto });

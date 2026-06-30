@@ -23,7 +23,8 @@ import {
   Star,
   AlertTriangle,
   CheckCircle,
-  Info
+  Info,
+  Building2
 } from 'lucide-react';
 
 interface ProductDetailsProps {
@@ -76,22 +77,17 @@ export function ProductDetails({ product, onClose, onEdit }: ProductDetailsProps
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between pr-6">
             <div>
-              <DialogTitle className="text-xl">{product.nombre}</DialogTitle>
+              <DialogTitle className="text-xl font-bold">{product.nombre}</DialogTitle>
               <p className="text-sm text-gray-500 mt-1">Código: {product.codigo}</p>
             </div>
-            <div className="flex gap-2">
-              {onEdit && (
-                <Button variant="outline" size="sm" onClick={onEdit}>
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Editar
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={onClose}>
-                <X className="w-4 h-4" />
+            {onEdit && (
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Edit3 className="w-4 h-4 mr-2" />
+                Editar
               </Button>
-            </div>
+            )}
           </div>
 
           {/* Status Badges */}
@@ -453,6 +449,36 @@ export function ProductDetails({ product, onClose, onEdit }: ProductDetailsProps
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg font-semibold">
+                  <Building2 className="w-5 h-5 mr-2 text-indigo-600" />
+                  Existencia por Sucursal
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  {product.stockSucursalesFull && product.stockSucursalesFull.length > 0 ? (
+                    product.stockSucursalesFull.map((ss: any) => (
+                      <div key={ss.sucursalId} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100/70 transition-colors rounded-xl border border-gray-100">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-gray-800 truncate">{ss.sucursal.nombre}</p>
+                          <p className="text-[10px] text-gray-400 font-medium">Mín: {ss.stockMinimo} / Máx: {ss.stockMaximo}</p>
+                        </div>
+                        <Badge className={`ml-2 font-semibold ${ss.stock > 0 ? 'bg-green-50 text-green-700 hover:bg-green-50 border border-green-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-100 border border-gray-200'}`} variant="outline">
+                          {ss.stock} {product.unidadMedida}
+                        </Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-6 text-gray-500 text-xs">
+                      No se encontraron registros de existencias en sucursales.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Ubicación */}
