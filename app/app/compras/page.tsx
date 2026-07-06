@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/navigation/header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { useSearchParams } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -16,653 +17,775 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Truck,
   Plus,
   Search,
-  Download,
   Eye,
-  Trash2,
+  DollarSign,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
   ShoppingCart,
+  Handshake,
+  RotateCcw,
+  CreditCard,
+  BarChart3,
   Package,
-  TrendingUp,
-  AlertCircle,
-} from "lucide-react";
+  XCircle,
+  Check,
+  ArrowUpRight,
+  ArrowDownRight,
+  FileText,
+  Building2,
+  Ban,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
+// ─── Formateo MXN ───
+const formatMXN = (n: number) =>
+  new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+  }).format(n);
+
+// ─── Tipos ───
 interface Proveedor {
   id: string;
   codigo: string;
   nombre: string;
-  contacto: string;
-  telefono: string;
-  email: string;
-  direccion: string;
-  diasCredito: number;
-  limiteCredito: number;
-  saldoActual: number;
-  activo: boolean;
-  createdAt: string;
+  rfc?: string;
+  telefono?: string;
+  email?: string;
 }
 
-interface DetalleOrdenCompra {
+interface Producto {
   id: string;
-  producto: { id: string; codigo: string; nombre: string };
-  cantidad: number;
-  precio: number;
-  subtotal: number;
-  cantidadRecibida: number;
+  codigo: string;
+  nombre: string;
+  precioCompra: number;
+  precio1: number;
+  stock: number;
+  unidadMedida: string;
 }
 
-interface OrdenCompra {
+interface CompraItem {
+  id: string;
+  productoId: string;
+  producto: Producto;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+}
+
+interface Compra {
   id: string;
   folio: string;
-  proveedor: { id: string; nombre: string; codigo: string };
-  fecha: string;
-  fechaEntrega: string;
+  proveedor: Proveedor;
   subtotal: number;
   iva: number;
   total: number;
-  estado: 'PENDIENTE' | 'CONFIRMADA' | 'PARCIAL' | 'RECIBIDA' | 'CANCELADA';
-  detalles: DetalleOrdenCompra[];
-  observaciones: string;
-  createdAt: string;
-  updatedAt: string;
+  status: string;
+  fechaOrden: string;
+  fechaRecepcion?: string;
+  items: CompraItem[];
+  observaciones?: string;
 }
 
-interface RecepcionMercancia {
+interface ConsignacionItem {
   id: string;
-  ordenCompra: { id: string; folio: string; proveedor: { nombre: string } };
-  folio: string;
-  fecha: string;
-  detalles: any[];
-  observaciones: string;
-  estado: string;
-  createdAt: string;
-}
-
-interface ProductoOpt {
-  id: string;
-  codigo: string;
-  nombre: string;
-  precioCompra?: number;
-}
-
-interface LineaOrden {
   productoId: string;
-  codigo: string;
-  nombre: string;
-  cantidad: number;
-  precio: number;
+  producto: Producto;
+  cantidadConsignada: number;
+  cantidadVendida: number;
+  cantidadDevuelta: number;
+  precioUnitario: number;
+  subtotal: number;
 }
 
-const emptyProveedor = {
-  codigo: '', nombre: '', contacto: '', telefono: '', email: '',
-  direccion: '', diasCredito: '', limiteCredito: '',
+interface Consignacion {
+  id: string;
+  folio: string;
+  proveedor: Proveedor;
+  subtotal: number;
+  iva: number;
+  total: number;
+  status: string;
+  fechaConsignacion: string;
+  fechaVencimiento?: string;
+  fechaLiquidacion?: string;
+  observaciones?: string;
+  items: ConsignacionItem[];
+}
+
+interface DevolucionItem {
+  id: string;
+  productoId: string;
+  producto: { id: string; codigo: string; nombre: string };
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+  motivo?: string;
+}
+
+interface DevolucionVenta {
+  id: string;
+  folio: string;
+  venta: { id: string; folio: string; total: number; fechaVenta?: string };
+  cliente: { id: string; nombre: string; codigoCliente: string };
+  aprobadoPor?: { name?: string; firstName?: string; lastName?: string };
+  motivo: string;
+  descripcion?: string;
+  subtotal: number;
+  iva: number;
+  total: number;
+  status: string;
+  afectaInventario: boolean;
+  inventarioAfectado: boolean;
+  saldoAjustado: boolean;
+  fechaDevolucion: string;
+  fechaAprobacion?: string;
+  observaciones?: string;
+  items: DevolucionItem[];
+}
+
+interface CuentaPorPagar {
+  id: string;
+  proveedor: Proveedor;
+  compra?: { id: string; folio: string };
+  numeroFactura?: string;
+  monto: number;
+  montoRestante: number;
+  status: string;
+  fechaVencimiento: string;
+  observaciones?: string;
+}
+
+interface VentaForDev {
+  id: string;
+  folio: string;
+  total: number;
+  saldoPendiente: number;
+  fechaVenta: string;
+  cliente: { id: string; nombre: string; codigoCliente: string };
+  detalles: Array<{
+    id: string;
+    productoId: string;
+    producto: { id: string; codigo: string; nombre: string; precio1: number };
+    cantidad: number;
+    precioUnitario: number;
+    subtotal: number;
+  }>;
+}
+
+// ─── Tab Buttons ───
+const TABS = [
+  { key: 'ordenes', label: 'Órdenes de Compra', icon: ShoppingCart },
+  { key: 'consignaciones', label: 'Consignaciones', icon: Handshake },
+  { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw },
+  { key: 'cuentas-pagar', label: 'Cuentas por Pagar', icon: CreditCard },
+  { key: 'reportes', label: 'Reportes', icon: BarChart3 },
+] as const;
+
+type TabKey = (typeof TABS)[number]['key'];
+
+const statusColors: Record<string, string> = {
+  PENDIENTE: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+  APROBADA: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+  RECIBIDA: 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+  PARCIAL: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
+  CANCELADA: 'bg-slate-400/15 text-slate-500 border-slate-400/30',
+  ACTIVA: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+  LIQUIDADA: 'bg-indigo-500/15 text-indigo-600 border-indigo-500/30',
+  DEVUELTA: 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+  PAGADA: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+  VENCIDA: 'bg-rose-500/15 text-rose-600 border-rose-500/30',
+  RECHAZADA: 'bg-rose-500/15 text-rose-600 border-rose-500/30',
 };
 
+const motivoLabels: Record<string, string> = {
+  PRODUCTO_DEFECTUOSO: 'Producto Defectuoso',
+  PRODUCTO_INCORRECTO: 'Producto Incorrecto',
+  NO_SATISFECHO: 'Cliente No Satisfecho',
+  EXCESO_PEDIDO: 'Exceso de Pedido',
+  GARANTIA: 'Garantía',
+  ACUERDO_COMERCIAL: 'Acuerdo Comercial',
+  OTRO: 'Otro',
+};
+
+// ═════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ═════════════════════════════════════════════
 export default function ComprasPage() {
-  const [activeTab, setActiveTab] = useState('ordenes');
-  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [ordenesCompra, setOrdenesCompra] = useState<OrdenCompra[]>([]);
-  const [recepciones, setRecepciones] = useState<RecepcionMercancia[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProveedor, setSelectedProveedor] = useState<string>('');
-  const [selectedEstado, setSelectedEstado] = useState<string>('');
-
-  // Dialog state
-  const [dialogType, setDialogType] = useState<'proveedor' | 'orden' | 'recepcion' | 'ver' | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Proveedor form
-  const [proveedorForm, setProveedorForm] = useState({ ...emptyProveedor });
-
-  // Orden form
-  const [ordenProveedor, setOrdenProveedor] = useState('');
-  const [ordenObs, setOrdenObs] = useState('');
-  const [lineas, setLineas] = useState<LineaOrden[]>([]);
-  const [productos, setProductos] = useState<ProductoOpt[]>([]);
-  const [productoBusqueda, setProductoBusqueda] = useState('');
-
-  // Recepcion form
-  const [recepcionOrden, setRecepcionOrden] = useState<OrdenCompra | null>(null);
-  const [recepcionCantidades, setRecepcionCantidades] = useState<Record<string, number>>({});
-  const [recepcionObs, setRecepcionObs] = useState('');
-
-  // Ver detalle
-  const [ordenVer, setOrdenVer] = useState<OrdenCompra | null>(null);
-
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab') as TabKey | null;
+  const [activeTab, setActiveTab] = useState<TabKey>(tabParam && TABS.some(t => t.key === tabParam) ? tabParam : 'ordenes');
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // ─── Data state ───
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [ordenes, setOrdenes] = useState<Compra[]>([]);
+  const [consignaciones, setConsignaciones] = useState<Consignacion[]>([]);
+  const [devoluciones, setDevoluciones] = useState<DevolucionVenta[]>([]);
+  const [cxps, setCxps] = useState<CuentaPorPagar[]>([]);
 
-  const loadData = async () => {
+  // ─── UI state ───
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // ─── Dialog state ───
+  const [dialogOrden, setDialogOrden] = useState(false);
+  const [dialogConsignacion, setDialogConsignacion] = useState(false);
+  const [dialogDevolucion, setDialogDevolucion] = useState(false);
+  const [dialogCxp, setDialogCxp] = useState(false);
+  const [dialogAbono, setDialogAbono] = useState(false);
+  const [dialogVerOrden, setDialogVerOrden] = useState<Compra | null>(null);
+  const [dialogVerConsignacion, setDialogVerConsignacion] = useState<Consignacion | null>(null);
+  const [dialogVerDevolucion, setDialogVerDevolucion] = useState<DevolucionVenta | null>(null);
+  const [dialogEditarConsignacion, setDialogEditarConsignacion] = useState<Consignacion | null>(null);
+
+  // ─── Forms ───
+  const [ordenForm, setOrdenForm] = useState({
+    proveedorId: '',
+    observaciones: '',
+  });
+  const [ordenItems, setOrdenItems] = useState<
+    Array<{ productoId: string; cantidad: string; precio: string }>
+  >([{ productoId: '', cantidad: '', precio: '' }]);
+
+  const [consigForm, setConsigForm] = useState({
+    proveedorId: '',
+    fechaVencimiento: '',
+    observaciones: '',
+  });
+  const [consigItems, setConsigItems] = useState<
+    Array<{ productoId: string; cantidad: string; precio: string }>
+  >([{ productoId: '', cantidad: '', precio: '' }]);
+
+  const [devForm, setDevForm] = useState({
+    ventaId: '',
+    motivo: '',
+    descripcion: '',
+    observaciones: '',
+  });
+  const [devItems, setDevItems] = useState<
+    Array<{ productoId: string; cantidad: string; precioUnitario: string; motivo: string }>
+  >([]);
+  const [ventasBusqueda, setVentasBusqueda] = useState<VentaForDev[]>([]);
+  const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaForDev | null>(null);
+  const [searchVenta, setSearchVenta] = useState('');
+
+  const [cxpForm, setCxpForm] = useState({
+    proveedorId: '',
+    numeroFactura: '',
+    monto: '',
+    fechaVencimiento: '',
+    observaciones: '',
+  });
+
+  const [abonoForm, setAbonoForm] = useState({
+    cxpId: '',
+    monto: '',
+    cxpRef: null as CuentaPorPagar | null,
+  });
+
+  // ─── Consignacion edit items ───
+  const [consigEditItems, setConsigEditItems] = useState<
+    Array<{ itemId: string; cantidadVendida: string; cantidadDevuelta: string }>
+  >([]);
+
+  // ═════════════════════════════════════════════
+  // DATA FETCHING
+  // ═════════════════════════════════════════════
+  const fetchAll = async () => {
     setLoading(true);
     try {
-      const [proveedoresRes, ordenesRes, recepcionesRes] = await Promise.all([
+      const [provRes, prodRes, ordRes, consRes, devRes, cxpRes] = await Promise.all([
         fetch('/api/compras/proveedores'),
+        fetch('/api/productos?limit=9999'),
         fetch('/api/compras/ordenes'),
-        fetch('/api/compras/recepciones'),
+        fetch('/api/compras/consignaciones'),
+        fetch('/api/compras/devoluciones'),
+        fetch('/api/compras/cuentas-pagar'),
       ]);
-      const [proveedoresData, ordenesData, recepcionesData] = await Promise.all([
-        proveedoresRes.json(),
-        ordenesRes.json(),
-        recepcionesRes.json(),
-      ]);
-      setProveedores(proveedoresData.proveedores || []);
-      setOrdenesCompra(ordenesData.ordenes || []);
-      setRecepciones(recepcionesData.recepciones || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({ title: "Error", description: "Error al cargar los datos", variant: "destructive" });
+
+      if (provRes.ok) {
+        const d = await provRes.json();
+        setProveedores(d.proveedores ?? []);
+      }
+      if (prodRes.ok) {
+        const d = await prodRes.json();
+        setProductos(Array.isArray(d) ? d : d.productos ?? []);
+      }
+      if (ordRes.ok) {
+        const d = await ordRes.json();
+        setOrdenes(d.ordenes ?? []);
+      }
+      if (consRes.ok) {
+        const d = await consRes.json();
+        setConsignaciones(d.consignaciones ?? []);
+      }
+      if (devRes.ok) {
+        const d = await devRes.json();
+        setDevoluciones(d.devoluciones ?? []);
+      }
+      if (cxpRes.ok) {
+        const d = await cxpRes.json();
+        setCxps(d.cxps ?? []);
+      }
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredProveedores = proveedores.filter(p =>
-    p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    fetchAll();
+  }, []);
 
-  const filteredOrdenes = ordenesCompra.filter(orden => {
-    const matchesSearch = orden.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      orden.proveedor.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesProveedor = !selectedProveedor || selectedProveedor === 'all' || orden.proveedor.id === selectedProveedor;
-    const matchesEstado = !selectedEstado || selectedEstado === 'all' || orden.estado === selectedEstado;
-    return matchesSearch && matchesProveedor && matchesEstado;
-  });
-
-  const closeDialog = () => {
-    setDialogType(null);
-    setProveedorForm({ ...emptyProveedor });
-    setOrdenProveedor('');
-    setOrdenObs('');
-    setLineas([]);
-    setProductoBusqueda('');
-    setRecepcionOrden(null);
-    setRecepcionCantidades({});
-    setRecepcionObs('');
-    setOrdenVer(null);
-  };
-
-  // ---- Proveedor ----
-  const openProveedor = () => { setProveedorForm({ ...emptyProveedor }); setDialogType('proveedor'); };
-
-  const submitProveedor = async () => {
-    if (!proveedorForm.codigo || !proveedorForm.nombre) {
-      toast({ title: "Datos incompletos", description: "Código y nombre son obligatorios", variant: "destructive" });
-      return;
-    }
-    setSubmitting(true);
+  // ─── Search ventas for devolucion ───
+  const buscarVentas = async (q: string) => {
+    if (!q || q.length < 2) { setVentasBusqueda([]); return; }
     try {
-      const res = await fetch('/api/compras/proveedores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(proveedorForm),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al crear proveedor');
-      toast({ title: "Proveedor creado", description: data.proveedor?.nombre });
-      closeDialog();
-      loadData();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // ---- Orden ----
-  const openOrden = async () => {
-    setDialogType('orden');
-    if (productos.length === 0) {
-      try {
-        const res = await fetch('/api/productos?activos=true&limit=500');
+      const res = await fetch(`/api/ventas?search=${encodeURIComponent(q)}&limit=20`);
+      if (res.ok) {
         const data = await res.json();
-        setProductos(data.productos || []);
-      } catch {
-        toast({ title: "Error", description: "No se pudieron cargar los productos", variant: "destructive" });
+        setVentasBusqueda(Array.isArray(data) ? data : data.ventas ?? []);
       }
-    }
+    } catch { setVentasBusqueda([]); }
   };
 
-  const agregarLinea = (prod: ProductoOpt) => {
-    if (lineas.some(l => l.productoId === prod.id)) return;
-    setLineas([...lineas, {
-      productoId: prod.id,
-      codigo: prod.codigo,
-      nombre: prod.nombre,
-      cantidad: 1,
-      precio: prod.precioCompra ?? 0,
-    }]);
-    setProductoBusqueda('');
-  };
+  // ═════════════════════════════════════════════
+  // KPI METRICS
+  // ═════════════════════════════════════════════
+  const kpis = useMemo(() => {
+    const totalOrdenes = ordenes.length;
+    const ordenesPendientes = ordenes.filter(o => o.status === 'PENDIENTE').length;
+    const totalConsig = consignaciones.length;
+    const consigActivas = consignaciones.filter(c => c.status === 'ACTIVA' || c.status === 'PARCIAL').length;
+    const totalDev = devoluciones.length;
+    const devPendientes = devoluciones.filter(d => d.status === 'PENDIENTE').length;
+    const totalCxp = cxps.length;
+    const cxpPendientes = cxps.filter(c => c.status === 'PENDIENTE' || c.status === 'PARCIAL').length;
+    const saldoCxpTotal = cxps.reduce((s, c) => s + c.montoRestante, 0);
+    const montoDevoluciones = devoluciones.filter(d => d.status === 'APROBADA').reduce((s, d) => s + d.total, 0);
+    return { totalOrdenes, ordenesPendientes, totalConsig, consigActivas, totalDev, devPendientes, totalCxp, cxpPendientes, saldoCxpTotal, montoDevoluciones };
+  }, [ordenes, consignaciones, devoluciones, cxps]);
 
-  const updateLinea = (id: string, field: 'cantidad' | 'precio', value: number) => {
-    setLineas(lineas.map(l => l.productoId === id ? { ...l, [field]: value } : l));
-  };
-
-  const removeLinea = (id: string) => setLineas(lineas.filter(l => l.productoId !== id));
-
-  const ordenSubtotal = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
-  const ordenIva = ordenSubtotal * 0.16;
-  const ordenTotal = ordenSubtotal + ordenIva;
-
+  // ═════════════════════════════════════════════
+  // HANDLERS — ORDENES
+  // ═════════════════════════════════════════════
   const submitOrden = async () => {
-    if (!ordenProveedor) {
-      toast({ title: "Falta proveedor", description: "Selecciona un proveedor", variant: "destructive" });
-      return;
-    }
-    if (lineas.length === 0) {
-      toast({ title: "Sin productos", description: "Agrega al menos un producto", variant: "destructive" });
+    if (!ordenForm.proveedorId || ordenItems.every(i => !i.productoId)) {
+      toast({ title: 'Error', description: 'Seleccione proveedor y al menos un producto', variant: 'destructive' });
       return;
     }
     setSubmitting(true);
     try {
+      const items = ordenItems.filter(i => i.productoId).map(i => ({
+        productoId: i.productoId,
+        cantidad: parseInt(i.cantidad) || 1,
+        precioUnitario: parseFloat(i.precio) || 0,
+      }));
       const res = await fetch('/api/compras/ordenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          proveedorId: ordenProveedor,
-          observaciones: ordenObs,
-          detalles: lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, precio: l.precio })),
-        }),
+        body: JSON.stringify({ ...ordenForm, items }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al crear orden');
-      toast({ title: "Orden creada", description: data.orden?.folio });
-      closeDialog();
-      loadData();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Orden creada', description: data.compra?.folio || 'Exitosamente' });
+      setDialogOrden(false);
+      setOrdenForm({ proveedorId: '', observaciones: '' });
+      setOrdenItems([{ productoId: '', cantidad: '', precio: '' }]);
+      fetchAll();
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ---- Recepcion ----
-  const openRecepcion = (orden: OrdenCompra) => {
-    setRecepcionOrden(orden);
-    const init: Record<string, number> = {};
-    orden.detalles.forEach(d => { init[d.producto.id] = d.cantidad; });
-    setRecepcionCantidades(init);
-    setRecepcionObs('');
-    setDialogType('recepcion');
-  };
-
-  const submitRecepcion = async () => {
-    if (!recepcionOrden) return;
+  const recibirOrden = async (ordenId: string) => {
     setSubmitting(true);
     try {
       const res = await fetch('/api/compras/recepciones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ordenCompraId: recepcionOrden.id,
-          observaciones: recepcionObs,
-          detalles: recepcionOrden.detalles.map(d => ({
-            productoId: d.producto.id,
-            cantidadRecibida: recepcionCantidades[d.producto.id] ?? d.cantidad,
-          })),
-        }),
+        body: JSON.stringify({ compraId: ordenId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al crear recepción');
-      toast({ title: "Recepción registrada", description: "Stock e inventario actualizados" });
-      closeDialog();
-      loadData();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Mercancía recibida', description: 'Inventario y CxP actualizados' });
+      fetchAll();
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ---- Reportes ----
-  const descargarReporte = () => {
-    const rows = [
-      ['Folio', 'Proveedor', 'Fecha', 'Subtotal', 'IVA', 'Total', 'Estado'],
-      ...ordenesCompra.map(o => [
-        o.folio, o.proveedor.nombre, new Date(o.fecha).toLocaleDateString(),
-        o.subtotal.toFixed(2), o.iva.toFixed(2), o.total.toFixed(2), o.estado,
-      ]),
-    ];
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-compras-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  // ═════════════════════════════════════════════
+  // HANDLERS — CONSIGNACIONES
+  // ═════════════════════════════════════════════
+  const submitConsignacion = async () => {
+    if (!consigForm.proveedorId || consigItems.every(i => !i.productoId)) {
+      toast({ title: 'Error', description: 'Seleccione proveedor y al menos un producto', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const detalles = consigItems.filter(i => i.productoId).map(i => ({
+        productoId: i.productoId,
+        cantidad: parseInt(i.cantidad) || 1,
+        precio: parseFloat(i.precio) || 0,
+      }));
+      const res = await fetch('/api/compras/consignaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...consigForm, detalles }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Consignación creada', description: data.consignacion?.folio || 'Exitosamente' });
+      setDialogConsignacion(false);
+      setConsigForm({ proveedorId: '', fechaVencimiento: '', observaciones: '' });
+      setConsigItems([{ productoId: '', cantidad: '', precio: '' }]);
+      fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const descargarAnalisisProveedores = () => {
-    const rows = [
-      ['Código', 'Proveedor', 'Días Crédito', 'Límite Crédito', 'Saldo Actual', 'Estado'],
-      ...proveedores.map(p => [
-        p.codigo, p.nombre, String(p.diasCredito), p.limiteCredito.toFixed(2),
-        p.saldoActual.toFixed(2), p.activo ? 'Activo' : 'Inactivo',
-      ]),
-    ];
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `analisis-proveedores-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const actualizarConsignacion = async () => {
+    if (!dialogEditarConsignacion) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/compras/consignaciones/${dialogEditarConsignacion.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'actualizar_cantidades',
+          items: consigEditItems.map(i => ({
+            itemId: i.itemId,
+            cantidadVendida: parseInt(i.cantidadVendida) || 0,
+            cantidadDevuelta: parseInt(i.cantidadDevuelta) || 0,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Consignación actualizada', description: data.message });
+      setDialogEditarConsignacion(null);
+      fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const getEstadoBadge = (estado: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      'PENDIENTE': 'default', 'CONFIRMADA': 'secondary', 'PARCIAL': 'default',
-      'RECIBIDA': 'secondary', 'CANCELADA': 'destructive',
-    };
-    return <Badge variant={variants[estado] || 'default'}>{estado}</Badge>;
+  // ═════════════════════════════════════════════
+  // HANDLERS — DEVOLUCIONES
+  // ═════════════════════════════════════════════
+  const submitDevolucion = async () => {
+    if (!ventaSeleccionada || !devForm.motivo || devItems.length === 0) {
+      toast({ title: 'Error', description: 'Seleccione venta, motivo y productos a devolver', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/compras/devoluciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ventaId: ventaSeleccionada.id,
+          motivo: devForm.motivo,
+          descripcion: devForm.descripcion,
+          observaciones: devForm.observaciones,
+          detalles: devItems.map(i => ({
+            productoId: i.productoId,
+            cantidad: parseFloat(i.cantidad) || 0,
+            precioUnitario: parseFloat(i.precioUnitario) || 0,
+            motivo: i.motivo,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Devolución creada', description: `${data.devolucion?.folio} — pendiente de aprobación` });
+      setDialogDevolucion(false);
+      setDevForm({ ventaId: '', motivo: '', descripcion: '', observaciones: '' });
+      setDevItems([]);
+      setVentaSeleccionada(null);
+      setSearchVenta('');
+      fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const productosFiltrados = productoBusqueda
-    ? productos.filter(p =>
-        p.nombre.toLowerCase().includes(productoBusqueda.toLowerCase()) ||
-        p.codigo.toLowerCase().includes(productoBusqueda.toLowerCase())
-      ).slice(0, 8)
-    : [];
+  const aprobarDevolucion = async (devId: string) => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/compras/devoluciones/${devId}/aprobar`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Devolución aprobada', description: data.message });
+      fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  const comprasDelMes = ordenesCompra
-    .filter(o => {
-      const f = new Date(o.fecha);
-      const now = new Date();
-      return f.getMonth() === now.getMonth() && f.getFullYear() === now.getFullYear();
-    })
-    .reduce((sum, o) => sum + o.total, 0);
+  // ═════════════════════════════════════════════
+  // HANDLERS — CXP
+  // ═════════════════════════════════════════════
+  const submitCxp = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/compras/cuentas-pagar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cxpForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'CxP creada', description: data.message });
+      setDialogCxp(false);
+      setCxpForm({ proveedorId: '', numeroFactura: '', monto: '', fechaVencimiento: '', observaciones: '' });
+      fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
+  const submitAbono = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/compras/cuentas-pagar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: abonoForm.cxpId, montoAbono: parseFloat(abonoForm.monto) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Abono registrado', description: data.message });
+      setDialogAbono(false);
+      setAbonoForm({ cxpId: '', monto: '', cxpRef: null });
+      fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ═════════════════════════════════════════════
+  // ITEM HELPERS
+  // ═════════════════════════════════════════════
+  const addItemRow = (setter: React.Dispatch<React.SetStateAction<Array<any>>>, template: any) =>
+    setter(prev => [...prev, { ...template }]);
+
+  const removeItemRow = (setter: React.Dispatch<React.SetStateAction<Array<any>>>, idx: number) =>
+    setter(prev => prev.filter((_, i) => i !== idx));
+
+  const updateItemRow = (
+    setter: React.Dispatch<React.SetStateAction<Array<any>>>,
+    idx: number,
+    field: string,
+    value: string,
+    autoFillPrice?: boolean
+  ) => {
+    setter(prev => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [field]: value };
+      if (field === 'productoId' && autoFillPrice) {
+        const prod = productos.find(p => p.id === value);
+        if (prod) next[idx].precio = prod.precioCompra.toString();
+      }
+      return next;
+    });
+  };
+
+  // ═════════════════════════════════════════════
+  // RENDER
+  // ═════════════════════════════════════════════
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header 
-        title="Módulo de Compras"
-        description="Gestión integral de proveedores, órdenes de compra y recepción de mercancía"
-      />
-      <div className="p-6 space-y-6">
+    <div className="flex flex-col min-h-screen bg-background">
+      <Header title="Compras" description="Gestión integral: órdenes, consignaciones, devoluciones y cuentas por pagar" />
 
+      <div className="p-4 md:p-6 space-y-5">
+        {/* ── KPI Cards ── */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[
+            { label: 'Órdenes', value: kpis.totalOrdenes, sub: `${kpis.ordenesPendientes} pendientes`, icon: ShoppingCart, color: 'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30', iconColor: 'text-emerald-500' },
+            { label: 'Consignaciones', value: kpis.totalConsig, sub: `${kpis.consigActivas} activas`, icon: Handshake, color: 'from-cyan-500/20 to-cyan-600/5 border-cyan-500/30', iconColor: 'text-cyan-500' },
+            { label: 'Devoluciones', value: kpis.totalDev, sub: `${kpis.devPendientes} pendientes`, icon: RotateCcw, color: 'from-amber-500/20 to-amber-600/5 border-amber-500/30', iconColor: 'text-amber-500' },
+            { label: 'CxP Pendiente', value: formatMXN(kpis.saldoCxpTotal), sub: `${kpis.cxpPendientes} cuentas`, icon: CreditCard, color: 'from-rose-500/20 to-rose-600/5 border-rose-500/30', iconColor: 'text-rose-500' },
+            { label: 'Dev. Aprobadas', value: formatMXN(kpis.montoDevoluciones), sub: `Total devuelto`, icon: ArrowDownRight, color: 'from-violet-500/20 to-violet-600/5 border-violet-500/30', iconColor: 'text-violet-500' },
+          ].map((kpi, i) => (
+            <Card key={i} className={`bg-gradient-to-br ${kpi.color} border backdrop-blur-sm`}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">{kpi.label}</p>
+                    <p className="text-xl font-black text-foreground">{kpi.value}</p>
+                    <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-background/50">
+                    <kpi.icon className={`h-4 w-4 ${kpi.iconColor}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Proveedores Activos</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{proveedores.filter(p => p.activo).length}</div>
-            <p className="text-xs text-muted-foreground">
-              {proveedores.length - proveedores.filter(p => p.activo).length} inactivos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Órdenes Pendientes</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {ordenesCompra.filter(o => o.estado === 'PENDIENTE' || o.estado === 'CONFIRMADA').length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              ${ordenesCompra.filter(o => o.estado === 'PENDIENTE' || o.estado === 'CONFIRMADA')
-                .reduce((sum, o) => sum + o.total, 0).toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Compras del Mes</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${comprasDelMes.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total del mes en curso</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recepciones Pendientes</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {ordenesCompra.filter(o => o.estado === 'CONFIRMADA' || o.estado === 'PARCIAL').length}
-            </div>
-            <p className="text-xs text-muted-foreground">Requieren seguimiento</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por folio, proveedor..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <Select value={selectedProveedor} onValueChange={setSelectedProveedor}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar proveedor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los proveedores</SelectItem>
-                {proveedores.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedEstado} onValueChange={setSelectedEstado}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="PENDIENTE">Pendiente</SelectItem>
-                <SelectItem value="CONFIRMADA">Confirmada</SelectItem>
-                <SelectItem value="PARCIAL">Parcial</SelectItem>
-                <SelectItem value="RECIBIDA">Recibida</SelectItem>
-                <SelectItem value="CANCELADA">Cancelada</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={openProveedor}
-                className="h-10 px-3 text-sm font-medium whitespace-nowrap"
+        {/* ── Tabs ── */}
+        <div className="flex gap-1 bg-muted/50 p-1 rounded-xl overflow-x-auto">
+          {TABS.map(tab => {
+            const active = activeTab === tab.key;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                  active
+                    ? 'bg-background text-foreground shadow-sm border border-border/50'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
               >
-                <Plus className="h-4 w-4 mr-1.5" />
-                Nuevo Proveedor
-              </Button>
-              <Button
-                size="sm"
-                onClick={openOrden}
-                className="h-10 px-3 text-sm font-medium whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <ShoppingCart className="h-4 w-4 mr-1.5" />
-                Nueva Orden
-              </Button>
-            </div>
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Search + Actions Bar ── */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por folio, proveedor, cliente..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={fetchAll} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+            {activeTab === 'ordenes' && (
+              <Button size="sm" onClick={() => setDialogOrden(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
+                <Plus className="h-4 w-4" /> Nueva Orden
+              </Button>
+            )}
+            {activeTab === 'consignaciones' && (
+              <Button size="sm" onClick={() => setDialogConsignacion(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white gap-1">
+                <Plus className="h-4 w-4" /> Nueva Consignación
+              </Button>
+            )}
+            {activeTab === 'devoluciones' && (
+              <Button size="sm" onClick={() => setDialogDevolucion(true)} className="bg-amber-600 hover:bg-amber-700 text-white gap-1">
+                <Plus className="h-4 w-4" /> Nueva Devolución
+              </Button>
+            )}
+            {activeTab === 'cuentas-pagar' && (
+              <Button size="sm" onClick={() => setDialogCxp(true)} className="bg-rose-600 hover:bg-rose-700 text-white gap-1">
+                <Plus className="h-4 w-4" /> Nueva CxP
+              </Button>
+            )}
+          </div>
+        </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="ordenes">Órdenes de Compra</TabsTrigger>
-          <TabsTrigger value="proveedores">Proveedores</TabsTrigger>
-          <TabsTrigger value="recepciones">Recepciones</TabsTrigger>
-          <TabsTrigger value="reportes">Reportes</TabsTrigger>
-        </TabsList>
-
-        {/* Ordenes */}
-        <TabsContent value="ordenes" className="space-y-4">
+        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: ÓRDENES DE COMPRA */}
+        {/* ═══════════════════════════════════════════════ */}
+        {activeTab === 'ordenes' && (
           <Card>
-            <CardHeader>
-              <CardTitle>Órdenes de Compra</CardTitle>
-              <CardDescription>Gestión de órdenes de compra y seguimiento de estado</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-3 text-left">Folio</th>
-                      <th className="px-4 py-3 text-left">Proveedor</th>
-                      <th className="px-4 py-3 text-left">Fecha</th>
-                      <th className="px-4 py-3 text-left">Total</th>
-                      <th className="px-4 py-3 text-left">Estado</th>
-                      <th className="px-4 py-3 text-left">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredOrdenes.length === 0 && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                        {loading ? 'Cargando...' : 'No hay órdenes de compra'}
-                      </td></tr>
-                    )}
-                    {filteredOrdenes.map((orden) => (
-                      <tr key={orden.id} className="border-b">
-                        <td className="px-4 py-3 font-medium">{orden.folio}</td>
-                        <td className="px-4 py-3">{orden.proveedor.nombre}</td>
-                        <td className="px-4 py-3">{new Date(orden.fecha).toLocaleDateString()}</td>
-                        <td className="px-4 py-3">${orden.total.toLocaleString()}</td>
-                        <td className="px-4 py-3">{getEstadoBadge(orden.estado)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => { setOrdenVer(orden); setDialogType('ver'); }}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {(orden.estado === 'PENDIENTE' || orden.estado === 'CONFIRMADA' || orden.estado === 'PARCIAL') && (
-                              <Button variant="ghost" size="sm" title="Recibir mercancía" onClick={() => openRecepcion(orden)}>
-                                <Package className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Proveedores */}
-        <TabsContent value="proveedores" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Catálogo de Proveedores</CardTitle>
-              <CardDescription>Gestión completa de proveedores y condiciones comerciales</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-3 text-left">Código</th>
-                      <th className="px-4 py-3 text-left">Nombre</th>
-                      <th className="px-4 py-3 text-left">Contacto</th>
-                      <th className="px-4 py-3 text-left">Crédito</th>
-                      <th className="px-4 py-3 text-left">Saldo</th>
-                      <th className="px-4 py-3 text-left">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProveedores.length === 0 && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                        {loading ? 'Cargando...' : 'No hay proveedores'}
-                      </td></tr>
-                    )}
-                    {filteredProveedores.map((proveedor) => (
-                      <tr key={proveedor.id} className="border-b">
-                        <td className="px-4 py-3 font-medium">{proveedor.codigo}</td>
-                        <td className="px-4 py-3">{proveedor.nombre}</td>
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium">{proveedor.contacto}</p>
-                            <p className="text-sm text-muted-foreground">{proveedor.telefono}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">${proveedor.limiteCredito.toLocaleString()}</td>
-                        <td className="px-4 py-3">${proveedor.saldoActual.toLocaleString()}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant={proveedor.activo ? 'secondary' : 'destructive'}>
-                            {proveedor.activo ? 'Activo' : 'Inactivo'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Recepciones */}
-        <TabsContent value="recepciones" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recepción de Mercancía</CardTitle>
-              <CardDescription>Control de entrada de productos y actualización de inventario</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recepciones.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">No hay recepciones registradas</h3>
-                  <p className="text-muted-foreground">
-                    Usa el botón de recepción en una orden pendiente para registrar la entrada de mercancía
-                  </p>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+                  <RefreshCw className="h-5 w-5 animate-spin" /> Cargando órdenes...
+                </div>
+              ) : ordenes.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">Sin órdenes de compra</p>
+                  <p className="text-sm mt-1">Crea tu primera orden para comenzar.</p>
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <table className="w-full">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-3 text-left">Folio</th>
-                        <th className="px-4 py-3 text-left">Orden</th>
-                        <th className="px-4 py-3 text-left">Proveedor</th>
-                        <th className="px-4 py-3 text-left">Fecha</th>
-                        <th className="px-4 py-3 text-left">Productos</th>
-                        <th className="px-4 py-3 text-left">Estado</th>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Folio</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Proveedor</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+                        <th className="px-4 py-3"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {recepciones.map((r) => (
-                        <tr key={r.id} className="border-b">
-                          <td className="px-4 py-3 font-medium">{r.folio}</td>
-                          <td className="px-4 py-3">{r.ordenCompra.folio}</td>
-                          <td className="px-4 py-3">{r.ordenCompra.proveedor.nombre}</td>
-                          <td className="px-4 py-3">{new Date(r.fecha).toLocaleDateString()}</td>
-                          <td className="px-4 py-3">{r.detalles.length}</td>
-                          <td className="px-4 py-3"><Badge variant="secondary">{r.estado}</Badge></td>
+                      {ordenes.filter(o =>
+                        !search || o.folio.toLowerCase().includes(search.toLowerCase()) ||
+                        o.proveedor.nombre.toLowerCase().includes(search.toLowerCase())
+                      ).map(o => (
+                        <tr key={o.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
+                          <td className="px-4 py-3 font-mono text-xs font-semibold">{o.folio}</td>
+                          <td className="px-4 py-3">
+                            <div>
+                              <p className="font-medium">{o.proveedor.nombre}</p>
+                              <p className="text-[11px] text-muted-foreground">{o.items?.length || 0} productos</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">
+                            {format(new Date(o.fechaOrden), 'dd/MM/yyyy', { locale: es })}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold">{formatMXN(o.total)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge variant="outline" className={statusColors[o.status] || ''}>{o.status}</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDialogVerOrden(o)}>
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              {o.status === 'PENDIENTE' && (
+                                <Button variant="ghost" size="sm" className="h-7 p-0 px-2 text-emerald-600 hover:text-emerald-700 text-xs" onClick={() => recibirOrden(o.id)} disabled={submitting}>
+                                  <Check className="h-3.5 w-3.5 mr-1" /> Recibir
+                                </Button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -671,316 +794,802 @@ export default function ComprasPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
-        {/* Reportes */}
-        <TabsContent value="reportes" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: CONSIGNACIONES */}
+        {/* ═══════════════════════════════════════════════ */}
+        {activeTab === 'consignaciones' && (
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+                  <RefreshCw className="h-5 w-5 animate-spin" /> Cargando consignaciones...
+                </div>
+              ) : consignaciones.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Handshake className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">Sin consignaciones</p>
+                  <p className="text-sm mt-1">Crea tu primera consignación de mercancía.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Folio</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Proveedor</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vencimiento</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+                        <th className="px-4 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {consignaciones.filter(c =>
+                        !search || c.folio.toLowerCase().includes(search.toLowerCase()) ||
+                        c.proveedor.nombre.toLowerCase().includes(search.toLowerCase())
+                      ).map(c => (
+                        <tr key={c.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
+                          <td className="px-4 py-3 font-mono text-xs font-semibold">{c.folio}</td>
+                          <td className="px-4 py-3">
+                            <p className="font-medium">{c.proveedor.nombre}</p>
+                            <p className="text-[11px] text-muted-foreground">{c.items?.length || 0} productos</p>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{format(new Date(c.fechaConsignacion), 'dd/MM/yyyy', { locale: es })}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{c.fechaVencimiento ? format(new Date(c.fechaVencimiento), 'dd/MM/yyyy', { locale: es }) : '—'}</td>
+                          <td className="px-4 py-3 text-right font-semibold">{formatMXN(c.total)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge variant="outline" className={statusColors[c.status] || ''}>{c.status}</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDialogVerConsignacion(c)}>
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              {(c.status === 'ACTIVA' || c.status === 'PARCIAL') && (
+                                <Button variant="ghost" size="sm" className="h-7 p-0 px-2 text-cyan-600 text-xs" onClick={() => {
+                                  setDialogEditarConsignacion(c);
+                                  setConsigEditItems(c.items.map(it => ({
+                                    itemId: it.id,
+                                    cantidadVendida: it.cantidadVendida.toString(),
+                                    cantidadDevuelta: it.cantidadDevuelta.toString(),
+                                  })));
+                                }}>
+                                  Gestionar
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: DEVOLUCIONES SOBRE VENTA */}
+        {/* ═══════════════════════════════════════════════ */}
+        {activeTab === 'devoluciones' && (
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+                  <RefreshCw className="h-5 w-5 animate-spin" /> Cargando devoluciones...
+                </div>
+              ) : devoluciones.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <RotateCcw className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">Sin devoluciones</p>
+                  <p className="text-sm mt-1">Registra devoluciones sobre ventas existentes.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Folio</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Venta</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cliente</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Motivo</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+                        <th className="px-4 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {devoluciones.filter(d =>
+                        !search || d.folio.toLowerCase().includes(search.toLowerCase()) ||
+                        d.venta.folio.toLowerCase().includes(search.toLowerCase()) ||
+                        d.cliente.nombre.toLowerCase().includes(search.toLowerCase())
+                      ).map(d => (
+                        <tr key={d.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
+                          <td className="px-4 py-3 font-mono text-xs font-semibold">{d.folio}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="text-[10px] font-mono">{d.venta.folio}</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-xs">{d.cliente.nombre}</p>
+                            <p className="text-[10px] text-muted-foreground">{d.cliente.codigoCliente}</p>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{motivoLabels[d.motivo] || d.motivo}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{format(new Date(d.fechaDevolucion), 'dd/MM/yyyy', { locale: es })}</td>
+                          <td className="px-4 py-3 text-right font-semibold">{formatMXN(d.total)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge variant="outline" className={statusColors[d.status] || ''}>{d.status}</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDialogVerDevolucion(d)}>
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              {d.status === 'PENDIENTE' && (
+                                <Button variant="ghost" size="sm" className="h-7 p-0 px-2 text-emerald-600 text-xs" onClick={() => aprobarDevolucion(d.id)} disabled={submitting}>
+                                  <Check className="h-3.5 w-3.5 mr-1" /> Aprobar
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: CUENTAS POR PAGAR */}
+        {/* ═══════════════════════════════════════════════ */}
+        {activeTab === 'cuentas-pagar' && (
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+                  <RefreshCw className="h-5 w-5 animate-spin" /> Cargando cuentas por pagar...
+                </div>
+              ) : cxps.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">Sin cuentas por pagar</p>
+                  <p className="text-sm mt-1">Las CxP se generan al recibir mercancía o manualmente.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Proveedor</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Factura</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Orden</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vencimiento</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Monto</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Restante</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+                        <th className="px-4 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cxps.filter(c =>
+                        !search || c.proveedor.nombre.toLowerCase().includes(search.toLowerCase()) ||
+                        (c.numeroFactura?.toLowerCase().includes(search.toLowerCase()))
+                      ).map(c => {
+                        const vencida = new Date(c.fechaVencimiento) < new Date() && c.status !== 'PAGADA';
+                        return (
+                          <tr key={c.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
+                            <td className="px-4 py-3 font-medium">{c.proveedor.nombre}</td>
+                            <td className="px-4 py-3 font-mono text-xs">{c.numeroFactura || '—'}</td>
+                            <td className="px-4 py-3 text-xs">
+                              {c.compra ? <Badge variant="outline" className="text-[10px] font-mono">{c.compra.folio}</Badge> : <span className="text-muted-foreground">Manual</span>}
+                            </td>
+                            <td className="px-4 py-3 text-xs">
+                              <span className={vencida ? 'text-rose-600 font-semibold' : 'text-muted-foreground'}>
+                                {format(new Date(c.fechaVencimiento), 'dd/MM/yyyy', { locale: es })}
+                                {vencida && <AlertTriangle className="h-3 w-3 inline ml-1 text-rose-500" />}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">{formatMXN(c.monto)}</td>
+                            <td className="px-4 py-3 text-right font-semibold">
+                              <span className={c.montoRestante > 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                                {formatMXN(c.montoRestante)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <Badge variant="outline" className={statusColors[vencida && c.status !== 'PAGADA' ? 'VENCIDA' : c.status] || ''}>
+                                {vencida && c.status !== 'PAGADA' ? 'VENCIDA' : c.status}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                {c.status !== 'PAGADA' && (
+                                  <Button variant="ghost" size="sm" className="h-7 p-0 px-2 text-emerald-600 text-xs" onClick={() => {
+                                    setAbonoForm({ cxpId: c.id, monto: '', cxpRef: c });
+                                    setDialogAbono(true);
+                                  }}>
+                                    <DollarSign className="h-3.5 w-3.5 mr-1" /> Abonar
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: REPORTES */}
+        {/* ═══════════════════════════════════════════════ */}
+        {activeTab === 'reportes' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Reporte de Compras</CardTitle>
-                <CardDescription>Listado de órdenes de compra por período y proveedor</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full" onClick={descargarReporte} disabled={ordenesCompra.length === 0}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Descargar Reporte (CSV)
-                </Button>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><BarChart3 className="h-4 w-4 text-indigo-500" /> Resumen de Compras</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Órdenes</span><span className="font-bold">{kpis.totalOrdenes}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Órdenes Pendientes</span><span className="font-bold text-amber-600">{kpis.ordenesPendientes}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Monto Total Compras</span><span className="font-bold">{formatMXN(ordenes.reduce((s, o) => s + o.total, 0))}</span></div>
+                </div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader>
-                <CardTitle>Análisis de Proveedores</CardTitle>
-                <CardDescription>Condiciones comerciales y saldos de proveedores</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full" onClick={descargarAnalisisProveedores} disabled={proveedores.length === 0}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Descargar Análisis (CSV)
-                </Button>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Handshake className="h-4 w-4 text-cyan-500" /> Resumen Consignaciones</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Consignaciones</span><span className="font-bold">{kpis.totalConsig}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Activas / Parciales</span><span className="font-bold text-cyan-600">{kpis.consigActivas}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Monto en Consignación</span><span className="font-bold">{formatMXN(consignaciones.filter(c => c.status === 'ACTIVA' || c.status === 'PARCIAL').reduce((s, c) => s + c.total, 0))}</span></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><RotateCcw className="h-4 w-4 text-amber-500" /> Resumen Devoluciones</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Devoluciones</span><span className="font-bold">{kpis.totalDev}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pendientes de Aprobación</span><span className="font-bold text-amber-600">{kpis.devPendientes}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Monto Devuelto (Aprobadas)</span><span className="font-bold text-rose-600">{formatMXN(kpis.montoDevoluciones)}</span></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><CreditCard className="h-4 w-4 text-rose-500" /> Resumen CxP</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total CxP</span><span className="font-bold">{kpis.totalCxp}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pendientes</span><span className="font-bold text-amber-600">{kpis.cxpPendientes}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Saldo Pendiente Total</span><span className="font-bold text-rose-600">{formatMXN(kpis.saldoCxpTotal)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Vencidas</span><span className="font-bold text-rose-600">{cxps.filter(c => new Date(c.fechaVencimiento) < new Date() && c.status !== 'PAGADA').length}</span></div>
+                </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
-      {/* Dialog Proveedor */}
-      <Dialog open={dialogType === 'proveedor'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-[600px]">
+      {/* ═══════════════════════════════════════════════════ */}
+      {/* DIALOGS */}
+      {/* ═══════════════════════════════════════════════════ */}
+
+      {/* ── Dialog: Nueva Orden ── */}
+      <Dialog open={dialogOrden} onOpenChange={o => !o && setDialogOrden(false)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nuevo Proveedor</DialogTitle>
-            <DialogDescription>Complete la información del proveedor.</DialogDescription>
+            <DialogTitle>Nueva Orden de Compra</DialogTitle>
+            <DialogDescription>Crea una orden de compra para un proveedor.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="codigo">Código *</Label>
-                <Input id="codigo" placeholder="PROV001" value={proveedorForm.codigo}
-                  onChange={(e) => setProveedorForm({ ...proveedorForm, codigo: e.target.value })} />
+          <div className="grid gap-4 py-3">
+            <div className="grid gap-2">
+              <Label>Proveedor *</Label>
+              <Select value={ordenForm.proveedorId} onValueChange={v => setOrdenForm({ ...ordenForm, proveedorId: v })}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar proveedor" /></SelectTrigger>
+                <SelectContent>
+                  {proveedores.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Productos</Label>
+                <Button variant="outline" size="sm" onClick={() => addItemRow(setOrdenItems, { productoId: '', cantidad: '', precio: '' })}>
+                  <Plus className="h-3 w-3 mr-1" /> Agregar
+                </Button>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="nombre">Nombre *</Label>
-                <Input id="nombre" placeholder="Nombre del proveedor" value={proveedorForm.nombre}
-                  onChange={(e) => setProveedorForm({ ...proveedorForm, nombre: e.target.value })} />
+              <div className="space-y-2">
+                {ordenItems.map((item, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-5">
+                      <Select value={item.productoId} onValueChange={v => updateItemRow(setOrdenItems, i, 'productoId', v, true)}>
+                        <SelectTrigger className="text-xs"><SelectValue placeholder="Producto" /></SelectTrigger>
+                        <SelectContent>
+                          {productos.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-3">
+                      <Input type="number" placeholder="Cantidad" value={item.cantidad} onChange={e => updateItemRow(setOrdenItems, i, 'cantidad', e.target.value)} />
+                    </div>
+                    <div className="col-span-3">
+                      <Input type="number" step="0.01" placeholder="Precio" value={item.precio} onChange={e => updateItemRow(setOrdenItems, i, 'precio', e.target.value)} />
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-500" onClick={() => removeItemRow(setOrdenItems, i)} disabled={ordenItems.length === 1}>
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="contacto">Persona de Contacto</Label>
-              <Input id="contacto" placeholder="Nombre del contacto" value={proveedorForm.contacto}
-                onChange={(e) => setProveedorForm({ ...proveedorForm, contacto: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="telefono">Teléfono</Label>
-                <Input id="telefono" placeholder="(555) 123-4567" value={proveedorForm.telefono}
-                  onChange={(e) => setProveedorForm({ ...proveedorForm, telefono: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="contacto@proveedor.com" value={proveedorForm.email}
-                  onChange={(e) => setProveedorForm({ ...proveedorForm, email: e.target.value })} />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="direccion">Dirección</Label>
-              <Textarea id="direccion" placeholder="Dirección completa" value={proveedorForm.direccion}
-                onChange={(e) => setProveedorForm({ ...proveedorForm, direccion: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="diasCredito">Días de Crédito</Label>
-                <Input id="diasCredito" type="number" placeholder="30" value={proveedorForm.diasCredito}
-                  onChange={(e) => setProveedorForm({ ...proveedorForm, diasCredito: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="limiteCredito">Límite de Crédito</Label>
-                <Input id="limiteCredito" type="number" placeholder="100000" value={proveedorForm.limiteCredito}
-                  onChange={(e) => setProveedorForm({ ...proveedorForm, limiteCredito: e.target.value })} />
-              </div>
+              <Label>Observaciones</Label>
+              <Textarea value={ordenForm.observaciones} onChange={e => setOrdenForm({ ...ordenForm, observaciones: e.target.value })} rows={2} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={submitProveedor} disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Crear Proveedor'}
+            <Button variant="outline" onClick={() => setDialogOrden(false)}>Cancelar</Button>
+            <Button onClick={submitOrden} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              {submitting ? 'Creando...' : 'Crear Orden'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Orden */}
-      <Dialog open={dialogType === 'orden'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-[750px]">
+      {/* ── Dialog: Nueva Consignación ── */}
+      <Dialog open={dialogConsignacion} onOpenChange={o => !o && setDialogConsignacion(false)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nueva Orden de Compra</DialogTitle>
-            <DialogDescription>Selecciona proveedor y agrega productos.</DialogDescription>
+            <DialogTitle>Nueva Consignación</DialogTitle>
+            <DialogDescription>Registra mercancía recibida en consignación. Solo se paga lo vendido.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Proveedor *</Label>
-              <Select value={ordenProveedor} onValueChange={setOrdenProveedor}>
-                <SelectTrigger><SelectValue placeholder="Selecciona un proveedor" /></SelectTrigger>
-                <SelectContent>
-                  {proveedores.filter(p => p.activo).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="grid gap-4 py-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Proveedor *</Label>
+                <Select value={consigForm.proveedorId} onValueChange={v => setConsigForm({ ...consigForm, proveedorId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar proveedor" /></SelectTrigger>
+                  <SelectContent>
+                    {proveedores.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Fecha Vencimiento</Label>
+                <Input type="date" value={consigForm.fechaVencimiento} onChange={e => setConsigForm({ ...consigForm, fechaVencimiento: e.target.value })} />
+              </div>
             </div>
-
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Productos en Consignación</Label>
+                <Button variant="outline" size="sm" onClick={() => addItemRow(setConsigItems, { productoId: '', cantidad: '', precio: '' })}>
+                  <Plus className="h-3 w-3 mr-1" /> Agregar
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {consigItems.map((item, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-5">
+                      <Select value={item.productoId} onValueChange={v => updateItemRow(setConsigItems, i, 'productoId', v, true)}>
+                        <SelectTrigger className="text-xs"><SelectValue placeholder="Producto" /></SelectTrigger>
+                        <SelectContent>
+                          {productos.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-3">
+                      <Input type="number" placeholder="Cantidad" value={item.cantidad} onChange={e => updateItemRow(setConsigItems, i, 'cantidad', e.target.value)} />
+                    </div>
+                    <div className="col-span-3">
+                      <Input type="number" step="0.01" placeholder="Precio" value={item.precio} onChange={e => updateItemRow(setConsigItems, i, 'precio', e.target.value)} />
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-500" onClick={() => removeItemRow(setConsigItems, i)} disabled={consigItems.length === 1}>
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="grid gap-2">
-              <Label>Agregar productos</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input className="pl-8" placeholder="Buscar producto por nombre o código..."
-                  value={productoBusqueda} onChange={(e) => setProductoBusqueda(e.target.value)} />
-                {productosFiltrados.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md max-h-56 overflow-auto">
-                    {productosFiltrados.map((p) => (
-                      <button key={p.id} type="button"
-                        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
-                        onClick={() => agregarLinea(p)}>
-                        <span>{p.nombre}</span>
-                        <span className="text-muted-foreground">{p.codigo}</span>
+              <Label>Observaciones</Label>
+              <Textarea value={consigForm.observaciones} onChange={e => setConsigForm({ ...consigForm, observaciones: e.target.value })} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogConsignacion(false)}>Cancelar</Button>
+            <Button onClick={submitConsignacion} disabled={submitting} className="bg-cyan-600 hover:bg-cyan-700 text-white">
+              {submitting ? 'Creando...' : 'Crear Consignación'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Nueva Devolución ── */}
+      <Dialog open={dialogDevolucion} onOpenChange={o => { if (!o) { setDialogDevolucion(false); setVentaSeleccionada(null); setDevItems([]); setSearchVenta(''); } }}>
+        <DialogContent className="sm:max-w-[750px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nueva Devolución sobre Venta</DialogTitle>
+            <DialogDescription>Busca la venta original y selecciona los productos a devolver.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-3">
+            {/* Buscar venta */}
+            {!ventaSeleccionada && (
+              <div className="grid gap-2">
+                <Label>Buscar Venta por Folio</Label>
+                <div className="flex gap-2">
+                  <Input placeholder="Ej: VTA-2026-..." value={searchVenta} onChange={e => setSearchVenta(e.target.value)} />
+                  <Button variant="outline" size="sm" onClick={() => buscarVentas(searchVenta)}>
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+                {ventasBusqueda.length > 0 && (
+                  <div className="border rounded-lg max-h-48 overflow-y-auto divide-y">
+                    {ventasBusqueda.map(v => (
+                      <button
+                        key={v.id}
+                        className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors text-xs cursor-pointer"
+                        onClick={() => {
+                          setVentaSeleccionada(v);
+                          setDevForm({ ...devForm, ventaId: v.id });
+                          setDevItems(v.detalles?.map(d => ({
+                            productoId: d.productoId,
+                            cantidad: '',
+                            precioUnitario: d.precioUnitario.toString(),
+                            motivo: '',
+                          })) || []);
+                        }}
+                      >
+                        <span className="font-mono font-semibold">{v.folio}</span>
+                        <span className="text-muted-foreground ml-2">{v.cliente?.nombre}</span>
+                        <span className="float-right font-semibold">{formatMXN(v.total)}</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
-
-            {lineas.length > 0 && (
-              <div className="rounded-md border max-h-64 overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-3 py-2 text-left">Producto</th>
-                      <th className="px-3 py-2 text-left w-20">Cant.</th>
-                      <th className="px-3 py-2 text-left w-28">Precio</th>
-                      <th className="px-3 py-2 text-left w-28">Subtotal</th>
-                      <th className="px-3 py-2 w-10"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lineas.map((l) => (
-                      <tr key={l.productoId} className="border-b">
-                        <td className="px-3 py-2">
-                          <div>{l.nombre}</div>
-                          <div className="text-xs text-muted-foreground">{l.codigo}</div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input type="number" min={1} value={l.cantidad}
-                            onChange={(e) => updateLinea(l.productoId, 'cantidad', Math.max(1, parseInt(e.target.value) || 1))} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input type="number" min={0} step="0.01" value={l.precio}
-                            onChange={(e) => updateLinea(l.productoId, 'precio', parseFloat(e.target.value) || 0)} />
-                        </td>
-                        <td className="px-3 py-2">${(l.cantidad * l.precio).toFixed(2)}</td>
-                        <td className="px-3 py-2">
-                          <Button variant="ghost" size="sm" onClick={() => removeLinea(l.productoId)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             )}
 
-            {lineas.length > 0 && (
-              <div className="flex flex-col items-end gap-1 text-sm">
-                <div>Subtotal: <span className="font-medium">${ordenSubtotal.toFixed(2)}</span></div>
-                <div>IVA (16%): <span className="font-medium">${ordenIva.toFixed(2)}</span></div>
-                <div className="text-base">Total: <span className="font-bold">${ordenTotal.toFixed(2)}</span></div>
-              </div>
-            )}
+            {/* Venta seleccionada */}
+            {ventaSeleccionada && (
+              <>
+                <Card className="bg-muted/30">
+                  <CardContent className="p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Venta seleccionada</p>
+                        <p className="font-mono font-bold text-sm">{ventaSeleccionada.folio}</p>
+                        <p className="text-xs text-muted-foreground">{ventaSeleccionada.cliente?.nombre} — {formatMXN(ventaSeleccionada.total)}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => { setVentaSeleccionada(null); setDevItems([]); }}>Cambiar</Button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <div className="grid gap-2">
-              <Label htmlFor="ordenObs">Observaciones</Label>
-              <Textarea id="ordenObs" value={ordenObs} onChange={(e) => setOrdenObs(e.target.value)} />
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Motivo *</Label>
+                    <Select value={devForm.motivo} onValueChange={v => setDevForm({ ...devForm, motivo: v })}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar motivo" /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(motivoLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Descripción</Label>
+                    <Input value={devForm.descripcion} onChange={e => setDevForm({ ...devForm, descripcion: e.target.value })} placeholder="Descripción breve" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Productos a devolver (ingrese cantidad)</Label>
+                  <div className="space-y-2">
+                    {devItems.map((item, i) => {
+                      const prod = ventaSeleccionada.detalles?.find(d => d.productoId === item.productoId);
+                      return (
+                        <div key={i} className="grid grid-cols-12 gap-2 items-center bg-muted/20 p-2 rounded-lg">
+                          <div className="col-span-4 text-xs">
+                            <p className="font-medium">{prod?.producto?.nombre || 'Producto'}</p>
+                            <p className="text-muted-foreground">Vendido: {prod?.cantidad} — ${prod?.precioUnitario}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <Input type="number" placeholder="Cant." step="1" min="0" max={prod?.cantidad} value={item.cantidad}
+                              onChange={e => {
+                                const next = [...devItems];
+                                next[i] = { ...next[i], cantidad: e.target.value };
+                                setDevItems(next);
+                              }} />
+                          </div>
+                          <div className="col-span-2">
+                            <Input type="number" step="0.01" value={item.precioUnitario} readOnly className="bg-muted/30" />
+                          </div>
+                          <div className="col-span-3">
+                            <Input placeholder="Motivo" value={item.motivo}
+                              onChange={e => {
+                                const next = [...devItems];
+                                next[i] = { ...next[i], motivo: e.target.value };
+                                setDevItems(next);
+                              }} />
+                          </div>
+                          <div className="col-span-1 text-right text-xs font-semibold">
+                            {formatMXN((parseFloat(item.cantidad) || 0) * (parseFloat(item.precioUnitario) || 0))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="text-right mt-2 text-sm font-bold">
+                    Total devolución: {formatMXN(devItems.reduce((s, i) => s + (parseFloat(i.cantidad) || 0) * (parseFloat(i.precioUnitario) || 0), 0))}
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Observaciones</Label>
+                  <Textarea value={devForm.observaciones} onChange={e => setDevForm({ ...devForm, observaciones: e.target.value })} rows={2} />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={submitOrden} disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Crear Orden'}
+            <Button variant="outline" onClick={() => { setDialogDevolucion(false); setVentaSeleccionada(null); }}>Cancelar</Button>
+            <Button onClick={submitDevolucion} disabled={submitting || !ventaSeleccionada} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {submitting ? 'Creando...' : 'Crear Devolución'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Recepcion */}
-      <Dialog open={dialogType === 'recepcion'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-[700px]">
+      {/* ── Dialog: Nueva CxP Manual ── */}
+      <Dialog open={dialogCxp} onOpenChange={o => !o && setDialogCxp(false)}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Recibir Mercancía</DialogTitle>
-            <DialogDescription>
-              {recepcionOrden && `Orden ${recepcionOrden.folio} — ${recepcionOrden.proveedor.nombre}`}
-            </DialogDescription>
+            <DialogTitle>Nueva Cuenta por Pagar</DialogTitle>
+            <DialogDescription>Registra una cuenta por pagar manualmente.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {recepcionOrden && (
-              <div className="rounded-md border max-h-64 overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-3 py-2 text-left">Producto</th>
-                      <th className="px-3 py-2 text-left w-28">Ordenado</th>
-                      <th className="px-3 py-2 text-left w-32">Recibido</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recepcionOrden.detalles.map((d) => (
-                      <tr key={d.id} className="border-b">
-                        <td className="px-3 py-2">
-                          <div>{d.producto.nombre}</div>
-                          <div className="text-xs text-muted-foreground">{d.producto.codigo}</div>
-                        </td>
-                        <td className="px-3 py-2">{d.cantidad}</td>
-                        <td className="px-3 py-2">
-                          <Input type="number" min={0} max={d.cantidad}
-                            value={recepcionCantidades[d.producto.id] ?? d.cantidad}
-                            onChange={(e) => setRecepcionCantidades({
-                              ...recepcionCantidades,
-                              [d.producto.id]: Math.max(0, parseInt(e.target.value) || 0),
-                            })} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <div className="grid gap-4 py-3">
             <div className="grid gap-2">
-              <Label htmlFor="recepcionObs">Observaciones</Label>
-              <Textarea id="recepcionObs" value={recepcionObs} onChange={(e) => setRecepcionObs(e.target.value)} />
+              <Label>Proveedor *</Label>
+              <Select value={cxpForm.proveedorId} onValueChange={v => setCxpForm({ ...cxpForm, proveedorId: v })}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar proveedor" /></SelectTrigger>
+                <SelectContent>
+                  {proveedores.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Al confirmar se actualizará el stock, se registrará el movimiento de inventario y se generará la cuenta por pagar.
-            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>No. Factura *</Label>
+                <Input value={cxpForm.numeroFactura} onChange={e => setCxpForm({ ...cxpForm, numeroFactura: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Monto *</Label>
+                <Input type="number" step="0.01" value={cxpForm.monto} onChange={e => setCxpForm({ ...cxpForm, monto: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Fecha Vencimiento *</Label>
+              <Input type="date" value={cxpForm.fechaVencimiento} onChange={e => setCxpForm({ ...cxpForm, fechaVencimiento: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Observaciones</Label>
+              <Textarea value={cxpForm.observaciones} onChange={e => setCxpForm({ ...cxpForm, observaciones: e.target.value })} rows={2} />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={submitRecepcion} disabled={submitting}>
-              {submitting ? 'Procesando...' : 'Confirmar Recepción'}
+            <Button variant="outline" onClick={() => setDialogCxp(false)}>Cancelar</Button>
+            <Button onClick={submitCxp} disabled={submitting} className="bg-rose-600 hover:bg-rose-700 text-white">
+              {submitting ? 'Creando...' : 'Crear CxP'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Ver Orden */}
-      <Dialog open={dialogType === 'ver'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-[700px]">
+      {/* ── Dialog: Abono CxP ── */}
+      <Dialog open={dialogAbono} onOpenChange={o => !o && setDialogAbono(false)}>
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>{ordenVer?.folio}</DialogTitle>
+            <DialogTitle>Registrar Abono</DialogTitle>
             <DialogDescription>
-              {ordenVer && `${ordenVer.proveedor.nombre} — ${new Date(ordenVer.fecha).toLocaleDateString()}`}
+              {abonoForm.cxpRef && <>Proveedor: <strong>{abonoForm.cxpRef.proveedor.nombre}</strong> — Restante: <strong className="text-rose-600">{formatMXN(abonoForm.cxpRef.montoRestante)}</strong></>}
             </DialogDescription>
           </DialogHeader>
-          {ordenVer && (
-            <div className="grid gap-4 py-4">
-              <div className="flex items-center gap-2">{getEstadoBadge(ordenVer.estado)}</div>
-              <div className="rounded-md border max-h-64 overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-3 py-2 text-left">Producto</th>
-                      <th className="px-3 py-2 text-left">Cant.</th>
-                      <th className="px-3 py-2 text-left">Precio</th>
-                      <th className="px-3 py-2 text-left">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ordenVer.detalles.map((d) => (
-                      <tr key={d.id} className="border-b">
-                        <td className="px-3 py-2">{d.producto.nombre}</td>
-                        <td className="px-3 py-2">{d.cantidad}</td>
-                        <td className="px-3 py-2">${d.precio.toFixed(2)}</td>
-                        <td className="px-3 py-2">${d.subtotal.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="grid gap-4 py-3">
+            <div className="grid gap-2">
+              <Label>Monto del Abono *</Label>
+              <Input type="number" step="0.01" placeholder="0.00" value={abonoForm.monto} onChange={e => setAbonoForm({ ...abonoForm, monto: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogAbono(false)}>Cancelar</Button>
+            <Button onClick={submitAbono} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              {submitting ? 'Registrando...' : 'Registrar Abono'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Ver Orden ── */}
+      <Dialog open={!!dialogVerOrden} onOpenChange={o => !o && setDialogVerOrden(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Orden {dialogVerOrden?.folio}</DialogTitle>
+            <DialogDescription>Detalle de la orden de compra</DialogDescription>
+          </DialogHeader>
+          {dialogVerOrden && (
+            <div className="space-y-4 py-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Proveedor:</span> <strong>{dialogVerOrden.proveedor.nombre}</strong></div>
+                <div><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className={statusColors[dialogVerOrden.status]}>{dialogVerOrden.status}</Badge></div>
+                <div><span className="text-muted-foreground">Fecha:</span> {format(new Date(dialogVerOrden.fechaOrden), 'dd/MM/yyyy', { locale: es })}</div>
+                <div><span className="text-muted-foreground">Total:</span> <strong>{formatMXN(dialogVerOrden.total)}</strong></div>
               </div>
-              <div className="flex flex-col items-end gap-1 text-sm">
-                <div>Subtotal: <span className="font-medium">${ordenVer.subtotal.toFixed(2)}</span></div>
-                <div>IVA: <span className="font-medium">${ordenVer.iva.toFixed(2)}</span></div>
-                <div className="text-base">Total: <span className="font-bold">${ordenVer.total.toFixed(2)}</span></div>
-              </div>
-              {ordenVer.observaciones && (
-                <div className="text-sm text-muted-foreground">Obs: {ordenVer.observaciones}</div>
+              {dialogVerOrden.items?.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead><tr className="bg-muted/30"><th className="text-left px-3 py-2">Producto</th><th className="text-right px-3 py-2">Cant.</th><th className="text-right px-3 py-2">Precio</th><th className="text-right px-3 py-2">Subtotal</th></tr></thead>
+                    <tbody>
+                      {dialogVerOrden.items.map(item => (
+                        <tr key={item.id} className="border-t">
+                          <td className="px-3 py-2">{item.producto?.nombre || item.productoId}</td>
+                          <td className="px-3 py-2 text-right">{item.cantidad}</td>
+                          <td className="px-3 py-2 text-right">{formatMXN(item.precioUnitario)}</td>
+                          <td className="px-3 py-2 text-right font-semibold">{formatMXN(item.subtotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
+          <DialogFooter><Button variant="outline" onClick={() => setDialogVerOrden(null)}>Cerrar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Ver Consignación ── */}
+      <Dialog open={!!dialogVerConsignacion} onOpenChange={o => !o && setDialogVerConsignacion(null)}>
+        <DialogContent className="sm:max-w-[650px]">
+          <DialogHeader>
+            <DialogTitle>Consignación {dialogVerConsignacion?.folio}</DialogTitle>
+            <DialogDescription>Detalle de la consignación</DialogDescription>
+          </DialogHeader>
+          {dialogVerConsignacion && (
+            <div className="space-y-4 py-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Proveedor:</span> <strong>{dialogVerConsignacion.proveedor.nombre}</strong></div>
+                <div><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className={statusColors[dialogVerConsignacion.status]}>{dialogVerConsignacion.status}</Badge></div>
+                <div><span className="text-muted-foreground">Fecha:</span> {format(new Date(dialogVerConsignacion.fechaConsignacion), 'dd/MM/yyyy', { locale: es })}</div>
+                <div><span className="text-muted-foreground">Total:</span> <strong>{formatMXN(dialogVerConsignacion.total)}</strong></div>
+              </div>
+              {dialogVerConsignacion.items?.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead><tr className="bg-muted/30"><th className="text-left px-3 py-2">Producto</th><th className="text-right px-3 py-2">Consignado</th><th className="text-right px-3 py-2">Vendido</th><th className="text-right px-3 py-2">Devuelto</th><th className="text-right px-3 py-2">Precio</th></tr></thead>
+                    <tbody>
+                      {dialogVerConsignacion.items.map(item => (
+                        <tr key={item.id} className="border-t">
+                          <td className="px-3 py-2">{item.producto?.nombre}</td>
+                          <td className="px-3 py-2 text-right">{item.cantidadConsignada}</td>
+                          <td className="px-3 py-2 text-right text-emerald-600">{item.cantidadVendida}</td>
+                          <td className="px-3 py-2 text-right text-amber-600">{item.cantidadDevuelta}</td>
+                          <td className="px-3 py-2 text-right">{formatMXN(item.precioUnitario)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter><Button variant="outline" onClick={() => setDialogVerConsignacion(null)}>Cerrar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Gestionar Consignación ── */}
+      <Dialog open={!!dialogEditarConsignacion} onOpenChange={o => !o && setDialogEditarConsignacion(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gestionar Consignación {dialogEditarConsignacion?.folio}</DialogTitle>
+            <DialogDescription>Actualiza las cantidades vendidas y devueltas de cada producto.</DialogDescription>
+          </DialogHeader>
+          {dialogEditarConsignacion && (
+            <div className="space-y-3 py-3">
+              {dialogEditarConsignacion.items.map((item, i) => (
+                <div key={item.id} className="grid grid-cols-12 gap-2 items-center bg-muted/20 p-3 rounded-lg">
+                  <div className="col-span-4 text-xs">
+                    <p className="font-medium">{item.producto?.nombre}</p>
+                    <p className="text-muted-foreground">Consignado: {item.cantidadConsignada}</p>
+                  </div>
+                  <div className="col-span-3">
+                    <Label className="text-[10px]">Vendido</Label>
+                    <Input type="number" min="0" max={item.cantidadConsignada} value={consigEditItems[i]?.cantidadVendida || ''}
+                      onChange={e => {
+                        const next = [...consigEditItems];
+                        next[i] = { ...next[i], cantidadVendida: e.target.value };
+                        setConsigEditItems(next);
+                      }} />
+                  </div>
+                  <div className="col-span-3">
+                    <Label className="text-[10px]">Devuelto</Label>
+                    <Input type="number" min="0" max={item.cantidadConsignada} value={consigEditItems[i]?.cantidadDevuelta || ''}
+                      onChange={e => {
+                        const next = [...consigEditItems];
+                        next[i] = { ...next[i], cantidadDevuelta: e.target.value };
+                        setConsigEditItems(next);
+                      }} />
+                  </div>
+                  <div className="col-span-2 text-right text-xs font-semibold">{formatMXN(item.precioUnitario)}</div>
+                </div>
+              ))}
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cerrar</Button>
+            <Button variant="outline" onClick={() => setDialogEditarConsignacion(null)}>Cancelar</Button>
+            <Button onClick={actualizarConsignacion} disabled={submitting} className="bg-cyan-600 hover:bg-cyan-700 text-white">
+              {submitting ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* ── Dialog: Ver Devolución ── */}
+      <Dialog open={!!dialogVerDevolucion} onOpenChange={o => !o && setDialogVerDevolucion(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Devolución {dialogVerDevolucion?.folio}</DialogTitle>
+            <DialogDescription>Detalle de la devolución sobre venta</DialogDescription>
+          </DialogHeader>
+          {dialogVerDevolucion && (
+            <div className="space-y-4 py-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Venta:</span> <strong className="font-mono">{dialogVerDevolucion.venta.folio}</strong></div>
+                <div><span className="text-muted-foreground">Cliente:</span> <strong>{dialogVerDevolucion.cliente.nombre}</strong></div>
+                <div><span className="text-muted-foreground">Motivo:</span> {motivoLabels[dialogVerDevolucion.motivo]}</div>
+                <div><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className={statusColors[dialogVerDevolucion.status]}>{dialogVerDevolucion.status}</Badge></div>
+                <div><span className="text-muted-foreground">Total:</span> <strong className="text-rose-600">{formatMXN(dialogVerDevolucion.total)}</strong></div>
+                <div><span className="text-muted-foreground">Fecha:</span> {format(new Date(dialogVerDevolucion.fechaDevolucion), 'dd/MM/yyyy', { locale: es })}</div>
+                {dialogVerDevolucion.aprobadoPor && (
+                  <div className="col-span-2"><span className="text-muted-foreground">Aprobado por:</span> {dialogVerDevolucion.aprobadoPor.firstName || dialogVerDevolucion.aprobadoPor.name} — {dialogVerDevolucion.fechaAprobacion && format(new Date(dialogVerDevolucion.fechaAprobacion), 'dd/MM/yyyy HH:mm', { locale: es })}</div>
+                )}
+                {dialogVerDevolucion.inventarioAfectado && <Badge className="bg-blue-100 text-blue-700 text-[10px]">Inventario actualizado</Badge>}
+                {dialogVerDevolucion.saldoAjustado && <Badge className="bg-green-100 text-green-700 text-[10px]">Saldo ajustado</Badge>}
+              </div>
+              {dialogVerDevolucion.items?.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead><tr className="bg-muted/30"><th className="text-left px-3 py-2">Producto</th><th className="text-right px-3 py-2">Cant.</th><th className="text-right px-3 py-2">Precio</th><th className="text-right px-3 py-2">Subtotal</th></tr></thead>
+                    <tbody>
+                      {dialogVerDevolucion.items.map(item => (
+                        <tr key={item.id} className="border-t">
+                          <td className="px-3 py-2">{item.producto?.nombre}</td>
+                          <td className="px-3 py-2 text-right">{item.cantidad}</td>
+                          <td className="px-3 py-2 text-right">{formatMXN(item.precioUnitario)}</td>
+                          <td className="px-3 py-2 text-right font-semibold">{formatMXN(item.subtotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter><Button variant="outline" onClick={() => setDialogVerDevolucion(null)}>Cerrar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

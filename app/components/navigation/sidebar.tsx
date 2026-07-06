@@ -71,7 +71,6 @@ const navigationItems: NavigationItem[] = [
   { title: 'Punto de Venta (POS)',  href: '/pos',                    icon: ShoppingCart,  group: 'Notas de venta' },
   { title: 'Pagarés',               href: '/pagares',                icon: CreditCard,    group: 'Procesos' },
   { title: 'Scoring de Crédito',    href: '/credito',                icon: TrendingUp,    group: 'Procesos' },
-  { title: 'Cuentas por Pagar',     href: '/cuentas-pagar',          icon: MinusCircle,   group: 'Procesos' },
   { title: 'Reestructuras',         href: '/reestructuras',          icon: RefreshCw,     group: 'Procesos' },
   { title: 'Garantías',             href: '/garantias',              icon: Shield,        group: 'Procesos' },
   { title: 'Notas de Cargo',        href: '/notas-cargo',            icon: PlusCircle,    group: 'Procesos' },
@@ -138,9 +137,14 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
 // ─────────────────────────────────────────────
 // NavigationContent — shared between desktop & mobile
 // ─────────────────────────────────────────────
+
 function NavigationContent({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    'Movimientos': true,
+    'Notas de venta': true,
+    'Catálogos': true,
+  });
 
   // Auto-expand the active group
   useEffect(() => {
@@ -148,7 +152,10 @@ function NavigationContent({ collapsed = false }: { collapsed?: boolean }) {
       pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
     );
     if (activeItem) {
-      setExpandedGroups({ [activeItem.group]: true });
+      setExpandedGroups(prev => ({
+        ...prev,
+        [activeItem.group]: true
+      }));
     }
   }, [pathname]);
 

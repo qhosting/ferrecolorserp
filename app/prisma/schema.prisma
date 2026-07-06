@@ -66,6 +66,7 @@ model User {
   reestructurasAutorizadas ReestructuraCredito[] @relation("ReestructuraAutorizada")
   sesionesCAja             SesionCaja[]          @relation("CajeroPOS")
   ventasCreadas            Venta[]               @relation("VentaCreador")
+  devolucionesAprobadas    DevolucionVenta[]     @relation("DevolucionAprobada")
 }
 
 model VerificationToken {
@@ -135,6 +136,7 @@ model Cliente {
   descuento           Float                 @default(0)
   gestor              User?                 @relation("ClienteGestor", fields: [gestorId], references: [id])
   creditoHistorial    CreditoHistorial[]
+  devoluciones        DevolucionVenta[]
   garantias           Garantia[]
   notasCargo          NotaCargo[]
   notasCredito        NotaCredito[]
@@ -196,10 +198,12 @@ model Producto {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   compraItems           CompraItem[]
+  consignacionItems     ConsignacionItem[]
   detallesNotaCredito   DetalleNotaCredito[]
   detallesPedido        DetallePedido[]
   detallesTransferencia DetalleTransferencia[]
   detallesVenta         DetalleVenta[]
+  devolucionItems       DevolucionItem[]
   garantias             Garantia[]
   garantiasReemplazo    Garantia[]             @relation("ProductoReemplazoGarantia")
   movimientos           MovimientoInventario[]
@@ -225,6 +229,7 @@ model Proveedor {
   updatedAt       DateTime         @updatedAt
   syncAt          DateTime         @default(now())
   compras         Compra[]
+  consignaciones  Consignacion[]
   cuentasPorPagar CuentaPorPagar[]
 
   @@map("proveedores")
@@ -330,6 +335,7 @@ model Venta {
   updatedAt                 DateTime              @updatedAt
   sucursalId                String?
   detalles                  DetalleVenta[]
+  devoluciones              DevolucionVenta[]
   garantias                 Garantia[]
   notasCargo                NotaCargo[]
   notasCredito              NotaCredito[]
@@ -626,6 +632,86 @@ model CuentaPorPagar {
 
   @@index([proveedorId])
   @@map("cuentas_por_pagar")
+}
+
+model Consignacion {
+  id                String            @id @default(cuid())
+  folio             String            @unique
+  proveedorId       String
+  subtotal          Float             @default(0)
+  iva               Float             @default(0)
+  total             Float             @default(0)
+  status            StatusConsignacion @default(ACTIVA)
+  fechaConsignacion DateTime          @default(now())
+  fechaVencimiento  DateTime?
+  fechaLiquidacion  DateTime?
+  observaciones     String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  items             ConsignacionItem[]
+  proveedor         Proveedor         @relation(fields: [proveedorId], references: [id])
+
+  @@index([proveedorId])
+  @@map("consignaciones")
+}
+
+model ConsignacionItem {
+  id                 String       @id @default(cuid())
+  consignacionId     String
+  productoId         String
+  cantidadConsignada Int
+  cantidadVendida    Int          @default(0)
+  cantidadDevuelta   Int          @default(0)
+  precioUnitario     Float
+  subtotal           Float
+  consignacion       Consignacion @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
+  producto           Producto     @relation(fields: [productoId], references: [id])
+
+  @@map("consignacion_items")
+}
+
+model DevolucionVenta {
+  id                 String           @id @default(cuid())
+  folio              String           @unique
+  ventaId            String
+  clienteId          String
+  motivo             MotivoDevolucion
+  descripcion        String?
+  subtotal           Float
+  iva                Float            @default(0)
+  total              Float
+  status             StatusDevolucion @default(PENDIENTE)
+  afectaInventario   Boolean          @default(true)
+  inventarioAfectado Boolean          @default(false)
+  saldoAjustado      Boolean          @default(false)
+  aprobadoPorId      String?
+  fechaDevolucion    DateTime         @default(now())
+  fechaAprobacion    DateTime?
+  observaciones      String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  items              DevolucionItem[]
+  venta              Venta            @relation(fields: [ventaId], references: [id])
+  cliente            Cliente          @relation(fields: [clienteId], references: [id])
+  aprobadoPor        User?            @relation("DevolucionAprobada", fields: [aprobadoPorId], references: [id])
+
+  @@index([ventaId])
+  @@index([clienteId])
+  @@map("devoluciones_venta")
+}
+
+model DevolucionItem {
+  id             String          @id @default(cuid())
+  devolucionId   String
+  productoId     String
+  cantidad       Float
+  precioUnitario Float
+  subtotal       Float
+  motivo         String?
+  devolucion     DevolucionVenta @relation(fields: [devolucionId], references: [id], onDelete: Cascade)
+  producto       Producto        @relation(fields: [productoId], references: [id])
+
+  @@map("devolucion_items")
 }
 
 model CreditoHistorial {
@@ -985,4 +1071,29 @@ enum StatusTransferencia {
   EN_TRANSITO
   RECIBIDA
   CANCELADA
+}
+
+enum StatusConsignacion {
+  ACTIVA
+  PARCIAL
+  LIQUIDADA
+  DEVUELTA
+  CANCELADA
+}
+
+enum StatusDevolucion {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
+enum MotivoDevolucion {
+  PRODUCTO_DEFECTUOSO
+  PRODUCTO_INCORRECTO
+  NO_SATISFECHO
+  EXCESO_PEDIDO
+  GARANTIA
+  ACUERDO_COMERCIAL
+  OTRO
 }
