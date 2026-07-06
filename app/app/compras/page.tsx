@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { Header } from '@/components/navigation/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -227,7 +227,7 @@ const motivoLabels: Record<string, string> = {
 // ═════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
 // ═════════════════════════════════════════════
-export default function ComprasPage() {
+function ComprasPageContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab') as TabKey | null;
   const [activeTab, setActiveTab] = useState<TabKey>(tabParam && TABS.some(t => t.key === tabParam) ? tabParam : 'ordenes');
@@ -1591,5 +1591,18 @@ export default function ComprasPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function ComprasPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen bg-slate-950 items-center justify-center text-slate-400">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mr-3"></div>
+        Cargando compras...
+      </div>
+    }>
+      <ComprasPageContent />
+    </Suspense>
   );
 }
