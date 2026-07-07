@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [clientes, total] = await Promise.all([
+    const [clientes, total, statsResult, sumResult] = await Promise.all([
       prisma.cliente.findMany({
         where,
         select: {
@@ -85,7 +85,22 @@ export async function GET(request: NextRequest) {
         take: limit,
       }),
       prisma.cliente.count({ where }),
+      prisma.cliente.groupBy({
+        by: ['status'],
+        _count: { status: true }
+      }),
+      prisma.cliente.aggregate({
+        _sum: { saldoActual: true }
+      })
     ]);
+
+    const statsMap = Object.fromEntries(statsResult.map(s => [s.status, s._count.status]));
+    const statistics = {
+      total: Object.values(statsMap).reduce((a, b) => a + b, 0),
+      activos: statsMap['ACTIVO'] || 0,
+      morosos: statsMap['MOROSO'] || 0,
+      saldoTotal: sumResult._sum.saldoActual || 0
+    };
 
     // Formatear para compatibilidad con cobranza móvil + web
     const formattedClientes = clientes.map((c) => ({
@@ -124,9 +139,11 @@ export async function GET(request: NextRequest) {
       updatedAt: c.ultimaActualizacion,
     }));
 
+
     return NextResponse.json({
       clientes: formattedClientes,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      statistics,
     });
   } catch (error) {
     console.error('Error obteniendo clientes:', error);

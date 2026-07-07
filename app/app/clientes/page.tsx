@@ -35,7 +35,11 @@ import {
   MessageCircle,
   MessageSquare,
   RefreshCw,
-  Link2
+  Link2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
 interface Cliente {
@@ -54,12 +58,136 @@ interface Cliente {
   vendedor?: { firstName?: string; lastName?: string; };
 }
 
+const PAGE_SIZE = 50;
+const DEBOUNCE_MS = 300;
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
+function SmartPagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const [inputPage, setInputPage] = useState('');
+
+  if (totalPages <= 1) return null;
+
+  const getPages = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    const range = 2;
+
+    const addPage = (p: number) => {
+      if (p >= 1 && p <= totalPages && !pages.includes(p)) pages.push(p);
+    };
+
+    addPage(1);
+    for (let p = currentPage - range; p <= currentPage + range; p++) addPage(p);
+    addPage(totalPages);
+
+    pages.sort((a, b) => (a as number) - (b as number));
+    const result: (number | 'ellipsis')[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      result.push(pages[i]);
+      if (i < pages.length - 1 && (pages[i + 1] as number) - (pages[i] as number) > 1) {
+        result.push('ellipsis');
+      }
+    }
+    return result;
+  };
+
+  const handleJump = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const p = parseInt(inputPage);
+      if (p >= 1 && p <= totalPages) {
+        onPageChange(p);
+        setInputPage('');
+      }
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-1 flex-wrap">
+      <Button
+        variant="outline" size="sm"
+        onClick={() => onPageChange(1)}
+        disabled={currentPage === 1}
+        title="Primera página"
+      >
+        <ChevronsLeft className="w-4 h-4" />
+      </Button>
+      <Button
+        variant="outline" size="sm"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </Button>
+
+      {getPages().map((p, i) =>
+        p === 'ellipsis' ? (
+          <span key={`ellipsis-${i}`} className="px-2 text-gray-400 select-none">…</span>
+        ) : (
+          <Button
+            key={p}
+            variant={currentPage === p ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => onPageChange(p as number)}
+            className="min-w-[36px]"
+          >
+            {p}
+          </Button>
+        )
+      )}
+
+      <Button
+        variant="outline" size="sm"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+      >
+        <ChevronRight className="w-4 h-4" />
+      </Button>
+      <Button
+        variant="outline" size="sm"
+        onClick={() => onPageChange(totalPages)}
+        disabled={currentPage === totalPages}
+        title="Última página"
+      >
+        <ChevronsRight className="w-4 h-4" />
+      </Button>
+
+      <div className="flex items-center gap-1 ml-2">
+        <span className="text-sm text-gray-500">Ir a:</span>
+        <Input
+          className="w-16 h-8 text-center text-sm"
+          placeholder="Pág"
+          value={inputPage}
+          onChange={(e) => setInputPage(e.target.value)}
+          onKeyDown={handleJump}
+          type="number"
+          min={1}
+          max={totalPages}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ClientesPage() {
   const { data: session } = useSession() || {};
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   
   // Estados para filtros
@@ -67,6 +195,19 @@ export default function ClientesPage() {
   const [filterPeriodicidad, setFilterPeriodicidad] = useState<string>('TODOS');
   const [filterConSaldo, setFilterConSaldo] = useState<boolean>(false);
   
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    activos: 0,
+    morosos: 0,
+    saldoTotal: 0
+  });
+
+  const debouncedSearch = useDebounce(searchTerm, DEBOUNCE_MS);
+
   // Estados para modales
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
@@ -91,52 +232,44 @@ export default function ClientesPage() {
   const canUpdate = permissions?.clientes?.update === true;
   const canDelete = permissions?.clientes?.delete === true;
 
+  // Reset a página 1 al cambiar filtros o búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterStatus, filterPeriodicidad, filterConSaldo]);
+
   useEffect(() => {
     if (session?.user) {
       fetchClientes();
     }
-  }, [session]);
-
-  useEffect(() => {
-    let filtered = clientes || [];
-
-    if (searchTerm) {
-      filtered = filtered.filter(cliente =>
-        cliente?.nombre?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-        cliente?.codigoCliente?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-        cliente?.telefono1?.includes(searchTerm) ||
-        cliente?.municipio?.toLowerCase()?.includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (filterStatus !== 'TODOS') {
-      filtered = filtered.filter(cliente => cliente.status === filterStatus);
-    }
-
-    if (filterPeriodicidad !== 'TODOS') {
-      filtered = filtered.filter(cliente => cliente.periodicidad === filterPeriodicidad);
-    }
-
-    if (filterConSaldo) {
-      filtered = filtered.filter(cliente => (cliente.saldoActual || 0) > 0);
-    }
-
-    setFilteredClientes(filtered);
-  }, [searchTerm, clientes, filterStatus, filterPeriodicidad, filterConSaldo]);
+  }, [session, currentPage, debouncedSearch, filterStatus, filterPeriodicidad, filterConSaldo]);
 
   const fetchClientes = async () => {
+    setLoading(true);
     try {
-      // Obtener ID del gestor de la sesión si es necesario
       const gestorId = (session?.user as any)?.id;
       
-      const url = gestorId && !['ADMIN', 'SUPERADMIN'].includes(session?.user?.role || '') 
-        ? `/api/clientes?gestorId=${encodeURIComponent(gestorId)}`
-        : '/api/clientes';
-      
-      const response = await fetch(url);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: PAGE_SIZE.toString(),
+        search: debouncedSearch,
+        status: filterStatus,
+        periodicidad: filterPeriodicidad,
+        conSaldo: filterConSaldo.toString(),
+      });
+
+      if (gestorId && !['ADMIN', 'SUPERADMIN'].includes(session?.user?.role || '')) {
+        params.append('gestorId', gestorId);
+      }
+
+      const response = await fetch(`/api/clientes?${params}`);
       if (response?.ok) {
         const data = await response.json();
-        setClientes(data || []);
+        setClientes(data.clientes || []);
+        setTotal(data.pagination?.total || 0);
+        setTotalPages(data.pagination?.pages || 1);
+        if (data.statistics) {
+          setStatistics(data.statistics);
+        }
       } else {
         console.error('Error response:', response.status, response.statusText);
         toast.error('Error al cargar clientes');
@@ -432,7 +565,7 @@ export default function ClientesPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clientes?.length || 0}</div>
+            <div className="text-2xl font-bold">{statistics.total.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               Clientes registrados
             </p>
@@ -446,7 +579,7 @@ export default function ClientesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {clientes?.filter?.(c => c?.status === 'ACTIVO')?.length || 0}
+              {statistics.activos.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Clientes activos
@@ -461,7 +594,7 @@ export default function ClientesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {clientes?.filter?.(c => c?.status === 'MOROSO')?.length || 0}
+              {statistics.morosos.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Requieren seguimiento
@@ -476,9 +609,7 @@ export default function ClientesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(
-                clientes?.reduce?.((sum, c) => sum + (c?.saldoActual || 0), 0) || 0
-              )}
+              {formatCurrency(statistics.saldoTotal)}
             </div>
             <p className="text-xs text-muted-foreground">
               Saldo por cobrar
@@ -493,7 +624,7 @@ export default function ClientesPage() {
           <CardTitle>Lista de Clientes</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredClientes?.length === 0 ? (
+          {clientes?.length === 0 ? (
             <div className="text-center py-8">
               <Users className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -519,7 +650,7 @@ export default function ClientesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClientes?.map?.((cliente) => (
+                  {clientes?.map?.((cliente) => (
                     <tr key={cliente?.id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <div>
@@ -598,6 +729,25 @@ export default function ClientesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex flex-col items-center gap-2 mt-4">
+          <p className="text-sm text-gray-500">
+            Mostrando{' '}
+            <span className="font-medium">{((currentPage - 1) * PAGE_SIZE + 1).toLocaleString()}</span>
+            {' '}–{' '}
+            <span className="font-medium">{Math.min(currentPage * PAGE_SIZE, total).toLocaleString()}</span>
+            {' '}de{' '}
+            <span className="font-medium">{total.toLocaleString()}</span> clientes
+          </p>
+          <SmartPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
 
       {/* Modales */}
       <ClienteDetailModal

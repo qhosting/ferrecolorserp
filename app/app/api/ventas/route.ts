@@ -104,11 +104,19 @@ export async function GET(request: NextRequest) {
               folio: true
             }
           },
+          pagares: {
+            select: {
+              estatus: true,
+              monto: true,
+              montoPagado: true,
+              fechaVencimiento: true,
+              diasVencido: true
+            }
+          },
           _count: {
             select: {
               detalles: true,
-              pagos: true,
-              pagares: true
+              pagos: true
             }
           }
         },
@@ -117,16 +125,20 @@ export async function GET(request: NextRequest) {
       prisma.venta.count({ where })
     ])
 
-    // Calcular estadísticas adicionales (sin cargar todos los pagarés)
+    // Calcular estadísticas adicionales de forma precisa
     const ventasConEstadisticas = ventas.map(venta => {
+      const pagaresVencidos = venta.pagares.filter(p => p.estatus === 'VENCIDO').length
+      const pagarePendiente = venta.pagares.find(p => p.estatus === 'PENDIENTE')
+      const totalPagado = venta.pagares.reduce((sum, p) => sum + p.montoPagado, 0) + venta.pagoInicial
+      
       return {
         ...venta,
         estadisticas: {
-          totalPagado: venta.pagoInicial,
-          saldoRestante: venta.saldoPendiente,
-          pagaresVencidos: 0, // se carga en detalle individual
-          proximoVencimiento: venta.fechaProximoPago || null,
-          diasVencidoProximo: 0,
+          totalPagado,
+          saldoRestante: venta.total - totalPagado,
+          pagaresVencidos,
+          proximoVencimiento: pagarePendiente?.fechaVencimiento || null,
+          diasVencidoProximo: pagarePendiente?.diasVencido || 0
         }
       }
     })
