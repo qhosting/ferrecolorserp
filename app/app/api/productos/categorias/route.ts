@@ -1,17 +1,15 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { RolePermissions } from '@/lib/types';
+import { redisCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Caché en memoria: TTL de 5 minutos
-let cachedCategorias: string[] | null = null;
-let cacheExpiresAt = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_KEY = 'productos:categorias';
+const CACHE_TTL_SECONDS = 10 * 60; // 10 minutos
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,11 +25,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Sin permisos para ver productos' }, { status: 403 });
     }
 
-    // Servir desde caché si está vigente
-    if (cachedCategorias && Date.now() < cacheExpiresAt) {
+    // Servir desde caché de Redis
+    const cachedData = await redisCache.get(CACHE_KEY);
+    if (cachedData) {
       return NextResponse.json(
-        { categorias: cachedCategorias },
-        { headers: { 'X-Cache': 'HIT' } }
+        { categorias: JSON.parse(cachedData) },
+        { headers: { 'X-Cache': 'REDIS_HIT' } }
       );
     }
 
@@ -48,9 +47,8 @@ export async function GET(request: NextRequest) {
       .filter((c) => c && c.trim() !== '')
       .sort();
 
-    // Actualizar caché
-    cachedCategorias = categorias;
-    cacheExpiresAt = Date.now() + CACHE_TTL_MS;
+    // Actualizar caché de Redis
+    await redisCache.set(CACHE_KEY, JSON.stringify(categorias), CACHE_TTL_SECONDS);
 
     return NextResponse.json(
       { categorias },
