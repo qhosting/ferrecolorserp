@@ -209,6 +209,14 @@ model Producto {
   movimientos           MovimientoInventario[]
   stockSucursales       StockSucursal[]
 
+  @@index([isActive])
+  @@index([categoria])
+  @@index([marca])
+  @@index([isActive, categoria])
+  @@index([isActive, marca])
+  @@index([isActive, categoria, marca])
+  @@index([createdAt])
+  @@index([nombre])
   @@map("productos")
 }
 
