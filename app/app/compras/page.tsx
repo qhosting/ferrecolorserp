@@ -332,7 +332,27 @@ function ComprasPageContent() {
       }
       if (ordRes.ok) {
         const d = await ordRes.json();
-        setOrdenes(d.ordenes ?? []);
+        const mappedOrdenes = (d.ordenes ?? []).map((o: any) => ({
+          id: o.id,
+          folio: o.folio,
+          proveedor: o.proveedor,
+          subtotal: o.subtotal,
+          iva: o.iva,
+          total: o.total,
+          status: o.estado || o.status,
+          fechaOrden: o.fecha || o.fechaOrden,
+          fechaRecepcion: o.fechaEntrega,
+          observaciones: o.observaciones,
+          items: (o.detalles ?? o.items ?? []).map((det: any) => ({
+            id: det.id,
+            productoId: det.producto?.id || det.productoId,
+            producto: det.producto,
+            cantidad: det.cantidad,
+            precioUnitario: det.precio || det.precioUnitario,
+            subtotal: det.subtotal,
+          })),
+        }));
+        setOrdenes(mappedOrdenes);
       }
       if (consRes.ok) {
         const d = await consRes.json();
