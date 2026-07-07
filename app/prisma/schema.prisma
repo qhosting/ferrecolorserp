@@ -145,6 +145,12 @@ model Cliente {
   reestructuras       ReestructuraCredito[]
   ventas              Venta[]
 
+  @@index([status])
+  @@index([gestorId])
+  @@index([status, gestorId])
+  @@index([nombre])
+  @@index([saldoActual])
+  @@index([fechaAlta])
   @@map("clientes")
 }
 
@@ -240,6 +246,8 @@ model Proveedor {
   consignaciones  Consignacion[]
   cuentasPorPagar CuentaPorPagar[]
 
+  @@index([isActive])
+  @@index([nombre])
   @@map("proveedores")
 }
 
@@ -257,6 +265,9 @@ model Servicio {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
+  @@index([isActive])
+  @@index([categoria])
+  @@index([isActive, categoria])
   @@map("servicios")
 }
 
@@ -287,6 +298,12 @@ model Pedido {
   vendedor             User            @relation("PedidoVendedor", fields: [vendedorId], references: [id])
   venta                Venta?          @relation("PedidoToVenta", fields: [ventaId], references: [id])
 
+  @@index([estatus])
+  @@index([clienteId])
+  @@index([vendedorId])
+  @@index([fechaPedido])
+  @@index([estatus, clienteId])
+  @@index([createdAt])
   @@map("pedidos")
 }
 
@@ -357,6 +374,13 @@ model Venta {
   ventaPOS                  VentaPOS?             @relation("VentaToVentaPOS")
 
   @@index([clienteId])
+  @@index([status])
+  @@index([fechaVenta])
+  @@index([vendedorId])
+  @@index([sucursalId])
+  @@index([saldoPendiente])
+  @@index([status, clienteId])
+  @@index([status, fechaVenta])
   @@map("ventas")
 }
 
@@ -568,6 +592,9 @@ model Pago {
   venta           Venta?              @relation(fields: [ventaId], references: [id])
 
   @@index([clienteId])
+  @@index([ventaId])
+  @@index([fechaPago])
+  @@index([gestorId])
   @@map("pagos")
 }
 
@@ -588,6 +615,10 @@ model Compra {
   proveedor       Proveedor        @relation(fields: [proveedorId], references: [id])
   cuentasPorPagar CuentaPorPagar[]
 
+  @@index([status])
+  @@index([proveedorId])
+  @@index([fechaCompra])
+  @@index([status, proveedorId])
   @@map("compras")
 }
 

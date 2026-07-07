@@ -14,12 +14,14 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const estado = searchParams.get('estado');
-    const pac = searchParams.get('pac');
+    const search = (searchParams.get('search') || '').trim();
     const fechaInicio = searchParams.get('fechaInicio');
     const fechaFin = searchParams.get('fechaFin');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')));
+    const skip = (page - 1) * limit;
 
-    let whereClause: any = {};
+    let whereClause: Record<string, unknown> = {};
 
     if (estado && estado !== 'all') {
       const upperEstado = estado.toUpperCase();
@@ -33,6 +35,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (search) {
+      whereClause.OR = [
+        { folio: { contains: search, mode: 'insensitive' } },
+        { numeroFactura: { contains: search, mode: 'insensitive' } },
+        { cliente: { nombre: { contains: search, mode: 'insensitive' } } },
+        { cliente: { codigoCliente: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
     if (fechaInicio && fechaFin) {
       whereClause.fechaVenta = {
         gte: new Date(fechaInicio),
@@ -40,23 +51,41 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const ventas = await prisma.venta.findMany({
-      where: whereClause,
-      include: {
-        cliente: true,
-        detalles: {
-          include: {
-            producto: true
-          }
-        }
-      },
-      orderBy: {
-        fechaVenta: 'desc'
-      },
-      take: limit
-    });
+    // Listado optimizado: sin detalles completos, solo conteo
+    const [ventas, total] = await Promise.all([
+      prisma.venta.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          uuid: true,
+          folio: true,
+          contpaqiFolio: true,
+          contpaqiSerie: true,
+          fechaVenta: true,
+          subtotal: true,
+          iva: true,
+          total: true,
+          timbrado: true,
+          status: true,
+          xmlPath: true,
+          pdfPath: true,
+          contpaqiSyncAt: true,
+          observaciones: true,
+          createdAt: true,
+          updatedAt: true,
+          cliente: {
+            select: { id: true, nombre: true, rfc: true, email: true, codigoCliente: true },
+          },
+          _count: { select: { detalles: true } },
+        },
+        orderBy: { fechaVenta: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.venta.count({ where: whereClause }),
+    ]);
 
-    // Mapear ventas a formato de factura esperado por el frontend
+    // Mapear ventas a formato de factura (sin detalles en listado)
     const facturas = ventas.map((venta) => ({
       id: venta.id,
       uuid: venta.uuid,
@@ -66,16 +95,10 @@ export async function GET(request: NextRequest) {
       cliente: {
         rfc: venta.cliente.rfc || 'XAXX010101000',
         nombre: venta.cliente.nombre,
-        email: venta.cliente.email || ''
+        email: venta.cliente.email || '',
+        codigoCliente: venta.cliente.codigoCliente,
       },
-      conceptos: venta.detalles.map((d) => ({
-        claveProdServ: d.producto.claveSat || '01010101',
-        descripcion: d.producto.nombre,
-        cantidad: d.cantidad,
-        unidad: d.producto.claveUnidadSat || 'H87',
-        valorUnitario: d.precioUnitario,
-        importe: d.subtotal
-      })),
+      totalConceptos: venta._count.detalles,
       subtotal: venta.subtotal,
       iva: venta.iva,
       total: venta.total,
@@ -87,25 +110,32 @@ export async function GET(request: NextRequest) {
       fechaTimbrado: venta.contpaqiSyncAt?.toISOString() || null,
       observaciones: venta.observaciones || '',
       createdAt: venta.createdAt.toISOString(),
-      updatedAt: venta.updatedAt.toISOString()
+      updatedAt: venta.updatedAt.toISOString(),
     }));
 
-    // Estadísticas
+    // Estadísticas usando el total real de la DB, no solo la página actual
+    const timbradas = await prisma.venta.count({ where: { timbrado: true } });
+    const canceladas = await prisma.venta.count({ where: { status: 'CANCELADA' } });
+    const totalAll = await prisma.venta.count();
+    const montoAgg = await prisma.venta.aggregate({
+      _sum: { total: true },
+      where: { timbrado: true },
+    });
+
     const estadisticas = {
-      total: facturas.length,
-      timbradas: facturas.filter(f => f.estado === 'TIMBRADA').length,
-      pendientes: facturas.filter(f => f.estado === 'PENDIENTE').length,
-      canceladas: facturas.filter(f => f.estado === 'CANCELADA').length,
-      montoTotal: facturas.reduce((sum, f) => sum + f.total, 0),
-      montoTimbrado: facturas
-        .filter(f => f.estado === 'TIMBRADA')
-        .reduce((sum, f) => sum + f.total, 0)
+      total: totalAll,
+      timbradas,
+      pendientes: totalAll - timbradas - canceladas,
+      canceladas,
+      montoTotal: total,
+      montoTimbrado: montoAgg._sum.total || 0,
     };
 
     return NextResponse.json({
       facturas,
       estadisticas,
-      message: 'Facturas obtenidas exitosamente'
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      message: 'Facturas obtenidas exitosamente',
     });
 
   } catch (error) {

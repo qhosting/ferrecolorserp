@@ -29,9 +29,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const search = searchParams.get('search') || ''
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
+    const search = (searchParams.get('search') || '').trim()
     const estatus = searchParams.get('estatus')
     const clienteId = searchParams.get('clienteId')
 
@@ -81,20 +81,11 @@ export async function GET(request: NextRequest) {
               email: true
             }
           },
-          detalles: {
-            include: {
-              producto: {
-                select: {
-                  id: true,
-                  codigo: true,
-                  nombre: true,
-                  precio1: true
-                }
-              }
-            }
+          _count: {
+            select: { detalles: true }
           }
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { fechaPedido: 'desc' }
       }),
       prisma.pedido.count({ where })
     ])

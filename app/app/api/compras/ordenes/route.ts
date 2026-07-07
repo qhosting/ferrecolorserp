@@ -14,29 +14,52 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const estado = searchParams.get('estado');
     const proveedor = searchParams.get('proveedor');
-    const limit = searchParams.get('limit');
+    const search = (searchParams.get('search') || '').trim();
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')));
+    const skip = (page - 1) * limit;
 
-    const where: any = {};
-    if (estado) {
-      where.status = estado as any;
-    }
-    if (proveedor) {
-      where.proveedorId = proveedor;
+    const where: Record<string, unknown> = {};
+    if (estado) where.status = estado;
+    if (proveedor) where.proveedorId = proveedor;
+    if (search) {
+      where.OR = [
+        { numeroCompra: { contains: search, mode: 'insensitive' } },
+        { proveedor: { nombre: { contains: search, mode: 'insensitive' } } },
+      ];
     }
 
-    const compras = await prisma.compra.findMany({
-      where,
-      take: limit ? parseInt(limit) : undefined,
-      include: {
-        proveedor: true,
-        items: {
-          include: {
-            producto: true,
+    const [compras, total, stats] = await Promise.all([
+      prisma.compra.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          numeroCompra: true,
+          subtotal: true,
+          iva: true,
+          total: true,
+          status: true,
+          fechaCompra: true,
+          fechaRecepcion: true,
+          observaciones: true,
+          createdAt: true,
+          updatedAt: true,
+          proveedor: {
+            select: { id: true, nombre: true, codigo: true },
           },
+          _count: { select: { items: true } },
         },
-      },
-      orderBy: { fechaCompra: 'desc' },
-    });
+        orderBy: { fechaCompra: 'desc' },
+      }),
+      prisma.compra.count({ where }),
+      prisma.compra.groupBy({
+        by: ['status'],
+        _count: { status: true },
+        where: proveedor ? { proveedorId: proveedor } : {},
+      }),
+    ]);
 
     const ordenes = compras.map((compra) => ({
       id: compra.id,
@@ -47,43 +70,26 @@ export async function GET(request: NextRequest) {
         codigo: compra.proveedor.codigo,
       },
       fecha: compra.fechaCompra.toISOString(),
-      fechaEntrega: compra.fechaRecepcion?.toISOString() || new Date(compra.fechaCompra.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      fechaEntrega: compra.fechaRecepcion?.toISOString() ||
+        new Date(compra.fechaCompra.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       subtotal: compra.subtotal,
       iva: compra.iva,
       total: compra.total,
       estado: compra.status,
-      detalles: compra.items.map((item) => ({
-        id: item.id,
-        producto: {
-          id: item.producto.id,
-          codigo: item.producto.codigo,
-          nombre: item.producto.nombre,
-        },
-        cantidad: item.cantidad,
-        precio: item.precioUnitario,
-        subtotal: item.subtotal,
-        cantidadRecibida: compra.status === 'RECIBIDA' ? item.cantidad : 0,
-      })),
+      totalItems: compra._count.items,
       observaciones: compra.observaciones,
       createdAt: compra.createdAt.toISOString(),
       updatedAt: compra.updatedAt.toISOString(),
     }));
 
-    // Calcular estadísticas en base a las compras filtradas o todas
-    const allCompras = await prisma.compra.findMany({
-      where: proveedor ? { proveedorId: proveedor } : {},
-    });
-
+    // Estadísticas usando groupBy (una sola query adicional)
+    const statsMap = Object.fromEntries(stats.map((s) => [s.status, s._count.status]));
     const estadisticas = {
-      total: allCompras.length,
-      pendientes: allCompras.filter((o) => o.status === 'PENDIENTE').length,
-      confirmadas: allCompras.filter((o) => o.status === 'CONFIRMADA').length,
-      recibidas: allCompras.filter((o) => o.status === 'RECIBIDA').length,
-      canceladas: allCompras.filter((o) => o.status === 'CANCELADA').length,
-      montoTotal: allCompras.reduce((sum, o) => sum + o.total, 0),
-      montoPendiente: allCompras
-        .filter((o) => o.status === 'PENDIENTE' || o.status === 'CONFIRMADA')
-        .reduce((sum, o) => sum + o.total, 0),
+      total,
+      pendientes: statsMap['PENDIENTE'] || 0,
+      confirmadas: statsMap['CONFIRMADA'] || 0,
+      recibidas: statsMap['RECIBIDA'] || 0,
+      canceladas: statsMap['CANCELADA'] || 0,
     };
 
     return NextResponse.json({

@@ -36,9 +36,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const search = searchParams.get('search') || ''
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
+    const search = (searchParams.get('search') || '').trim()
     const status = searchParams.get('status')
     const clienteId = searchParams.get('clienteId')
     const fechaInicio = searchParams.get('fechaInicio')
@@ -104,44 +104,29 @@ export async function GET(request: NextRequest) {
               folio: true
             }
           },
-          pagares: {
-            select: {
-              id: true,
-              numeroPago: true,
-              monto: true,
-              montoPagado: true,
-              estatus: true,
-              fechaVencimiento: true,
-              diasVencido: true
-            },
-            orderBy: { numeroPago: 'asc' }
-          },
           _count: {
             select: {
               detalles: true,
-              pagos: true
+              pagos: true,
+              pagares: true
             }
           }
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { fechaVenta: 'desc' }
       }),
       prisma.venta.count({ where })
     ])
 
-    // Calcular estadísticas adicionales
+    // Calcular estadísticas adicionales (sin cargar todos los pagarés)
     const ventasConEstadisticas = ventas.map(venta => {
-      const pagaresVencidos = venta.pagares.filter(p => p.estatus === 'VENCIDO').length
-      const pagarePendiente = venta.pagares.find(p => p.estatus === 'PENDIENTE')
-      const totalPagado = venta.pagares.reduce((sum, p) => sum + p.montoPagado, 0) + venta.pagoInicial
-      
       return {
         ...venta,
         estadisticas: {
-          totalPagado,
-          saldoRestante: venta.total - totalPagado,
-          pagaresVencidos,
-          proximoVencimiento: pagarePendiente?.fechaVencimiento || null,
-          diasVencidoProximo: pagarePendiente?.diasVencido || 0
+          totalPagado: venta.pagoInicial,
+          saldoRestante: venta.saldoPendiente,
+          pagaresVencidos: 0, // se carga en detalle individual
+          proximoVencimiento: venta.fechaProximoPago || null,
+          diasVencidoProximo: 0,
         }
       }
     })
