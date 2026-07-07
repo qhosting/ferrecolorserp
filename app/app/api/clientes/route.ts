@@ -51,39 +51,50 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [clientes, total, statsResult, sumResult] = await Promise.all([
-      prisma.cliente.findMany({
-        where,
-        select: {
-          id: true,
-          codigoCliente: true,
-          contrato: true,
-          nombre: true,
-          telefono1: true,
-          telefono2: true,
-          email: true,
-          colonia: true,
-          municipio: true,
-          estado: true,
-          saldoActual: true,
-          pagosPeriodicos: true,
-          periodicidad: true,
-          diaCobro: true,
-          limiteCredito: true,
-          status: true,
-          gestorId: true,
-          fechaAlta: true,
-          ultimaActualizacion: true,
-          listaPrecio: true,
-          descuento: true,
-          gestor: {
-            select: { id: true, name: true, firstName: true, lastName: true, email: true },
-          },
+    const hasPage = searchParams.has('page');
+    const hasLimit = searchParams.has('limit');
+    const isPaginated = hasPage || hasLimit;
+
+    const queryOptions: any = {
+      where,
+      select: {
+        id: true,
+        codigoCliente: true,
+        contrato: true,
+        nombre: true,
+        telefono1: true,
+        telefono2: true,
+        email: true,
+        colonia: true,
+        municipio: true,
+        estado: true,
+        saldoActual: true,
+        pagosPeriodicos: true,
+        periodicidad: true,
+        diaCobro: true,
+        limiteCredito: true,
+        status: true,
+        gestorId: true,
+        fechaAlta: true,
+        ultimaActualizacion: true,
+        listaPrecio: true,
+        descuento: true,
+        gestor: {
+          select: { id: true, name: true, firstName: true, lastName: true, email: true },
         },
-        orderBy: { nombre: 'asc' },
-        skip,
-        take: limit,
-      }),
+      },
+      orderBy: { nombre: 'asc' },
+    };
+
+    if (isPaginated) {
+      queryOptions.skip = skip;
+      queryOptions.take = limit;
+    } else {
+      queryOptions.take = 250; // límite razonable de compatibilidad
+    }
+
+    const [clientes, total, statsResult, sumResult] = await Promise.all([
+      prisma.cliente.findMany(queryOptions as any),
       prisma.cliente.count({ where }),
       prisma.cliente.groupBy({
         by: ['status'],
@@ -103,7 +114,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Formatear para compatibilidad con cobranza móvil + web
-    const formattedClientes = clientes.map((c) => ({
+    const formattedClientes = clientes.map((c: any) => ({
       id: c.id,
       cod_cliente: c.codigoCliente,
       codigoCliente: c.codigoCliente,
@@ -139,6 +150,9 @@ export async function GET(request: NextRequest) {
       updatedAt: c.ultimaActualizacion,
     }));
 
+    if (!isPaginated) {
+      return NextResponse.json(formattedClientes);
+    }
 
     return NextResponse.json({
       clientes: formattedClientes,
