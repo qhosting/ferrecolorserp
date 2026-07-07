@@ -464,7 +464,7 @@ export default function AlmacenPage() {
               onClick={() => { setSelectedSucursalId('all'); setCurrentPage(1); setMovCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedSucursalId === 'all'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                   : 'bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:text-slate-200'
               }`}
             >
@@ -557,7 +557,7 @@ export default function AlmacenPage() {
                 <Button
                   size="sm"
                   onClick={() => { resetTransForm(); setShowTransModal(true); }}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-xl flex items-center gap-2"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl flex items-center gap-2"
                 >
                   <ArrowLeftRight className="h-3.5 w-3.5" /> Nueva Transferencia
                 </Button>
@@ -643,7 +643,7 @@ export default function AlmacenPage() {
                                     <TooltipContent className="bg-slate-950 border-slate-800 text-slate-200 p-3 w-64 shadow-xl rounded-xl z-50">
                                       <p className="text-xs font-bold text-slate-400 border-b border-slate-800 pb-1.5 mb-1.5 flex items-center justify-between">
                                         <span>Distribución de Stock</span>
-                                        <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+                                        <Building2 className="h-3.5 w-3.5 text-emerald-400" />
                                       </p>
                                       <div className="space-y-1.5">
                                         {prod.stockSucursalesFull && prod.stockSucursalesFull.length > 0 ? (
@@ -669,7 +669,7 @@ export default function AlmacenPage() {
                               <TableCell>
                                 {(prod.pasillo || prod.estante || prod.nivel) ? (
                                   <span className="text-xs text-slate-300 flex items-center gap-1">
-                                    <MapPin className="h-3 w-3 text-indigo-400" />
+                                    <MapPin className="h-3 w-3 text-emerald-400" />
                                     P:{prod.pasillo||'—'} E:{prod.estante||'—'} N:{prod.nivel||'—'}
                                   </span>
                                 ) : (
@@ -757,7 +757,7 @@ export default function AlmacenPage() {
                             <TableRow key={mov.id} className="border-slate-800/60 hover:bg-slate-800/20">
                               <TableCell className="text-xs text-slate-500">{new Date(mov.fechaMovimiento).toLocaleString('es-MX')}</TableCell>
                               <TableCell className="text-xs">
-                                <span className="font-mono text-indigo-400">{mov.sucursal?.codigo || '—'}</span>
+                                <span className="font-mono text-emerald-400">{mov.sucursal?.codigo || '—'}</span>
                                 <span className="text-slate-500 block text-[10px]">{mov.sucursal?.nombre}</span>
                               </TableCell>
                               <TableCell>
@@ -830,7 +830,7 @@ export default function AlmacenPage() {
                               <p className="text-sm">Sin transferencias registradas</p>
                               {isAdmin && sucursales.length > 1 && (
                                 <Button size="sm" onClick={() => { resetTransForm(); setShowTransModal(true); }}
-                                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs mt-2">
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs mt-2">
                                   <Plus className="h-3 w-3 mr-1" /> Nueva Transferencia
                                 </Button>
                               )}
@@ -843,7 +843,7 @@ export default function AlmacenPage() {
                           const StatusIcon = cfg.icon;
                           return (
                             <TableRow key={trans.id} className="border-slate-800/60 hover:bg-slate-800/20">
-                              <TableCell className="font-mono text-xs text-indigo-400 font-bold">{trans.folio}</TableCell>
+                              <TableCell className="font-mono text-xs text-emerald-400 font-bold">{trans.folio}</TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1.5 text-xs">
                                   <span className="text-slate-300 font-medium">{trans.sucursalOrigen.codigo}</span>
@@ -985,7 +985,7 @@ export default function AlmacenPage() {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-3.5 w-3.5" />
                       <Input placeholder="Buscar por nombre o código..." value={modalSearch}
                         onChange={e => setModalSearch(e.target.value)} autoFocus
-                        className="pl-9 bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 focus:border-indigo-500" />
+                        className="pl-9 bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 focus:border-emerald-500" />
                     </div>
                     <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/60 max-h-44 overflow-y-auto">
                       {filteredModalProducts.length === 0 ? (
@@ -1021,7 +1021,7 @@ export default function AlmacenPage() {
                         {selectedProd.categoria && <p className="text-[10px] text-slate-600 mt-0.5">{selectedProd.categoria}</p>}
                       </div>
                       <button type="button" onClick={() => setSelectedProd(null)}
-                        className="text-indigo-400 hover:text-indigo-300 text-[10px] font-bold shrink-0 underline underline-offset-2 cursor-pointer">
+                        className="text-emerald-400 hover:text-emerald-300 text-[10px] font-bold shrink-0 underline underline-offset-2 cursor-pointer">
                         Cambiar
                       </button>
                     </div>
@@ -1073,7 +1073,7 @@ export default function AlmacenPage() {
                     type="number" min="1" value={adjQty}
                     onChange={e => setAdjQty(Math.max(1, parseInt(e.target.value) || 1))}
                     required
-                    className="h-10 text-center text-xl font-bold bg-slate-900 border-slate-700 text-white rounded-xl flex-1 focus:border-indigo-500"
+                    className="h-10 text-center text-xl font-bold bg-slate-900 border-slate-700 text-white rounded-xl flex-1 focus:border-emerald-500"
                   />
                   <button type="button" onClick={() => setAdjQty(q => q + 1)}
                     className="h-10 w-10 shrink-0 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors text-xl font-bold cursor-pointer flex items-center justify-center">
@@ -1085,7 +1085,7 @@ export default function AlmacenPage() {
                     <button key={n} type="button" onClick={() => setAdjQty(n)}
                       className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
                         adjQty === n
-                          ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                           : 'bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300'
                       }`}>
                       {n}
@@ -1098,7 +1098,7 @@ export default function AlmacenPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Motivo <span className="text-rose-500">*</span></label>
                 <Select value={adjMotive} onValueChange={setAdjMotive}>
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 focus:border-indigo-500">
+                  <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 focus:border-emerald-500">
                     <SelectValue placeholder="Seleccionar motivo..." />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
@@ -1122,7 +1122,7 @@ export default function AlmacenPage() {
                   placeholder="Ej. Factura F-001, OC-2025, Ticket..."
                   value={adjRef}
                   onChange={e => setAdjRef(e.target.value)}
-                  className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 placeholder:text-slate-600 focus:border-indigo-500"
+                  className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl text-sm h-10 placeholder:text-slate-600 focus:border-emerald-500"
                 />
               </div>
 
@@ -1183,7 +1183,7 @@ export default function AlmacenPage() {
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setShowLocationModal(false)}
                   className="border-slate-700 text-slate-300 rounded-xl">Cancelar</Button>
-                <Button type="submit" disabled={submitting} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
+                <Button type="submit" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
                   {submitting ? 'Guardando...' : 'Guardar'}
                 </Button>
               </DialogFooter>
@@ -1250,7 +1250,7 @@ export default function AlmacenPage() {
                         <button key={p.id} type="button" onClick={() => addProductToTransfer(p)}
                           className="w-full p-2.5 text-left text-xs hover:bg-slate-900 flex justify-between items-center">
                           <span className="text-slate-200">{p.nombre} <span className="text-slate-500 font-mono">({p.codigo})</span></span>
-                          <span className="text-indigo-400 text-[10px]">Stock: {p.stock}</span>
+                          <span className="text-emerald-400 text-[10px]">Stock: {p.stock}</span>
                         </button>
                       ))
                     }
@@ -1296,7 +1296,7 @@ export default function AlmacenPage() {
                 <Button type="button" variant="outline" onClick={() => setShowTransModal(false)}
                   className="border-slate-700 text-slate-300 rounded-xl">Cancelar</Button>
                 <Button type="submit" disabled={submitting || transDetalles.length === 0}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
                   {submitting ? 'Creando...' : 'Crear Transferencia'}
                 </Button>
               </DialogFooter>
@@ -1314,7 +1314,7 @@ export default function AlmacenPage() {
                   : '🚫 Cancelar Transferencia'}
               </DialogTitle>
               <DialogDescription className="text-slate-400 text-sm">
-                Folio: <span className="font-mono text-indigo-400">{selectedTransferencia?.folio}</span> ·{' '}
+                Folio: <span className="font-mono text-emerald-400">{selectedTransferencia?.folio}</span> ·{' '}
                 {selectedTransferencia?.sucursalOrigen.nombre} → {selectedTransferencia?.sucursalDestino.nombre}
               </DialogDescription>
             </DialogHeader>
