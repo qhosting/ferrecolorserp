@@ -57,7 +57,6 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-tap-highlight" content="no" />
         
-        {/* Service Worker deshabilitado temporalmente para evitar errores con redirects
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -75,7 +74,6 @@ export default function RootLayout({
             `,
           }}
         />
-        */}
       </head>
       <body className={inter.className}>
         <Providers>
