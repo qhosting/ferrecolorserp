@@ -16,7 +16,7 @@ async function run() {
   console.log('pg_trgm instalado:', installed);
   
   // Verificar si tenemos permisos superuser
-  const role = await prisma.$queryRawUnsafe(`SELECT current_user, pg_has_role(current_user, 'superuser', 'member') as is_superuser`);
+  const role = await prisma.$queryRawUnsafe(`SELECT current_user, usesuper as is_superuser FROM pg_user WHERE usename = current_user`);
   console.log('Rol actual:', role);
   
   await prisma.$disconnect();
