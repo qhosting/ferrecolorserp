@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
@@ -12,7 +12,8 @@ import {
   CheckCircleIcon,
   ArrowRightIcon,
   XMarkIcon,
-  DocumentTextIcon,
+  EyeIcon,
+  ArrowDownTrayIcon,
   PencilIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
@@ -103,9 +104,14 @@ export function PedidoCard({ pedido, onView, onEdit, onConvertir, onCancelar }: 
     onCancelar?.(pedido.id)
   }
 
-  const handleOpenPdf = (e: React.MouseEvent) => {
+  const handleVisualizarPdf = (e: React.MouseEvent) => {
     e.stopPropagation()
     window.open(`/api/pedidos/${pedido.id}/pdf`, '_blank')
+  }
+
+  const handleDownloadPdf = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    window.open(`/api/pedidos/${pedido.id}/pdf?download=true`, '_blank')
   }
 
   return (
@@ -218,55 +224,69 @@ export function PedidoCard({ pedido, onView, onEdit, onConvertir, onCancelar }: 
       </div>
 
       {/* Action Footer Buttons */}
-      <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-2">
-        {/* PDF Cotización Viewer Button (Always Accessible) */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleOpenPdf}
-          className="flex-1 bg-white hover:bg-slate-100 text-slate-700 border-slate-200 font-semibold text-xs h-9 shadow-sm"
-          title="Ver / Imprimir Cotización PDF"
-        >
-          <DocumentTextIcon className="w-4 h-4 mr-1.5 text-blue-600 shrink-0" />
-          PDF Cotización
-        </Button>
-
-        {!pedido.convertidoAVenta && pedido.estatus === 'PENDIENTE' && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEdit}
-              className="bg-white hover:bg-slate-100 text-slate-700 border-slate-200 font-medium text-xs h-9 px-3"
-              title="Editar pedido"
-            >
-              <PencilIcon className="w-3.5 h-3.5 text-slate-500" />
-            </Button>
-            
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleConvertir}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9 px-3"
-              title="Convertir a venta"
-            >
-              <ArrowRightIcon className="w-3.5 h-3.5 mr-1" />
-              Convertir
-            </Button>
-          </>
-        )}
-        
-        {pedido.estatus === 'PENDIENTE' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancelar}
-            className="hover:bg-red-50 text-red-600 font-medium text-xs h-9 px-2"
-            title="Cancelar pedido"
+      <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-col gap-2">
+        {/* PDF Action Row: Visualizar & Descargar PDF */}
+        <div className="flex gap-2">
+          {/* Botón 1: Visualizar PDF */}
+          <button
+            type="button"
+            onClick={handleVisualizarPdf}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-700 font-bold text-xs py-2 px-3 rounded-xl border border-blue-200 shadow-sm transition-all duration-150"
+            title="Visualizar Cotización PDF en pantalla"
           >
-            <XMarkIcon className="w-4 h-4" />
-          </Button>
-        )}
+            <EyeIcon className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>Visualizar</span>
+          </button>
+
+          {/* Botón 2: Descargar PDF */}
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-sm transition-all duration-150"
+            title="Descargar archivo PDF directamente"
+          >
+            <ArrowDownTrayIcon className="w-4 h-4 text-blue-400 shrink-0" />
+            <span>Descargar PDF</span>
+          </button>
+        </div>
+
+        {/* Action Row: Editar / Convertir / Cancelar */}
+        <div className="flex gap-2">
+          {!pedido.convertidoAVenta && pedido.estatus === 'PENDIENTE' && (
+            <>
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="inline-flex items-center justify-center gap-1 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs py-1.5 px-3 rounded-xl border border-slate-200 shadow-sm"
+                title="Editar pedido"
+              >
+                <PencilIcon className="w-3.5 h-3.5 text-slate-500" />
+                <span>Editar</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleConvertir}
+                className="flex-1 inline-flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-xs py-1.5 px-3 rounded-xl shadow-sm transition-all duration-150"
+                title="Convertir a venta"
+              >
+                <ArrowRightIcon className="w-3.5 h-3.5" />
+                <span>Convertir a Venta</span>
+              </button>
+            </>
+          )}
+          
+          {pedido.estatus === 'PENDIENTE' && (
+            <button
+              type="button"
+              onClick={handleCancelar}
+              className="inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs py-1.5 px-2.5 rounded-xl border border-rose-200 transition-colors"
+              title="Cancelar pedido"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </Card>
   )
