@@ -19,8 +19,9 @@ import {
   LogOut, Settings, User, Bell, ChevronRight,
   LayoutDashboard, ShieldCheck, ExternalLink,
   AlertTriangle, TrendingDown, Package, ArrowLeftRight,
-  CreditCard, Loader2, RefreshCw
+  CreditCard, Loader2, RefreshCw, Monitor, Smartphone, Tablet
 } from 'lucide-react';
+import { useDeviceMode, DeviceMode } from '@/components/providers/device-mode-provider';
 import { toast } from 'react-hot-toast';
 
 interface HeaderProps {
@@ -275,6 +276,52 @@ function NotificationBell() {
   );
 }
 
+// ── Mode Switcher Component ──
+function ModeSwitcher() {
+  const { mode, setMode } = useDeviceMode();
+
+  const MODE_LABELS: Record<DeviceMode, { label: string; icon: any; color: string }> = {
+    desktop: { label: 'Desktop', icon: Monitor, color: 'bg-sky-500/10 text-sky-400 border-sky-500/30' },
+    pwa:     { label: 'PWA', icon: Tablet, color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
+    mobile:  { label: 'Móvil', icon: Smartphone, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  };
+
+  const current = MODE_LABELS[mode] || MODE_LABELS.desktop;
+  const Icon = current.icon;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] font-bold cursor-pointer transition-all ${current.color}`}
+          title="Cambiar Modo de Vista"
+        >
+          <Icon className="h-3.5 w-3.5" />
+          <span>Modo {current.label}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44 bg-slate-900 border-slate-800 shadow-xl p-1 z-50">
+        <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider px-2 py-1">
+          Seleccionar Modo
+        </DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => setMode('desktop')} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-300 hover:text-white cursor-pointer rounded-lg">
+          <Monitor className="h-4 w-4 text-sky-400" />
+          <span>Modo Desktop</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setMode('pwa')} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-300 hover:text-white cursor-pointer rounded-lg">
+          <Tablet className="h-4 w-4 text-purple-400" />
+          <span>Modo PWA Híbrido</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setMode('mobile')} className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-300 hover:text-white cursor-pointer rounded-lg">
+          <Smartphone className="h-4 w-4 text-emerald-400" />
+          <span>Modo Móvil Campo</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // ── Main Header Export ──
 export function Header({ title, description, actions }: HeaderProps) {
   const { data: session } = useSession() || {};
@@ -353,8 +400,9 @@ export function Header({ title, description, actions }: HeaderProps) {
         {/* ── Center: actions slot ── */}
         {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
 
-        {/* ── Right: Bell + User ── */}
+        {/* ── Right: ModeSwitcher + Bell + User ── */}
         <div className="flex items-center gap-2 shrink-0">
+          <ModeSwitcher />
           <NotificationBell />
 
           {/* User dropdown */}

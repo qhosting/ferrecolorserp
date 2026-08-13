@@ -3,6 +3,8 @@
 
 import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from './theme-provider';
+import { DeviceModeProvider } from './providers/device-mode-provider';
+import { BottomNavDock } from './navigation/bottom-nav-dock';
 import { Toaster } from './ui/toaster';
 import { useEffect, useState } from 'react';
 
@@ -19,15 +21,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="light"
-        enableSystem
-        disableTransitionOnChange
-      >
-        {children}
-        <Toaster />
-      </ThemeProvider>
+      <DeviceModeProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <BottomNavDock />
+          <Toaster />
+        </ThemeProvider>
+      </DeviceModeProvider>
     </SessionProvider>
   );
 }
