@@ -71,8 +71,9 @@ export default function PagaresPage() {
         limit: '15'
       })
 
+      if (searchTerm) params.append('search', searchTerm)
       if (statusFilter !== 'todos') params.append('estatus', statusFilter)
-      if (statusFilter === 'vencidos') params.append('soloVencidos', 'true')
+      if (statusFilter === 'VENCIDO' || statusFilter === 'vencidos') params.append('soloVencidos', 'true')
 
       const response = await fetch(`/api/pagares?${params}`)
       const data = await response.json()
@@ -94,7 +95,7 @@ export default function PagaresPage() {
   useEffect(() => {
     fetchPagares(1)
     setCurrentPage(1)
-  }, [statusFilter])
+  }, [statusFilter, searchTerm])
 
   useEffect(() => {
     fetchPagares(currentPage)
@@ -238,13 +239,22 @@ export default function PagaresPage() {
       {/* Filtros */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 items-center">
+            <div className="relative flex-1 w-full">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por folio de venta, cliente o código..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="todos">Todos los estados</SelectItem>
                 <SelectItem value="PENDIENTE">Pendientes</SelectItem>
                 <SelectItem value="VENCIDO">Vencidos</SelectItem>
                 <SelectItem value="PARCIAL">Parciales</SelectItem>

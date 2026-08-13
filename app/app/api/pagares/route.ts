@@ -19,9 +19,18 @@ export async function GET(request: NextRequest) {
     const clienteId = searchParams.get('clienteId')
     const ventaId = searchParams.get('ventaId')
     const fechaVencimiento = searchParams.get('fechaVencimiento') // para pagos del día
+    const search = searchParams.get('search')
     const soloVencidos = searchParams.get('soloVencidos') === 'true'
 
     const where: any = {}
+
+    if (search) {
+      where.OR = [
+        { venta: { folio: { contains: search, mode: 'insensitive' } } },
+        { venta: { cliente: { nombre: { contains: search, mode: 'insensitive' } } } },
+        { venta: { cliente: { codigoCliente: { contains: search, mode: 'insensitive' } } } },
+      ]
+    }
 
     if (estatus) {
       where.estatus = estatus
