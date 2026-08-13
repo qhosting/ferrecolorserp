@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import { generarFolioSecuencial } from '@/lib/folio-generator';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
       data: {
         clienteId: cliente.id,
         gestorId: validatedData.gestorId || session.user.id,
-        referencia: validatedData.referencia || `PAG-${Date.now()}`,
+        referencia: validatedData.referencia || (await generarFolioSecuencial('PAG', 'pago', prisma)),
         monto: validatedData.monto,
         tipoPago: validatedData.tipoPago,
         fechaPago: validatedData.fechaPago ? new Date(validatedData.fechaPago) : new Date(),

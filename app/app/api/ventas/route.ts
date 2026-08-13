@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { generarFolioSecuencial } from '@/lib/folio-generator'
 
 // Schema de validación para ventas directas (sin pedido)
 const ventaDirectaSchema = z.object({
@@ -246,8 +247,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generar folio único
-    const folio = `VTA-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+    // Generar folio único secuencial corto (ej: VTA-00001)
+    const folio = await generarFolioSecuencial('VTA', 'venta', prisma)
 
     // Calcular totales
     let subtotal = 0

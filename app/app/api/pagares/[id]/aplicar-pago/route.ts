@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { generarFolioSecuencial } from '@/lib/folio-generator'
 
 interface RouteParams {
   params: {
@@ -108,8 +109,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         aplicadoCapital = validatedData.montoPago
       }
 
-      // Generar folio de pago
-      const folioPago = `PAG-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+      // Generar folio de pago secuencial corto (ej: PAG-00001)
+      const folioPago = await generarFolioSecuencial('PAG', 'pago', prisma)
 
       // Crear registro de pago
       const pago = await prisma.pago.create({

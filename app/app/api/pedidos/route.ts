@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+import { generarFolioSecuencial } from '@/lib/folio-generator'
+
 // Schema de validación para pedidos
 const pedidoSchema = z.object({
   clienteId: z.string().min(1, "Cliente requerido"),
@@ -127,8 +129,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = pedidoSchema.parse(body)
 
-    // Generar folio único
-    const folio = `PED-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+    // Generar folio único secuencial corto (ej: PED-00001)
+    const folio = await generarFolioSecuencial('PED', 'pedido', prisma)
 
     // Calcular totales
     let subtotal = 0

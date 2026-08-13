@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { generarFolioSecuencial } from '@/lib/folio-generator'
 
 interface RouteParams {
   params: {
@@ -111,8 +112,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Generar folio de venta
-    const folioVenta = `VTA-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+    // Generar folio de venta secuencial corto (ej: VTA-00001)
+    const folioVenta = await generarFolioSecuencial('VTA', 'venta', prisma)
 
     // Calcular sistema de pagarés
     const saldoPendiente = pedido.total - validatedData.pagoInicial

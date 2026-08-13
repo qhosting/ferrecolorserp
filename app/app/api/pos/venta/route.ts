@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { generarFolioSecuencial } from '@/lib/folio-generator';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,8 +97,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generar folio de venta y número de ticket
-    const folio = `VTA-POS-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // Generar folio de venta único secuencial corto (ej: VTA-00001)
+    const folio = await generarFolioSecuencial('VTA', 'venta', prisma);
 
     // Calcular totales
     let subtotal = 0;
