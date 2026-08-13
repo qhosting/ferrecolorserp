@@ -14,8 +14,9 @@ ERP **Next.js 14 + TypeScript + Prisma/PostgreSQL** con integración real a **CO
 | **Typecheck (`tsc --noEmit`)** | ✅ **Pasa limpio (0 errores)** |
 | **Integración DB / Datos** | ✅ **100% Real (Sin Mocks)** |
 | Módulos operativos | **100% (35/35 completos)** |
+| Modos de experiencia | **3 Modos (Desktop, PWA, Móvil)** |
 
-**Veredicto:** Base sólida, funcional y 100% integrada con base de datos real PostgreSQL. Todos los módulos parciales (proveedores, agentes, BI, crédito, pagarés, reestructuras) han sido completados y verificados.
+**Veredicto:** Base sólida, funcional y 100% integrada con base de datos real PostgreSQL. Todos los módulos parciales han sido completados y la experiencia adaptativa en 3 modos por rol ha sido desplegada y verificada.
 
 ---
 
@@ -53,6 +54,11 @@ ERP **Next.js 14 + TypeScript + Prisma/PostgreSQL** con integración real a **CO
 - [x] **pagares**: buscador en tiempo real por folio/cliente/código, filtro por estado/vencidos, cálculo de mora real y modal de cobranza.
 - [x] **reestructuras**: creación de reestructuras con recalculo de cuotas, quitas/descuentos, consulta de historial y activacion/desactivacion directa en PostgreSQL.
 
+### Sprint 5 — Experiencia Adaptativa 3 Modos por Rol *(13 ago 2026)*
+- [x] **`DeviceModeProvider`**: Detección inteligente por tamaño de pantalla (`<768px`), PWA standalone (`display-mode: standalone`) y selección predeterminada por rol de usuario (`GESTOR`, `COBRADOR`, `VENDEDOR_CAMPO` → Modo Móvil de Campo).
+- [x] **`BottomNavDock`**: Barra de navegación táctil fija en la parte inferior para smartphones con botón flotante principal (FAB `+`) que despliega menú rápido para registrar cobro, nuevo pedido, venta POS y catálogo.
+- [x] **`ModeSwitcher`**: Selector de modo en el Header (`💻 Desktop`, `📱 PWA`, `🏃 Móvil`) con persistencia en `localStorage`.
+
 ---
 
 ## 🚀 ROADMAP POR FASES FUTURAS
@@ -68,7 +74,7 @@ ERP **Next.js 14 + TypeScript + Prisma/PostgreSQL** con integración real a **CO
 - [ ] Queries N+1 restantes + índices por uso real
 - [ ] Caché + revalidación en dashboards pesados
 - [ ] Reportes exportables PDF/Excel (cartera, ventas, inventario)
-- [ ] PWA: service worker + instalabilidad en campo
+- [ ] PWA: service worker + instalabilidad en campo completada
 
 ### 🔵 FASE E — Documentación y operación
 - [ ] Runbook de despliegue y rollback

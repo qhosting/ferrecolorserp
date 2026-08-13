@@ -61,7 +61,12 @@ Revisión completa de **35+ páginas/módulos** + **auditoría de seguridad** so
 
 ---
 
-## 🎨 PARTE 3 — CAMBIOS UI/UX PRO MAX & PDF ENGINE
+## 🎨 PARTE 3 — CAMBIOS UI/UX PRO MAX & EXPERIENCIA ADAPTATIVA
+
+### Experiencia Multi-Modo (Desktop, PWA y Móvil)
+- ✅ **`DeviceModeProvider`**: Detección inteligente por pantalla (`<768px`), PWA standalone (`display-mode: standalone`) y asignación según el rol del usuario (`GESTOR`, `COBRADOR`, `VENDEDOR_CAMPO` → Modo Móvil de Campo).
+- ✅ **`BottomNavDock`**: Navegación táctil inferior fija para smartphones con botón flotante (FAB `+`) que abre un menú de acciones rápidas (Registrar Cobro, Nuevo Pedido, Venta POS, Catálogo).
+- ✅ **`ModeSwitcher`**: Botón e indicador en el Header (`💻 Desktop`, `📱 PWA`, `🏃 Móvil`) con persistencia en `localStorage`.
 
 ### Motor de PDF Directo
 - ✅ **Descarga Directa (`/api/pedidos/[id]/pdf?download=true`)**: Generación instantánea de binarios PDF nativos con `PDFKit` sin abrir pestañas interactivas.
@@ -89,3 +94,6 @@ Buscador clientes RFC · Folios secuenciales cortos (`PED-00001`, `VTA-00001`, `
 
 ### Sprint 4 — FASE B Completada 100% Real ✅ (13 ago 2026)
 Proveedores CRUD · Agentes CRUD · Business Intelligence real (5 tabs + OLS) · Crédito Scoring + Historial · Pagarés Buscador + Vencidos · Reestructuras completas.
+
+### Sprint 5 — Experiencia Adaptativa 3 Modos por Rol ✅ (13 ago 2026)
+`DeviceModeProvider` · `BottomNavDock` táctil con FAB `+` · `ModeSwitcher` en Header · Auto-detección por rol y dispositivo.
