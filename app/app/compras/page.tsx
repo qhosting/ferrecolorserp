@@ -224,6 +224,123 @@ const motivoLabels: Record<string, string> = {
   OTRO: 'Otro',
 };
 
+// ─── Selector Buscador de Productos ───
+function ProductoSearchSelect({
+  value,
+  onSelect,
+  productos,
+}: {
+  value: string;
+  onSelect: (prod: Producto) => void;
+  productos: Producto[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+
+  const selectedProduct = productos.find(p => p.id === value);
+
+  const filteredProductos = useMemo(() => {
+    if (!filter) return productos.slice(0, 40);
+    const q = filter.toLowerCase().trim();
+    return productos
+      .filter(p => p.codigo?.toLowerCase().includes(q) || p.nombre?.toLowerCase().includes(q))
+      .slice(0, 40);
+  }, [productos, filter]);
+
+  return (
+    <div className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between text-left h-9 px-2.5 py-1 text-xs border border-input bg-background rounded-md shadow-sm hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+      >
+        {selectedProduct ? (
+          <span className="truncate flex items-center gap-1.5 font-medium text-slate-900 w-full min-w-0">
+            <span className="bg-slate-100 text-slate-800 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+              {selectedProduct.codigo}
+            </span>
+            <span className="truncate font-semibold">{selectedProduct.nombre}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate">Buscar por código o nombre...</span>
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1 w-full min-w-[320px] max-w-lg bg-popover text-popover-foreground border rounded-lg shadow-xl z-50 p-2 space-y-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Escribe código o nombre de producto..."
+                value={filter}
+                onChange={e => setFilter(e.target.value)}
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-muted/50 border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              {filter && (
+                <button
+                  type="button"
+                  onClick={() => setFilter('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="max-h-56 overflow-y-auto divide-y divide-border/40 rounded-md border border-border/30">
+              {filteredProductos.length === 0 ? (
+                <div className="p-3 text-center text-xs text-muted-foreground">
+                  No se encontraron productos con "{filter}"
+                </div>
+              ) : (
+                filteredProductos.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(p);
+                      setOpen(false);
+                      setFilter('');
+                    }}
+                    className={`w-full text-left p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-between text-xs cursor-pointer ${
+                      p.id === value ? 'bg-blue-50 dark:bg-blue-950/50 font-semibold' : ''
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[10px] font-bold bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                          {p.codigo}
+                        </span>
+                        <span className="truncate font-medium text-slate-900 dark:text-slate-100">{p.nombre}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-[11px] font-bold text-emerald-600 block">
+                        {formatMXN(p.precioCompra || 0)}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono block">
+                        Stock: {p.stock} {p.unidadMedida || 'PZA'}
+                      </span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
 // ═════════════════════════════════════════════
@@ -405,6 +522,29 @@ function ComprasPageContent() {
     const montoDevoluciones = devoluciones.filter(d => d.status === 'APROBADA').reduce((s, d) => s + d.total, 0);
     return { totalOrdenes, ordenesPendientes, totalConsig, consigActivas, totalDev, devPendientes, totalCxp, cxpPendientes, saldoCxpTotal, montoDevoluciones };
   }, [ordenes, consignaciones, devoluciones, cxps]);
+
+  // ─── Totales Calculados en Tiempo Real ───
+  const ordenTotals = useMemo(() => {
+    const subtotal = ordenItems.reduce((acc, item) => {
+      const cant = parseFloat(item.cantidad) || 0;
+      const precio = parseFloat(item.precio) || 0;
+      return acc + (cant * precio);
+    }, 0);
+    const iva = subtotal * 0.16;
+    const total = subtotal + iva;
+    return { subtotal, iva, total };
+  }, [ordenItems]);
+
+  const consigTotals = useMemo(() => {
+    const subtotal = consigItems.reduce((acc, item) => {
+      const cant = parseFloat(item.cantidad) || 0;
+      const precio = parseFloat(item.precio) || 0;
+      return acc + (cant * precio);
+    }, 0);
+    const iva = subtotal * 0.16;
+    const total = subtotal + iva;
+    return { subtotal, iva, total };
+  }, [consigItems]);
 
   // ═════════════════════════════════════════════
   // HANDLERS — ORDENES
@@ -1106,10 +1246,10 @@ function ComprasPageContent() {
 
       {/* ── Dialog: Nueva Orden ── */}
       <Dialog open={dialogOrden} onOpenChange={o => !o && setDialogOrden(false)}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nueva Orden de Compra</DialogTitle>
-            <DialogDescription>Crea una orden de compra para un proveedor.</DialogDescription>
+            <DialogDescription>Crea una orden de compra seleccionando los productos con buscador por código o nombre.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-3">
             <div className="grid gap-2">
@@ -1123,46 +1263,96 @@ function ComprasPageContent() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <Label>Productos</Label>
+                <Label className="font-bold text-slate-800">Partidas de la Orden</Label>
                 <Button variant="outline" size="sm" onClick={() => addItemRow(setOrdenItems, { productoId: '', cantidad: '', precio: '' })}>
-                  <Plus className="h-3 w-3 mr-1" /> Agregar
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Agregar Producto
                 </Button>
               </div>
               <div className="space-y-2">
-                {ordenItems.map((item, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-5">
-                      <Select value={item.productoId} onValueChange={v => updateItemRow(setOrdenItems, i, 'productoId', v, true)}>
-                        <SelectTrigger className="text-xs"><SelectValue placeholder="Producto" /></SelectTrigger>
-                        <SelectContent>
-                          {productos.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                {ordenItems.map((item, i) => {
+                  const lineSubtotal = (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio) || 0);
+                  return (
+                    <div key={i} className="grid grid-cols-12 gap-2 items-center bg-slate-50/90 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <div className="col-span-5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Producto / Código</label>
+                        <ProductoSearchSelect
+                          value={item.productoId}
+                          productos={productos}
+                          onSelect={(prod) => {
+                            updateItemRow(setOrdenItems, i, 'productoId', prod.id);
+                            updateItemRow(setOrdenItems, i, 'precio', (prod.precioCompra || 0).toString());
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Cantidad</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="1"
+                          value={item.cantidad}
+                          onChange={e => updateItemRow(setOrdenItems, i, 'cantidad', e.target.value)}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">P. Compra</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={item.precio}
+                          onChange={e => updateItemRow(setOrdenItems, i, 'precio', e.target.value)}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Subtotal</label>
+                        <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100 block py-1.5 truncate">
+                          {formatMXN(lineSubtotal)}
+                        </span>
+                      </div>
+                      <div className="col-span-1 flex justify-center pt-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700"
+                          onClick={() => removeItemRow(setOrdenItems, i)}
+                          disabled={ordenItems.length === 1}
+                          title="Eliminar partida"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="col-span-3">
-                      <Input type="number" placeholder="Cantidad" value={item.cantidad} onChange={e => updateItemRow(setOrdenItems, i, 'cantidad', e.target.value)} />
-                    </div>
-                    <div className="col-span-3">
-                      <Input type="number" step="0.01" placeholder="Precio" value={item.precio} onChange={e => updateItemRow(setOrdenItems, i, 'precio', e.target.value)} />
-                    </div>
-                    <div className="col-span-1 flex justify-center">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-500" onClick={() => removeItemRow(setOrdenItems, i)} disabled={ordenItems.length === 1}>
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+
+              {/* Totals Summary Box */}
+              <div className="bg-slate-900 text-white rounded-xl p-3.5 flex items-center justify-between mt-3 shadow-md">
+                <div className="text-xs space-y-0.5 text-slate-300">
+                  <div>Subtotal: <strong className="text-white font-mono">{formatMXN(ordenTotals.subtotal)}</strong></div>
+                  <div>IVA (16%): <strong className="text-white font-mono">{formatMXN(ordenTotals.iva)}</strong></div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 block">Total Estimado Orden</span>
+                  <span className="text-lg font-extrabold font-mono text-white">
+                    {formatMXN(ordenTotals.total)}
+                  </span>
+                </div>
               </div>
             </div>
+
             <div className="grid gap-2">
               <Label>Observaciones</Label>
-              <Textarea value={ordenForm.observaciones} onChange={e => setOrdenForm({ ...ordenForm, observaciones: e.target.value })} rows={2} />
+              <Textarea value={ordenForm.observaciones} onChange={e => setOrdenForm({ ...ordenForm, observaciones: e.target.value })} rows={2} placeholder="Notas o términos de la orden..." />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOrden(false)}>Cancelar</Button>
-            <Button onClick={submitOrden} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              {submitting ? 'Creando...' : 'Crear Orden'}
+            <Button onClick={submitOrden} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+              {submitting ? 'Creando...' : 'Crear Orden de Compra'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1170,10 +1360,10 @@ function ComprasPageContent() {
 
       {/* ── Dialog: Nueva Consignación ── */}
       <Dialog open={dialogConsignacion} onOpenChange={o => !o && setDialogConsignacion(false)}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nueva Consignación</DialogTitle>
-            <DialogDescription>Registra mercancía recibida en consignación. Solo se paga lo vendido.</DialogDescription>
+            <DialogDescription>Registra mercancía recibida en consignación buscando productos por código o nombre.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-3">
             <div className="grid grid-cols-2 gap-4">
@@ -1193,45 +1383,94 @@ function ComprasPageContent() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <Label>Productos en Consignación</Label>
+                <Label className="font-bold text-slate-800">Productos en Consignación</Label>
                 <Button variant="outline" size="sm" onClick={() => addItemRow(setConsigItems, { productoId: '', cantidad: '', precio: '' })}>
-                  <Plus className="h-3 w-3 mr-1" /> Agregar
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Agregar Producto
                 </Button>
               </div>
               <div className="space-y-2">
-                {consigItems.map((item, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-5">
-                      <Select value={item.productoId} onValueChange={v => updateItemRow(setConsigItems, i, 'productoId', v, true)}>
-                        <SelectTrigger className="text-xs"><SelectValue placeholder="Producto" /></SelectTrigger>
-                        <SelectContent>
-                          {productos.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                {consigItems.map((item, i) => {
+                  const lineSubtotal = (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio) || 0);
+                  return (
+                    <div key={i} className="grid grid-cols-12 gap-2 items-center bg-slate-50/90 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <div className="col-span-5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Producto / Código</label>
+                        <ProductoSearchSelect
+                          value={item.productoId}
+                          productos={productos}
+                          onSelect={(prod) => {
+                            updateItemRow(setConsigItems, i, 'productoId', prod.id);
+                            updateItemRow(setConsigItems, i, 'precio', (prod.precioCompra || 0).toString());
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Cantidad</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="1"
+                          value={item.cantidad}
+                          onChange={e => updateItemRow(setConsigItems, i, 'cantidad', e.target.value)}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">P. Consignación</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={item.precio}
+                          onChange={e => updateItemRow(setConsigItems, i, 'precio', e.target.value)}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Subtotal</label>
+                        <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100 block py-1.5 truncate">
+                          {formatMXN(lineSubtotal)}
+                        </span>
+                      </div>
+                      <div className="col-span-1 flex justify-center pt-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700"
+                          onClick={() => removeItemRow(setConsigItems, i)}
+                          disabled={consigItems.length === 1}
+                          title="Eliminar partida"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="col-span-3">
-                      <Input type="number" placeholder="Cantidad" value={item.cantidad} onChange={e => updateItemRow(setConsigItems, i, 'cantidad', e.target.value)} />
-                    </div>
-                    <div className="col-span-3">
-                      <Input type="number" step="0.01" placeholder="Precio" value={item.precio} onChange={e => updateItemRow(setConsigItems, i, 'precio', e.target.value)} />
-                    </div>
-                    <div className="col-span-1 flex justify-center">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-500" onClick={() => removeItemRow(setConsigItems, i)} disabled={consigItems.length === 1}>
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+
+              {/* Totals Summary Box */}
+              <div className="bg-slate-900 text-white rounded-xl p-3.5 flex items-center justify-between mt-3 shadow-md">
+                <div className="text-xs space-y-0.5 text-slate-300">
+                  <div>Subtotal: <strong className="text-white font-mono">{formatMXN(consigTotals.subtotal)}</strong></div>
+                  <div>IVA (16%): <strong className="text-white font-mono">{formatMXN(consigTotals.iva)}</strong></div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 block">Total Consignación</span>
+                  <span className="text-lg font-extrabold font-mono text-white">
+                    {formatMXN(consigTotals.total)}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="grid gap-2">
               <Label>Observaciones</Label>
-              <Textarea value={consigForm.observaciones} onChange={e => setConsigForm({ ...consigForm, observaciones: e.target.value })} rows={2} />
+              <Textarea value={consigForm.observaciones} onChange={e => setConsigForm({ ...consigForm, observaciones: e.target.value })} rows={2} placeholder="Notas adicionales..." />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogConsignacion(false)}>Cancelar</Button>
-            <Button onClick={submitConsignacion} disabled={submitting} className="bg-cyan-600 hover:bg-cyan-700 text-white">
+            <Button onClick={submitConsignacion} disabled={submitting} className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold">
               {submitting ? 'Creando...' : 'Crear Consignación'}
             </Button>
           </DialogFooter>
