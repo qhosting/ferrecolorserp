@@ -52,7 +52,7 @@ export function DeviceModeProvider({ children }: { children: React.ReactNode }) 
     }
 
     // Role-based default
-    const role = session?.user?.role
+    const role = (session?.user as any)?.role as string | undefined
     if (role === 'GESTOR' || role === 'COBRADOR' || role === 'VENDEDOR_CAMPO') {
       setModeState('mobile')
       return
