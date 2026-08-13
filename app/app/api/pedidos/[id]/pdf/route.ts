@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { numeroALetras } from '@/lib/numero-a-letras'
+import { generarCotizacionPdfBuffer } from '@/lib/pdf-cotizacion-generator'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +55,17 @@ export async function GET(
       telefono: configuracion?.telefono || '(81) 8234-5678',
       email: configuracion?.email || 'ventas@ferrecolors.com',
       colorPrimario: configuracion?.colorPrimario || '#1e3a8a'
+    }
+
+    if (isDownload) {
+      const pdfBuffer = await generarCotizacionPdfBuffer(pedido, empresa)
+      return new Response(pdfBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="Cotizacion_${pedido.folio}.pdf"`,
+        },
+      })
     }
 
     const fechaFormateada = format(new Date(pedido.fechaPedido), "dd 'de' MMMM, yyyy", { locale: es })
