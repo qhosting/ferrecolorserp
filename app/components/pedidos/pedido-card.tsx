@@ -1,19 +1,19 @@
-
 'use client'
 
 import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
   CalendarIcon, 
   UserIcon, 
   ShoppingCartIcon,
-  CurrencyDollarIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ArrowRightIcon,
-  XMarkIcon
+  XMarkIcon,
+  DocumentTextIcon,
+  PencilIcon
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -53,26 +53,34 @@ interface PedidoCardProps {
   onCancelar?: (id: string) => void
 }
 
-const statusColors = {
-  'PENDIENTE': 'bg-yellow-100 text-yellow-800',
-  'APROBADO': 'bg-blue-100 text-blue-800',
-  'RECHAZADO': 'bg-red-100 text-red-800',
-  'CONVERTIDO_VENTA': 'bg-green-100 text-green-800',
-  'CANCELADO': 'bg-gray-100 text-gray-800'
+const statusColors: Record<string, string> = {
+  'PENDIENTE': 'bg-amber-50 text-amber-700 border-amber-200',
+  'APROBADO': 'bg-blue-50 text-blue-700 border-blue-200',
+  'RECHAZADO': 'bg-red-50 text-red-700 border-red-200',
+  'CONVERTIDO_VENTA': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'CANCELADO': 'bg-slate-100 text-slate-600 border-slate-200'
 }
 
-const prioridadColors = {
-  'BAJA': 'bg-gray-100 text-gray-600',
-  'NORMAL': 'bg-blue-100 text-blue-600',
-  'ALTA': 'bg-orange-100 text-orange-600',
-  'URGENTE': 'bg-red-100 text-red-600'
+const statusLabels: Record<string, string> = {
+  'PENDIENTE': 'Pendiente',
+  'APROBADO': 'Aprobado',
+  'RECHAZADO': 'Rechazado',
+  'CONVERTIDO_VENTA': 'Convertido Venta',
+  'CANCELADO': 'Cancelado'
+}
+
+const prioridadColors: Record<string, string> = {
+  'BAJA': 'bg-slate-100 text-slate-600 border-slate-200',
+  'NORMAL': 'bg-sky-50 text-sky-700 border-sky-200',
+  'ALTA': 'bg-orange-50 text-orange-700 border-orange-200',
+  'URGENTE': 'bg-rose-50 text-rose-700 border-rose-200'
 }
 
 const statusIcons = {
   'PENDIENTE': ExclamationTriangleIcon,
   'APROBADO': CheckCircleIcon,
   'RECHAZADO': XMarkIcon,
-  'CONVERTIDO_VENTA': ArrowRightIcon,
+  'CONVERTIDO_VENTA': CheckCircleIcon,
   'CANCELADO': XMarkIcon
 }
 
@@ -95,143 +103,171 @@ export function PedidoCard({ pedido, onView, onEdit, onConvertir, onCancelar }: 
     onCancelar?.(pedido.id)
   }
 
+  const handleOpenPdf = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    window.open(`/api/pedidos/${pedido.id}/pdf`, '_blank')
+  }
+
   return (
     <Card 
-      className="cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500"
+      className="group cursor-pointer bg-white hover:shadow-xl transition-all duration-300 border border-slate-200 hover:border-blue-400 rounded-2xl overflow-hidden flex flex-col justify-between"
       onClick={() => onView?.(pedido.id)}
     >
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              {pedido.folio}
-            </CardTitle>
-            <div className="flex items-center space-x-2">
-              <Badge 
-                variant="secondary" 
-                className={statusColors[pedido.estatus as keyof typeof statusColors]}
+      {/* Header top bar with decorative accent */}
+      <div className="p-5 space-y-3.5">
+        
+        {/* Folio & Total Price block - Fixed Layout Overflow */}
+        <div className="flex flex-col gap-2 border-b border-slate-100 pb-3">
+          <div className="flex justify-between items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase block">Folio Pedido</span>
+              <h3 
+                className="font-mono text-sm sm:text-base font-bold text-slate-900 truncate" 
+                title={pedido.folio}
               >
-                <StatusIcon className="w-3 h-3 mr-1" />
-                {pedido.estatus.replace('_', ' ')}
-              </Badge>
-              <Badge 
-                variant="outline"
-                className={prioridadColors[pedido.prioridad as keyof typeof prioridadColors]}
-              >
-                {pedido.prioridad}
-              </Badge>
+                {pedido.folio}
+              </h3>
             </div>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-green-600">
-              ${pedido.total.toLocaleString()}
-            </p>
-            <p className="text-sm text-gray-500">Total</p>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Información del Cliente */}
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <UserIcon className="w-4 h-4" />
-          <span className="font-medium">{pedido.cliente.codigoCliente}</span>
-          <span>-</span>
-          <span>{pedido.cliente.nombre}</span>
-          {pedido.cliente.telefono1 && (
-            <>
-              <span>•</span>
-              <span>{pedido.cliente.telefono1}</span>
-            </>
-          )}
-        </div>
-
-        {/* Información del Vendedor */}
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <span className="font-medium">Vendedor:</span>
-          <span>{pedido.vendedor.name}</span>
-        </div>
-
-        {/* Fechas */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center space-x-2 text-gray-600">
-            <CalendarIcon className="w-4 h-4" />
-            <div>
-              <p className="font-medium">Fecha pedido</p>
-              <p>{format(new Date(pedido.fechaPedido), 'dd MMM yyyy', { locale: es })}</p>
-            </div>
-          </div>
-          {pedido.fechaEntregaEstimada && (
-            <div className="flex items-center space-x-2 text-gray-600">
-              <CalendarIcon className="w-4 h-4" />
-              <div>
-                <p className="font-medium">Entrega estimada</p>
-                <p>{format(new Date(pedido.fechaEntregaEstimada), 'dd MMM yyyy', { locale: es })}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Productos */}
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <ShoppingCartIcon className="w-4 h-4" />
-          <span>{pedido.detalles?.length || 0} productos</span>
-          <span>•</span>
-          <span>{totalProductos} unidades</span>
-        </div>
-
-        {/* Información de conversión a venta */}
-        {pedido.convertidoAVenta && pedido.venta && (
-          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-            <div className="flex items-center space-x-2">
-              <CheckCircleIcon className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-800">
-                Convertido a venta: {pedido.venta.folio}
+            
+            {/* Total Badge Box */}
+            <div className="text-right shrink-0 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-600 block">Total</span>
+              <span className="text-base font-extrabold text-emerald-700 font-mono">
+                ${pedido.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">
-                {pedido.venta.status}
-              </Badge>
             </div>
+          </div>
+
+          {/* Badges Bar */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <Badge 
+              variant="outline" 
+              className={`text-xs font-semibold px-2.5 py-0.5 rounded-lg border ${statusColors[pedido.estatus] || 'bg-slate-100'}`}
+            >
+              <StatusIcon className="w-3.5 h-3.5 mr-1 inline-block" />
+              {statusLabels[pedido.estatus] || pedido.estatus}
+            </Badge>
+            <Badge 
+              variant="outline"
+              className={`text-xs font-semibold px-2.5 py-0.5 rounded-lg border ${prioridadColors[pedido.prioridad] || 'bg-slate-100'}`}
+            >
+              Prioridad: {pedido.prioridad}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Cliente details block - Fixed wrap / overlap */}
+        <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 space-y-1">
+          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase">
+            <UserIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>Cliente</span>
+          </div>
+          <div className="flex flex-col text-sm">
+            <div className="font-semibold text-slate-900 truncate" title={pedido.cliente.nombre}>
+              <span className="text-blue-600 font-mono font-bold mr-1.5">[{pedido.cliente.codigoCliente}]</span>
+              {pedido.cliente.nombre}
+            </div>
+            {pedido.cliente.telefono1 && (
+              <span className="text-xs text-slate-500 font-mono mt-0.5">
+                📞 {pedido.cliente.telefono1}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Metadata info grid */}
+        <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-1">
+          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-400 block font-medium">Fecha</span>
+              <span className="font-semibold text-slate-800 truncate block">
+                {format(new Date(pedido.fechaPedido), 'dd MMM yyyy', { locale: es })}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <ShoppingCartIcon className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-400 block font-medium">Artículos</span>
+              <span className="font-semibold text-slate-800 truncate block">
+                {pedido.detalles?.length || 0} prods • {totalProductos} uds
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Vendedor info */}
+        <div className="text-xs text-slate-500 flex justify-between items-center px-1">
+          <span>Vendedor: <strong className="text-slate-700">{pedido.vendedor.name}</strong></span>
+        </div>
+
+        {/* Conversion Alert Box */}
+        {pedido.convertidoAVenta && pedido.venta && (
+          <div className="p-2.5 bg-emerald-50/90 rounded-xl border border-emerald-200 text-xs flex items-center justify-between text-emerald-900">
+            <span className="font-medium flex items-center gap-1.5">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+              Venta: <strong className="font-mono">{pedido.venta.folio}</strong>
+            </span>
+            <Badge variant="secondary" className="bg-emerald-200/80 text-emerald-900 font-bold text-[10px]">
+              {pedido.venta.status}
+            </Badge>
           </div>
         )}
+      </div>
 
-        {/* Botones de acción */}
-        <div className="flex space-x-2 pt-2">
-          {!pedido.convertidoAVenta && pedido.estatus === 'PENDIENTE' && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEdit}
-                className="flex-1"
-              >
-                Editar
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleConvertir}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-              >
-                <ArrowRightIcon className="w-4 h-4 mr-1" />
-                Convertir a Venta
-              </Button>
-            </>
-          )}
-          
-          {pedido.estatus === 'PENDIENTE' && (
+      {/* Action Footer Buttons */}
+      <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-2">
+        {/* PDF Cotización Viewer Button (Always Accessible) */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleOpenPdf}
+          className="flex-1 bg-white hover:bg-slate-100 text-slate-700 border-slate-200 font-semibold text-xs h-9 shadow-sm"
+          title="Ver / Imprimir Cotización PDF"
+        >
+          <DocumentTextIcon className="w-4 h-4 mr-1.5 text-blue-600 shrink-0" />
+          PDF Cotización
+        </Button>
+
+        {!pedido.convertidoAVenta && pedido.estatus === 'PENDIENTE' && (
+          <>
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
-              onClick={handleCancelar}
-              className="flex-1"
+              onClick={handleEdit}
+              className="bg-white hover:bg-slate-100 text-slate-700 border-slate-200 font-medium text-xs h-9 px-3"
+              title="Editar pedido"
             >
-              <XMarkIcon className="w-4 h-4 mr-1" />
-              Cancelar
+              <PencilIcon className="w-3.5 h-3.5 text-slate-500" />
             </Button>
-          )}
-        </div>
-      </CardContent>
+            
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleConvertir}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9 px-3"
+              title="Convertir a venta"
+            >
+              <ArrowRightIcon className="w-3.5 h-3.5 mr-1" />
+              Convertir
+            </Button>
+          </>
+        )}
+        
+        {pedido.estatus === 'PENDIENTE' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancelar}
+            className="hover:bg-red-50 text-red-600 font-medium text-xs h-9 px-2"
+            title="Cancelar pedido"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
     </Card>
   )
 }

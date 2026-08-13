@@ -19,7 +19,8 @@ import {
   UserIcon,
   MapPinIcon,
   ClockIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import { toast } from "sonner"
 import { ConvertirVentaDialog } from "@/components/pedidos/convertir-venta-dialog"
@@ -299,6 +300,15 @@ export default function PedidoDetailsPage({ params }: RouteParams) {
 
         {/* Dynamic Context Actions */}
         <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => window.open(`/api/pedidos/${pedido.id}/pdf`, '_blank')}
+            className="flex items-center gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold"
+          >
+            <DocumentTextIcon className="w-4 h-4 text-blue-600" />
+            PDF Cotización
+          </Button>
+
           {pedido.estatus === 'PENDIENTE' && (
             <>
               <Button 
