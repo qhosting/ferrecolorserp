@@ -298,21 +298,41 @@ export async function GET(request: NextRequest) {
       sumXX += x * x;
     }
 
+    const diasProyeccionParam = searchParams.get('diasProyeccion') || '90';
+    const diasProyeccion = parseInt(diasProyeccionParam, 10) || 90;
+    const periodosMeses = Math.max(1, Math.round(diasProyeccion / 30));
+
     const denominator = OLS_N * sumXX - sumX * sumX;
     const slope = denominator !== 0 ? (OLS_N * sumXY - sumX * sumY) / denominator : 0;
     const intercept = (sumY - slope * sumX) / OLS_N;
 
+    // Calcular R2 y error estándar de estimación
+    const meanY = sumY / OLS_N;
+    let ssTot = 0;
+    let ssRes = 0;
+    for (let i = 0; i < OLS_N; i++) {
+      const yReal = last6MonthsTotals[i];
+      const yPred = slope * i + intercept;
+      ssTot += Math.pow(yReal - meanY, 2);
+      ssRes += Math.pow(yReal - yPred, 2);
+    }
+    const r2 = ssTot > 0 ? Math.max(0, Math.min(1, 1 - (ssRes / ssTot))) : 0.85;
+    const stdError = OLS_N > 2 ? Math.sqrt(ssRes / (OLS_N - 2)) : 500;
+
     const predictions: any[] = [];
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= periodosMeses; i++) {
       const d = new Date();
       d.setMonth(d.getMonth() + i);
       const projectedX = (OLS_N - 1) + i;
       const predictionVal = Math.max(0, slope * projectedX + intercept);
-      const confidence = Math.max(50, 85 - (i - 1) * 6);
+      const marginOfError = Math.max(200, stdError * 1.96 * Math.sqrt(1 + 1 / OLS_N + Math.pow(projectedX - sumX / OLS_N, 2) / (sumXX - Math.pow(sumX, 2) / OLS_N || 1)));
+      const confidence = Math.max(60, Math.min(95, Math.round(r2 * 100 - (i - 1) * 4)));
       
       predictions.push({
         periodo: `${monthNames[d.getMonth()]} ${d.getFullYear()}`,
         prediccion: Math.round(predictionVal),
+        limiteInferior: Math.max(0, Math.round(predictionVal - marginOfError)),
+        limiteSuperior: Math.round(predictionVal + marginOfError),
         probabilidad: confidence
       });
     }

@@ -61,6 +61,8 @@ interface PredictionData {
   periodo: string;
   actual?: number;
   prediccion: number;
+  limiteInferior?: number;
+  limiteSuperior?: number;
   probabilidad: number;
 }
 
@@ -90,6 +92,7 @@ export default function BusinessIntelligencePage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState('mes');
   const [selectedMetric, setSelectedMetric] = useState('ventas');
+  const [diasProyeccion, setDiasProyeccion] = useState('90');
   const [loading, setLoading] = useState(false);
   const [kpiData, setKpiData] = useState<KPIData[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -103,12 +106,12 @@ export default function BusinessIntelligencePage() {
 
   useEffect(() => {
     loadBIData();
-  }, [selectedPeriod, selectedMetric]);
+  }, [selectedPeriod, selectedMetric, diasProyeccion]);
 
   const loadBIData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/business-intelligence?periodo=${selectedPeriod}`);
+      const response = await fetch(`/api/business-intelligence?periodo=${selectedPeriod}&diasProyeccion=${diasProyeccion}`);
       if (!response.ok) {
         throw new Error('Error al obtener datos de Business Intelligence');
       }
@@ -567,48 +570,73 @@ export default function BusinessIntelligencePage() {
 
         <TabsContent value="predicciones" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Predicciones con Inteligencia Artificial
-              </CardTitle>
-              <CardDescription>
-                Proyecciones de ventas y demanda basadas en ML
-              </CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-500" />
+                  Predicciones con Inteligencia Artificial (OLS Real)
+                </CardTitle>
+                <CardDescription>
+                  Proyecciones de ventas e intervalos de confianza (95%) basados en regresión lineal sobre datos de PostgreSQL
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">Horizonte:</span>
+                <Select value={diasProyeccion} onValueChange={setDiasProyeccion}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue placeholder="Horizonte" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30 Días (1 mes)</SelectItem>
+                    <SelectItem value="60">60 Días (2 meses)</SelectItem>
+                    <SelectItem value="90">90 Días (3 meses)</SelectItem>
+                    <SelectItem value="180">180 Días (6 meses)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="rounded-md border">
-                  <table className="w-full">
+                <div className="rounded-md border overflow-x-auto">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/50">
                         <th className="px-4 py-3 text-left">Período</th>
-                        <th className="px-4 py-3 text-left">Predicción</th>
-                        <th className="px-4 py-3 text-left">Confianza</th>
-                        <th className="px-4 py-3 text-left">Estado</th>
+                        <th className="px-4 py-3 text-right">Predicción Estimada</th>
+                        <th className="px-4 py-3 text-right">Rango de Confianza (95%)</th>
+                        <th className="px-4 py-3 text-left">Nivel de Confianza</th>
+                        <th className="px-4 py-3 text-center">Precisión</th>
                       </tr>
                     </thead>
                     <tbody>
                       {predictions.map((pred, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="px-4 py-3 font-medium">{pred.periodo}</td>
-                          <td className="px-4 py-3">
+                        <tr key={index} className="border-b hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3 font-medium flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            {pred.periodo}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-amber-600 dark:text-amber-400">
                             {formatValue(pred.prediccion, 'currency')}
+                          </td>
+                          <td className="px-4 py-3 text-right text-xs text-muted-foreground">
+                            {pred.limiteInferior !== undefined && pred.limiteSuperior !== undefined
+                              ? `${formatValue(pred.limiteInferior, 'currency')} — ${formatValue(pred.limiteSuperior, 'currency')}`
+                              : 'Calculando...'}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="w-24 bg-gray-200 dark:bg-gray-800 rounded-full h-2">
                                 <div 
-                                  className="bg-blue-600 h-2 rounded-full" 
+                                  className="bg-emerald-500 h-2 rounded-full" 
                                   style={{width: `${pred.probabilidad}%`}}
                                 />
                               </div>
-                              <span className="text-sm">{pred.probabilidad}%</span>
+                              <span className="text-xs font-mono">{pred.probabilidad}%</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            <Badge variant={pred.probabilidad > 80 ? 'default' : pred.probabilidad > 70 ? 'secondary' : 'destructive'}>
-                              {pred.probabilidad > 80 ? 'Alta' : pred.probabilidad > 70 ? 'Media' : 'Baja'}
+                          <td className="px-4 py-3 text-center">
+                            <Badge variant={pred.probabilidad >= 80 ? 'default' : pred.probabilidad >= 70 ? 'secondary' : 'destructive'}>
+                              {pred.probabilidad >= 80 ? 'Alta' : pred.probabilidad >= 70 ? 'Aceptable' : 'Estimada'}
                             </Badge>
                           </td>
                         </tr>
@@ -618,20 +646,47 @@ export default function BusinessIntelligencePage() {
                 </div>
 
                 <div className="mt-6">
-                  <h4 className="text-lg font-medium mb-4">Visualización de Predicciones</h4>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-base font-semibold">Tendencia y Rango Proyectado</h4>
+                    <span className="text-xs text-muted-foreground">Modelo de regresión lineal OLS sobre histórico de ventas</span>
+                  </div>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={predictions.map(p => ({ name: p.periodo, prediccion: p.prediccion }))}>
-                      <CartesianGrid strokeDasharray="3 3" />
+                    <LineChart data={predictions.map(p => ({
+                      name: p.periodo,
+                      prediccion: p.prediccion,
+                      min: p.limiteInferior,
+                      max: p.limiteSuperior
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip formatter={(value) => formatValue(value as number, 'currency')} />
+                      <Legend />
                       <Line 
                         type="monotone" 
                         dataKey="prediccion" 
+                        name="Venta Proyectada"
                         stroke="#f59e0b" 
                         strokeWidth={3}
-                        strokeDasharray="5 5"
                         dot={{ fill: '#f59e0b', strokeWidth: 2, r: 6 }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="max" 
+                        name="Límite Superior (95%)"
+                        stroke="#10b981" 
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        dot={false}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="min" 
+                        name="Límite Inferior (95%)"
+                        stroke="#6b7280" 
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        dot={false}
                       />
                     </LineChart>
                   </ResponsiveContainer>

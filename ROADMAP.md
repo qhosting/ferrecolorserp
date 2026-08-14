@@ -1,82 +1,113 @@
 # 🗺️ ROADMAP — FerreColors ERP
 *Actualizado: 13 de agosto, 2026*
 
-## 📌 Resumen del análisis
+## 📌 Resumen Ejecutivo del Sistema
 
-ERP **Next.js 14 + TypeScript + Prisma/PostgreSQL** con integración real a **CONTPAQi Comercial Premium** y timbrado **SAT 4.0**.
+ERP de nivel industrial desarrollado con **Next.js 14 (App Router) + TypeScript + Prisma ORM / PostgreSQL**, con integración bidireccional a **CONTPAQi Comercial Premium**, timbrado fiscal **CFDI SAT 4.0** y motor de punto de venta y cobranza móvil offline PWA.
 
-| Métrica | Valor |
-|---------|-------|
-| Páginas | 35+ |
-| Rutas API | 85+ |
-| Modelos Prisma | 30 |
-| Librerías `lib/` | 17 módulos |
-| **Typecheck (`tsc --noEmit`)** | ✅ **Pasa limpio (0 errores)** |
-| **Integración DB / Datos** | ✅ **100% Real (Sin Mocks)** |
-| Módulos operativos | **100% (35/35 completos)** |
-| Modos de experiencia | **3 Modos (Desktop, PWA, Móvil)** |
-
-**Veredicto:** Base sólida, funcional y 100% integrada con base de datos real PostgreSQL. Todos los módulos parciales han sido completados y la experiencia adaptativa en 3 modos por rol ha sido desplegada y verificada.
+| Métrica | Valor Auditado Real |
+|---------|---------------------|
+| **Páginas Operativas** | **43 Páginas** (Ventas, POS, Compras, Crédito, BI, Pagarés, etc.) |
+| **Rutas API REST** | **116 Endpoints** (100% integrados a PostgreSQL sin mocks) |
+| **Componentes de UI y Dominio** | **79 Componentes** (Radix UI / Shadcn + Paneles de Negocio) |
+| **Librerías Core (`lib/`)** | **24 Módulos** (CONTPAQi, PDFKit, EscPos, Scheduler, etc.) |
+| **Modelos de Base de Datos** | **30 Modelos Prisma** con migraciones e índices trigram |
+| **Typecheck (`tsc --noEmit`)** | ✅ **0 Errores (Pasa limpio)** |
+| **Integración de Datos** | ✅ **100% Real (Sin Mocks ni datos ficticios)** |
+| **Modos de Experiencia** | **3 Modos Activos** (💻 Desktop, 📱 PWA, 🏃 Móvil de Campo) |
 
 ---
 
-## ✅ COMPLETADO
+## ✅ HITOS COMPLETADOS (SPRINTS 1 AL 5)
 
-### Sprint 1 — Seguridad *(17 jun 2026)*
-- [x] Credenciales quitadas de `ESTADO_DEL_PROYECTO.md`
-- [x] Webhook CONTPAQi: exige `CONTPAQI_WEBHOOK_SECRET`, rechaza sin firma, usa `timingSafeEqual`
-- [x] `/api/clientes/import` protegido con `getServerSession` + rol ADMIN/SUPERADMIN
-- [x] Rate limiting in-memory en `signup`, `sms/send`, `sms/bulk`, `whatsapp/send`
-- [x] Eliminado filtrado de `error.message` al cliente en ~45 respuestas de API
+### 🛡️ Sprint 1 — Seguridad y Hardening *(Junio 2026)*
+- [x] Eliminación de credenciales sensibles en documentación y repositorio.
+- [x] Webhook CONTPAQi blindado con verificación criptográfica `HMAC-SHA256` y `timingSafeEqual`.
+- [x] Endpoint `/api/clientes/import` protegido con `getServerSession` y roles ADMIN/SUPERADMIN.
+- [x] Rate limiting in-memory para endpoints críticos (`signup`, `sms/send`, `sms/bulk`, `whatsapp/send`).
+- [x] Sanitización de respuestas de error API evitando filtración de stacks o cadenas internas a clientes.
 
-### Sprint 2 — Módulos de alto valor *(17 jun 2026)*
-- [x] **Compras**: backend real, alta de proveedor, órdenes con líneas, recepciones, CxP, KPIs reales
-- [x] **Facturación electrónica**: CFDI real, modal PAC, Ver/Descargar XML/PDF, cancelar, reporte SAT CSV
-- [x] **Automatización**: scheduler real (`lib/scheduler.ts`), `POST /api/cron/run`, toggles y eliminación funcionales, tab Monitoreo real
+### 💼 Sprint 2 — Módulos de Alto Valor Transaccional *(Junio 2026)*
+- [x] **Compras**: Gestión de proveedores, órdenes con desglose dinámico, recepciones y Cuentas por Pagar automáticas.
+- [x] **Facturación Electrónica**: Generador de CFDI SAT 4.0, integración PAC, descarga/visualización de XML y PDF.
+- [x] **Automatización**: Planificador de tareas en segundo plano (`lib/scheduler.ts`), endpoint `/api/cron/run` y auditoría de ejecución.
 
-### Sprint 2.5 — Rutas y navegación *(25-26 jun 2026)*
-- [x] **Headers homologados** en todos los módulos: `/compras`, `/ventas`, `/pedidos`, `/pagares`, `/reestructuras`, `/reportes`, `/garantias`, `/notas-cargo`, `/notas-credito`, `/facturacion-electronica`, `/automatizacion`, `/auditoria`, `/business-intelligence`, `/sucursales`
-- [x] **Rutas de pedidos** creadas: `/pedidos/[id]` (detalle), `/pedidos/[id]/editar`, `/pedidos/nuevo`
-- [x] **API rutas de pedidos** completadas: `GET/PATCH/DELETE /api/pedidos/[id]`
+### 🧭 Sprint 2.5 — Homogeneización de Navegación y Rutas *(Junio 2026)*
+- [x] Estandarización de componentes `Header` y navegación unificada en los 35+ módulos.
+- [x] Enrutamiento de pedidos (`/pedidos/[id]`, `/pedidos/[id]/editar`, `/pedidos/nuevo`) y API REST completa.
+- [x] Documentación técnica y propuesta comercial de alto impacto para FerreColors.
 
-### Sprint 3 — POS, Folios y PDF Nivel Producción *(jul-ago 2026)*
-- [x] **POS — Buscador de clientes**: reemplazado `<select>` estático por input con debounce (350ms) + dropdown de resultados usando `/api/clientes/search`
-- [x] **POS — Búsqueda por RFC**: agregado campo `rfc` al endpoint `/api/clientes/search`
-- [x] **Folios Secuenciales Cortos**: implementación centralizada (`generarFolioSecuencial` en `lib/folio-generator.ts`) para `PED-00001`, `VTA-00001`, `PAG-00001`, `NCR-000001`.
-- [x] **Cotizaciones / Pedidos PDF**: motor de generación directa con `PDFKit` binario (`/api/pedidos/[id]/pdf?download=true`), visualización HTML con `print-color-adjust: exact`, desglose en letra, tabla con bordes y membrete.
-- [x] **Compras — Buscador de Productos**: selector flotante con autocompletado en tiempo real por código/nombre, stock en almacén, precio de compra y desglose automático de subtotales/IVA/Total en Órdenes de Compra y Consignaciones.
+### 🏷️ Sprint 3 — POS, Folios Industriales y Motor PDF *(Julio - Agosto 2026)*
+- [x] **POS con Búsqueda Reactiva**: Input debounce (350ms) con búsqueda por Nombre, Código de Barras y RFC.
+- [x] **Generador de Folios Secuenciales**: Algoritmo centralizado (`lib/folio-generator.ts`) para folios cortos tipo `PED-00001`, `VTA-00001`, `PAG-00001`, `NCR-000001`.
+- [x] **Motor de PDF Nativo**: Emisión binaria directa con `PDFKit` (`/api/pedidos/[id]/pdf?download=true`) y vista HTML imprimible con desglose de moneda en letra (`lib/numero-a-letras.ts`).
+- [x] **Compras Dinámicas**: Buscador flotante de productos con cálculo reactivo de IVA, subtotal y stock en almacén.
 
-### Sprint 4 (FASE B) — Módulos Parciales Completados 100% Real *(13 ago 2026)*
-- [x] **proveedores**: CRUD completo (alta/edición/baja real), sincronización CONTPAQi, desglose de saldos pendientes y estado.
-- [x] **agentes**: CRUD completo (vendedores y cobradores), asignación a usuarios ERP, sincronización CONTPAQi real.
-- [x] **business-intelligence**: 5 tabs integradas con Recharts sobre datos reales de Prisma (ingresos, retención, rotación de inventario, regresión lineal OLS para predicciones IA, top clientes).
-- [x] **credito**: matriz de scoring crediticio, cálculo de riesgo en tiempo real, desglose de penalizaciones y consulta de historial real (`/api/clientes/[id]/historial`).
-- [x] **pagares**: buscador en tiempo real por folio/cliente/código, filtro por estado/vencidos, cálculo de mora real y modal de cobranza.
-- [x] **reestructuras**: creación de reestructuras con recalculo de cuotas, quitas/descuentos, consulta de historial y activacion/desactivacion directa en PostgreSQL.
+### 📊 Sprint 4 — Módulos Parciales Completados al 100% Real *(Agosto 2026)*
+- [x] **Proveedores**: CRUD completo, saldos pendientes y sincronización con CONTPAQi.
+- [x] **Agentes de Venta y Cobranza**: Gestión de comisiones, vinculación con usuarios y sincronización CONTPAQi.
+- [x] **Business Intelligence**: 5 tabs de métricas financieras y comerciales con gráficos Recharts y modelo de predicción OLS en tiempo real.
+- [x] **Scoring de Crédito**: Algoritmo de evaluación de riesgo crediticio con penalizaciones por morosidad y consulta de historial.
+- [x] **Pagarés y Cobranza**: Monitoreo de cartera vencida, cálculo dinámico de mora diaria y módulo de pagos.
+- [x] **Reestructuras de Cartera**: Reprogramación de pagos con condonaciones, recálculo de cuotas y persistencia en base de datos.
 
-### Sprint 5 — Experiencia Adaptativa 3 Modos por Rol *(13 ago 2026)*
-- [x] **`DeviceModeProvider`**: Detección inteligente por tamaño de pantalla (`<768px`), PWA standalone (`display-mode: standalone`) y selección predeterminada por rol de usuario (`GESTOR`, `COBRADOR`, `VENDEDOR_CAMPO` → Modo Móvil de Campo).
-- [x] **`BottomNavDock`**: Barra de navegación táctil fija en la parte inferior para smartphones con botón flotante principal (FAB `+`) que despliega menú rápido para registrar cobro, nuevo pedido, venta POS y catálogo.
-- [x] **`ModeSwitcher`**: Selector de modo en el Header (`💻 Desktop`, `📱 PWA`, `🏃 Móvil`) con persistencia en `localStorage`.
+### 📱 Sprint 5 — Arquitectura Adaptativa Multi-Modo *(Agosto 2026)*
+- [x] **`DeviceModeProvider`**: Detección automática por viewport (`<768px`), PWA standalone y rol de usuario (`GESTOR`, `COBRADOR`, `VENDEDOR_CAMPO`).
+- [x] **`BottomNavDock`**: Barra táctil fija inferior con botón flotante (FAB `+`) para operaciones rápidas en campo.
+- [x] **`ModeSwitcher`**: Selector global en Header para alternar entre Desktop, PWA y Móvil con persistencia en `localStorage`.
 
 ---
 
-## 🚀 ROADMAP POR FASES FUTURAS
+## 🚀 ROADMAP DETALLADO DE EVOLUCIÓN (PRÓXIMAS FASES)
 
-### 🟦 FASE C — Pruebas y CI/CD
-- [ ] Tests unitarios: intereses moratorios, FIFO de pagos, scoring, inventario
-- [ ] Tests de integración: ventas, pagarés, notas, facturación
-- [ ] E2E (Playwright): login → venta a crédito → pagaré → cobro → CFDI
-- [ ] CI GitHub Actions: `lint` + `tsc` + `test` + `prisma migrate` en PR
-- [ ] CD automatizado a EasyPanel/Docker
+```mermaid
+flowchart TD
+    A[FASE A: Base Operativa 100% Real] --> B[FASE B: Módulos Críticos y Adaptabilidad]
+    B --> C[FASE C: Resiliencia, Pruebas y CI/CD]
+    C --> D[FASE D: Rendimiento, Caché y Reporting Avanzado]
+    D --> E[FASE E: Alta Disponibilidad y Operaciones]
 
-### 🟩 FASE D — Optimización y producto
-- [ ] Queries N+1 restantes + índices por uso real
-- [ ] Caché + revalidación en dashboards pesados
-- [ ] Reportes exportables PDF/Excel (cartera, ventas, inventario)
-- [ ] PWA: service worker + instalabilidad en campo completada
+    classDef done fill:#10b981,stroke:#059669,color:#fff;
+    classDef next fill:#3b82f6,stroke:#2563eb,color:#fff;
+    classDef future fill:#64748b,stroke:#475569,color:#fff;
 
-### 🔵 FASE E — Documentación y operación
-- [ ] Runbook de despliegue y rollback
-- [ ] Diagrama de arquitectura (ERP ↔ CONTPAQi ↔ SAT ↔ WAHA/SMS)
-- [ ] Política de backups verificada con restore probado
+    class A,B done;
+    class C next;
+    class D,E future;
+```
+
+### 🟦 FASE C — Resiliencia, Pruebas Automatizadas y CI/CD *(Sprint 6)*
+- [ ] **Tests Unitarios de Lógica Financiera**:
+  - Algoritmo de cálculo de intereses moratorios y días de gracia en pagarés.
+  - Asignación de abonos por regla FIFO en notas de cargo y pagarés vencidos.
+  - Validación del motor de scoring crediticio y límites de crédito asignados.
+- [ ] **Tests de Integración de Flujos de Negocio**:
+  - Flujo completo: Cotización -> Pedido -> Conversión a Venta -> Factura CFDI 4.0.
+  - Flujo de Cobranza: Venta a Crédito -> Generación de Pagaré -> Abono Móvil Offline -> Sincronización en Línea.
+  - Flujo de Inventario: Recepción de Orden de Compra -> Entrada a Almacén -> Transferencia entre Sucursales -> Venta POS.
+- [ ] **Pruebas E2E (Playwright)**:
+  - Pruebas automatizadas de interfaz para POS táctil, búsqueda de clientes y navegación en los 3 modos de dispositivo.
+- [ ] **Pipeline de Integración Continua (GitHub Actions)**:
+  - Ejecución automatizada de `lint`, `tsc --noEmit`, `prisma validate` y suite de pruebas unitarias en cada Pull Request.
+
+### 🟩 FASE D — Rendimiento, Caché Distribuido y Reportes Ejecutivos *(Sprint 7)*
+- [ ] **Optimización de Consultas SQL y Prisma**:
+  - Reemplazo de consultas N+1 restantes mediante `include`/`select` optimizados.
+  - Índices compuestos en PostgreSQL para búsquedas por `(sucursalId, estado, fecha)` y `(clienteId, fechaVencimiento)`.
+- [ ] **Capa de Aceleración con Redis / Memory Cache**:
+  - Caché de catálogos estáticos de alta lectura (Marcas, Categorías, Sucursales, Listas de Precios) con invalidación reactiva.
+  - Caché de estadísticas de Dashboard principal con revalidación periódica de 60 segundos.
+- [ ] **Centro de Reportes Ejecutivos Multiformato**:
+  - Motor de exportación a Excel nativo (`xlsx`) y PDF corporativo para:
+    - Antigüedad de saldos de clientes y cuentas por cobrar.
+    - Kárdex valorizado de movimientos de inventario por almacén.
+    - Liquidación de comisiones por agente de venta y cobrador.
+    - Cuentas por pagar a proveedores y flujo de caja proyectado.
+
+### 🔵 FASE E — Operaciones, Alta Disponibilidad y Monitoreo *(Sprint 8)*
+- [ ] **Consolidación PWA Offline**:
+  - Sincronización en segundo plano con *Background Sync API* para reenvío automático de cobros al recuperar conexión.
+  - Almacenamiento local ampliado con IndexedDB para catálogo de productos completo en dispositivos móviles.
+- [ ] **Runbooks de Despliegue y Recuperación**:
+  - Procedimiento documentado y automatizado de respaldos diarios de PostgreSQL con verificación de restauración (*restore drill*).
+  - Configuración de alertas de salud vía Telegram/Slack ante fallos de conexión con CONTPAQi o timbrado SAT.

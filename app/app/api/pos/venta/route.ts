@@ -97,9 +97,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generar folio de venta único secuencial corto (ej: VTA-00001)
-    const folio = await generarFolioSecuencial('VTA', 'venta', prisma);
-
     // Calcular totales
     let subtotal = 0;
     const detallesCalculados = detalles.map((d: any) => {
@@ -116,6 +113,9 @@ export async function POST(request: NextRequest) {
 
     // Procesar venta en transacción
     const resultado = await prisma.$transaction(async (tx) => {
+      // Generar folio de venta único secuencial corto (ej: VTA-00001) dentro de la transacción
+      const folio = await generarFolioSecuencial('VTA', 'venta', tx);
+
       // 1. Generar número de ticket
       const now = new Date();
       const sucursalCodigo = sesion.sucursal.codigo;

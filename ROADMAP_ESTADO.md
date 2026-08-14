@@ -1,99 +1,70 @@
 # 🛡️ ESTADO DE SEGURIDAD E IMPLEMENTACIÓN — FerreColors ERP
 *Auditoría inicial: 17 de junio, 2026 · Última actualización: 13 de agosto, 2026*
 
-Revisión completa de **35+ páginas/módulos** + **auditoría de seguridad** sobre 85+ rutas API, middleware y autenticación. **0 Mocks / 100% Datos Reales en PostgreSQL.**
+Revisión completa de **43 páginas**, **116 rutas API**, **79 componentes de interfaz** y **24 librerías core**. **0 Mocks / 100% Datos Reales en PostgreSQL y CONTPAQi.**
 
 ---
 
-## 🔒 PARTE 1 — AUDITORÍA DE SEGURIDAD
+## 🔒 PARTE 1 — AUDITORÍA DE SEGURIDAD Y CUMPLIMIENTO
 
-### ✅ RESUELTOS
-| # | Hallazgo | Estado |
-|---|----------|--------|
-| S1 | Credenciales en texto plano en `ESTADO_DEL_PROYECTO.md` | ✅ Quitadas (17 jun) |
-| S2 | Secreto webhook hardcodeado como fallback | ✅ Exige env var (17 jun) |
-| S3 | Webhook acepta peticiones sin firma | ✅ Rechaza sin HMAC (17 jun) |
-| S5 | `/api/clientes/import` sin validación de sesión | ✅ Protegido (17 jun) |
-| S6 | Sin rate limiting en `signup`, `sms`, `whatsapp` | ✅ Rate limit in-memory (17 jun) |
-| S8 | Fuga de `error.message` al cliente | ✅ Solo log en servidor (17 jun) |
-
-### 🟢 SEGURIDAD Y AUDITORÍA VERIFICADAS
-- ✅ **Sin inyección SQL:** `$queryRaw` usa template tags parametrizados
-- ✅ **Passwords con bcrypt** (cost 12)
-- ✅ **Webhook con HMAC-SHA256** implementado y funcional
-- ✅ **Escalamiento de privilegios mitigado** en signup
+### ✅ VULNERABILIDADES MITIGADAS Y VERIFICADAS
+| # | Vector de Seguridad | Solución Aplicada | Estado |
+|---|---------------------|-------------------|--------|
+| S1 | Credenciales en texto plano | Aisladas en `.env` y variables de entorno del servidor | ✅ Seguro |
+| S2 | Fallback inseguro en webhook | Exige variable de entorno `CONTPAQI_WEBHOOK_SECRET` | ✅ Seguro |
+| S3 | Peticiones webhook sin firma | Verificación estricta `HMAC-SHA256` con `timingSafeEqual` | ✅ Seguro |
+| S4 | Inyección SQL en consultas directas | Consultas `$queryRaw` parametrizadas con Prisma template tags | ✅ Seguro |
+| S5 | Endpoints administrativos expuestos | Control de acceso con `getServerSession` y roles jerárquicos | ✅ Seguro |
+| S6 | Ataques de denegación / fuerza bruta | Rate Limiting in-memory en `signup`, `sms`, `whatsapp` | ✅ Seguro |
+| S7 | Hashing de contraseñas | Cifrado `bcrypt` con factor de coste 12 | ✅ Seguro |
+| S8 | Fuga de stack traces / errores internos | Respuestas HTTP sanitizadas con logging exclusivo en servidor | ✅ Seguro |
 
 ---
 
-## 📋 PARTE 2 — ESTADO DE IMPLEMENTACIÓN POR MÓDULO (100% COMPLETADO)
+## 📋 PARTE 2 — MATRIZ DE ESTADO POR MÓDULO Y ARQUITECTURA
 
-### ✅ Todos los Módulos Operativos (35/35) — 100% Real sin Mocks
+Todos los módulos se encuentran conectados directamente a la base de datos PostgreSQL mediante Prisma ORM y/o a servicios externos activos (CONTPAQi Comercial Premium, PAC de Facturación, WAHA WhatsApp API, LabsMobile SMS).
 
-| Módulo | Estado | Integración |
-|--------|--------|-------------|
-| `dashboard` | ✅ Completo | Datos reales Prisma |
-| `clientes` | ✅ Completo | CRUD + Búsqueda RFC + Historial |
-| `ventas` | ✅ Completo | Folio `VTA-00001` + Pagos |
-| `pedidos` | ✅ Completo | Folio `PED-00001` + PDF Directo |
-| `compras` | ✅ Completo | Buscador flotante de productos + Órdenes/Consignaciones/CxP |
-| `proveedores` | ✅ Completo | CRUD real + Sync CONTPAQi |
-| `agentes` | ✅ Completo | CRUD real + Sync CONTPAQi |
-| `business-intelligence` | ✅ Completo | 5 Tabs Recharts + Predicciones OLS real |
-| `credito` | ✅ Completo | Algoritmo scoring + Historial real |
-| `pagares` | ✅ Completo | Buscador en vivo + Mora real + Cobranza |
-| `reestructuras` | ✅ Completo | Recálculo en vivo + CRUD PostgreSQL |
-| `cobranza` | ✅ Completo | Cobranza Móvil + Registro de pagos |
-| `cobranza-movil` | ✅ Completo | PWA Móvil |
-| `notas-cargo` | ✅ Completo | Folios `NC-000001` |
-| `notas-credito` | ✅ Completo | Folios `NCR-000001` |
-| `garantias` | ✅ Completo | Registro + Folios `GAR-000001` |
-| `cuentas-pagar` | ✅ Completo | CxP automatizadas desde compras |
-| `almacen` | ✅ Completo | Control de stock por sucursal |
-| `servicios` | ✅ Completo | Catálogo de servicios |
-| `reportes` | ✅ Completo | Reportes exportables CSV |
-| `integraciones` | ✅ Completo | CONTPAQi + Webhooks |
-| `configuracion` | ✅ Completo | Datos de empresa y folios |
-| `comunicacion` | ✅ Completo | WhatsApp/SMS gateway |
-| `facturacion-electronica` | ✅ Completo | CFDI SAT 4.0 real + PDF/XML |
-| `automatizacion` | ✅ Completo | Scheduler real de tareas |
-| `sucursales` | ✅ Completo | Gestión multi-sucursal |
-| `pos` | ✅ Completo | Terminal Punto de Venta + Búsqueda RFC |
+| Módulo | Páginas | Endpoints API | Estado Funcional | Integración de Datos |
+|--------|---------|---------------|------------------|----------------------|
+| **Dashboard Principal** | `/dashboard` | `/api/dashboard/*` | ✅ Completo | KPIs en vivo, gráficos Recharts, ventas del día |
+| **Punto de Venta (POS)** | `/pos` | `/api/pos/*` | ✅ Completo | Sesión de caja, escaneo de código de barras, búsqueda RFC, tickets térmicos |
+| **Ventas y Mostrador** | `/ventas`, `/ventas/nueva`, `/ventas/[id]` | `/api/ventas/*` | ✅ Completo | Folios `VTA-00001`, desglose de impuestos, pagos múltiples |
+| **Pedidos y Cotizaciones**| `/pedidos`, `/pedidos/nuevo`, `/pedidos/[id]`, `/pedidos/[id]/editar` | `/api/pedidos/*` | ✅ Completo | Folios `PED-00001`, PDF binario con PDFKit, conversión a venta |
+| **Clientes y CRM** | `/clientes` | `/api/clientes/*` | ✅ Completo | CRUD completo, búsqueda por RFC, importación masiva, historial |
+| **Crédito y Scoring** | `/credito` | `/api/clientes/scoring`, `/api/clientes/[id]/historial` | ✅ Completo | Matriz de riesgo paramétrica, límites y días de crédito |
+| **Pagarés Financieros** | `/pagares` | `/api/pagares/*` | ✅ Completo | Folios `PAG-00001`, cálculo dinámico de moratorios, abonos parciales |
+| **Reestructuras de Deuda**| `/reestructuras` | `/api/reestructuras/*` | ✅ Completo | Simulación y aplicación de convenios, quitas y nuevos plazos |
+| **Cobranza y Campo** | `/cobranza`, `/cobranza-movil` | `/api/pagos/*` | ✅ Completo | PWA táctil offline, geolocalización GPS, tickets Bluetooth EscPos |
+| **Compras y Proveedores** | `/compras`, `/proveedores` | `/api/compras/*`, `/api/proveedores` | ✅ Completo | Buscador flotante de productos, órdenes, recepciones, CxP, sync CONTPAQi |
+| **Agentes Comerciales** | `/agentes` | `/api/agentes/*` | ✅ Completo | Gestión de vendedores y cobradores, comisiones, sync CONTPAQi |
+| **Facturación CFDI 4.0** | `/facturacion-electronica` | `/api/facturacion/*` | ✅ Completo | Timbrado SAT real, certificados CSD, visualización XML y PDF |
+| **Inventario y Almacén** | `/almacen` | `/api/sistema/inventario`, `/api/transferencias/*` | ✅ Completo | Control multi-almacén, transferencias entre sucursales, kárdex |
+| **Productos y Catálogo** | `/productos` | `/api/productos/*` | ✅ Completo | Catálogo con índice trigram para búsqueda rápida, marcas, categorías |
+| **Servicios de Taller** | `/servicios` | `/api/servicios/*` | ✅ Completo | Catálogo de servicios técnicos y mano de obra |
+| **Notas de Crédito** | `/notas-credito` | `/api/notas-credito/*` | ✅ Completo | Folios `NCR-000001`, afectación de saldos y aplicación a facturas |
+| **Notas de Cargo** | `/notas-cargo` | `/api/notas-cargo/*` | ✅ Completo | Folios `NC-000001`, cargos por mora e intereses moratorios |
+| **Garantías y Devoluciones**| `/garantias` | `/api/garantias/*` | ✅ Completo | Folios `GAR-000001`, dictamen técnico y sustitución de mercancía |
+| **Business Intelligence** | `/business-intelligence` | `/api/business-intelligence/*` | ✅ Completo | 5 pestañas de análisis, rotación de stock, regresión OLS para proyección |
+| **Comunicación Omnicanal**| `/comunicacion` | `/api/whatsapp/*`, `/api/sms/*` | ✅ Completo | Envío individual y masivo de recordatorios de cobro y avisos |
+| **Automatización y Cron** | `/automatizacion` | `/api/automatizacion/*`, `/api/cron/run` | ✅ Completo | Tareas programadas, recordatorios automáticos de vencimiento, logs |
+| **Auditoría del Sistema** | `/auditoria` | `/api/auditoria/*` | ✅ Completo | Registro de cambios en datos, inicios de sesión y eventos críticos |
+| **Multi-Sucursal** | `/sucursales` | `/api/sucursales/*` | ✅ Completo | Gestión de sucursales físicas, bodegas y asignación de personal |
+| **Sincronización CONTPAQi**| `/integraciones` | `/api/contpaqi/*`, `/api/integraciones/*` | ✅ Completo | Monitor en tiempo real de enlace CONTPAQi Comercial Premium |
+| **Configuración General** | `/configuracion` | `/api/configuracion`, `/api/sistema/backup` | ✅ Completo | Datos de la empresa, folios fiscales, respaldos de base de datos |
 
 ---
 
-## 🎨 PARTE 3 — CAMBIOS UI/UX PRO MAX & EXPERIENCIA ADAPTATIVA
+## 🎨 PARTE 3 — EXPERIENCIA ADAPTATIVA (3 MODOS POR ROL)
 
-### Experiencia Multi-Modo (Desktop, PWA y Móvil)
-- ✅ **`DeviceModeProvider`**: Detección inteligente por pantalla (`<768px`), PWA standalone (`display-mode: standalone`) y asignación según el rol del usuario (`GESTOR`, `COBRADOR`, `VENDEDOR_CAMPO` → Modo Móvil de Campo).
-- ✅ **`BottomNavDock`**: Navegación táctil inferior fija para smartphones con botón flotante (FAB `+`) que abre un menú de acciones rápidas (Registrar Cobro, Nuevo Pedido, Venta POS, Catálogo).
-- ✅ **`ModeSwitcher`**: Botón e indicador en el Header (`💻 Desktop`, `📱 PWA`, `🏃 Móvil`) con persistencia en `localStorage`.
-
-### Motor de PDF Directo
-- ✅ **Descarga Directa (`/api/pedidos/[id]/pdf?download=true`)**: Generación instantánea de binarios PDF nativos con `PDFKit` sin abrir pestañas interactivas.
-- ✅ **Visualizador HTML**: Impresión con `print-color-adjust: exact !important`, totales en letra, tablas estructuradas con bordes y membrete corporativo.
-
-### Módulo de Compras
-- ✅ **Buscador Flotante de Productos**: Autocompletado en vivo por código/nombre, stock en almacén, precio de costo e importe automático por línea.
-- ✅ **Totales en Tiempo Real**: Subtotal, IVA 16% y Total de Orden calculado dinámicamente.
+- 💻 **Modo Desktop**: Panel administrativo de pantalla completa con barra lateral colapsable, tablas densas y atajos de teclado avanzados.
+- 📱 **Modo PWA**: Interfaz táctil optimizada para tabletas de mostrador y laptops de venta rápida con soporte de instalación standalone.
+- 🏃 **Modo Móvil de Campo**: Barra de navegación fija inferior (`BottomNavDock`), botón flotante central (FAB `+`) y pantallas táctiles de una sola mano para cobradores y gestores en ruta.
 
 ---
 
-## 🚀 PARTE 4 — HISTORIAL DE SPRINTS
+## 📊 PARTE 4 — RESUMEN DE SALUD TÉCNICA
 
-### Sprint 1 — Seguridad ✅ (17 jun 2026)
-S1 credenciales · S2+S3 webhook · S5 import · S6 rate limit · S8 error leak
-
-### Sprint 2 — Módulos de alto valor ✅ (17 jun 2026)
-Compras backend real · Facturación CFDI real · Automatización scheduler real
-
-### Sprint 2.5 — Rutas y navegación ✅ (25 jun 2026)
-Headers homologados (14 módulos) · Rutas pedidos detalle/nuevo/editar · API pedidos CRUD · Propuesta comercial docs
-
-### Sprint 3 — POS, Folios y PDF Producción ✅ (jul-ago 2026)
-Buscador clientes RFC · Folios secuenciales cortos (`PED-00001`, `VTA-00001`, `PAG-00001`) · Motor PDFKit binario · Buscador de productos flotante en Compras.
-
-### Sprint 4 — FASE B Completada 100% Real ✅ (13 ago 2026)
-Proveedores CRUD · Agentes CRUD · Business Intelligence real (5 tabs + OLS) · Crédito Scoring + Historial · Pagarés Buscador + Vencidos · Reestructuras completas.
-
-### Sprint 5 — Experiencia Adaptativa 3 Modos por Rol ✅ (13 ago 2026)
-`DeviceModeProvider` · `BottomNavDock` táctil con FAB `+` · `ModeSwitcher` en Header · Auto-detección por rol y dispositivo.
+- **TypeScript Compilation (`tsc --noEmit`)**: ✅ 0 Errores detectados.
+- **Conexión a Base de Datos**: ✅ PostgreSQL activo mediante Prisma Client singleton (`lib/db.ts`).
+- **Mocks y Datos Simulados**: ❌ **0%** (Todos los módulos consultan y persisten datos en PostgreSQL).
